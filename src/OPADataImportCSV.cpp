@@ -1,0 +1,107 @@
+#include "OPADataImportCSV.h"
+
+#include <fstream>
+
+#include <boost/lexical_cast.hpp>
+#include <boost/tokenizer.hpp>
+#include <boost/algorithm/string/trim.hpp>
+
+typedef boost::escaped_list_separator<char> csv_listsep_t;
+typedef boost::tokenizer< boost::escaped_list_separator<char> > csvrow_tokenizer_t;
+
+csvrow_tokenizer_t RowTokenizer( const std::string& row, char sep = '\t' )
+{
+    return ( csvrow_tokenizer_t( row, csv_listsep_t( '\\', sep ) ) ); 
+}
+
+void ImportProteins(
+    OPAData&    data,
+    const char* proteinsFilename,
+    char sep = '\t'
+){
+    LOG_INFO( "Loading proteins from CSV file " << proteinsFilename << "..." );
+    std::ifstream proteinsStream( proteinsFilename, std::ios_base::in );
+    std::string row;
+
+    // skip header
+    std::getline( proteinsStream, row );
+    while ( std::getline( proteinsStream, row ) ) {
+        csvrow_tokenizer_t tokenizer = RowTokenizer( row, sep );
+        csvrow_tokenizer_t::const_iterator tokenIt = tokenizer.begin();
+        std::string ac = *(tokenIt++);
+        boost::trim( ac );
+        size_t      seqlen = boost::lexical_cast<size_t>( boost::trim_copy( *tokenIt ) );
+        data.addObject( ac, seqlen );
+    }
+}
+
+void ImportExpDesign(
+    OPAData&    data,
+    const char* expDesignFilename,
+    char sep = '\t'
+){
+    LOG_INFO( "Loading experimental design from CSV file " << expDesignFilename << "..." );
+    std::ifstream expDesignStream( expDesignFilename, std::ios_base::in );
+    std::string row;
+
+    // skip header
+    std::getline( expDesignStream, row );
+    while ( std::getline( expDesignStream, row ) ) {
+        csvrow_tokenizer_t tokenizer = RowTokenizer( row, sep );
+        csvrow_tokenizer_t::const_iterator tokenIt = tokenizer.begin();
+        std::string baitAc = *(tokenIt++);
+        boost::trim( baitAc );
+        std::string sample = *(tokenIt++);
+        boost::trim( sample );
+        std::string msrun = *(tokenIt++);
+        boost::trim( msrun );
+        double multiplier = boost::lexical_cast<double>( boost::trim_copy( *tokenIt ) );
+        OPAData::const_probe_ptr_t probe = ((const OPAData&)data).probe( sample );
+        if ( !probe ) {
+            // create probe if not exist yet
+            // bait protein should be already defined
+            probe = data.addProbe( sample, baitAc );
+        } else {
+            /// @todo check bait protein in CSV file matches one already defined in OPAData for given probe
+        }
+        data.addAssay( msrun, sample, multiplier );
+    }
+}
+
+void ImportMeasurements(
+    OPAData&    data,
+    const char* measurementsFilename,
+    char sep = '\t'
+){
+    LOG_INFO( "Loading measurements from CSV file " << measurementsFilename << "..." );
+    std::ifstream measurementsStream( measurementsFilename, std::ios_base::in );
+    std::string row;
+
+    // skip header
+    std::getline( measurementsStream, row );
+    while ( std::getline( measurementsStream, row ) ) {
+        csvrow_tokenizer_t tokenizer = RowTokenizer( row, sep );
+        csvrow_tokenizer_t::const_iterator tokenIt = tokenizer.begin();
+        std::string msrun = *(tokenIt++);
+        boost::trim( msrun );
+        std::string proteinAc = *(tokenIt++);
+        boost::trim( proteinAc );
+        size_t sc = boost::lexical_cast<size_t>( boost::trim_copy( *tokenIt ) );
+        size_t pc = tokenIt != tokenizer.end() ? boost::lexical_cast<size_t>( boost::trim_copy( *tokenIt ) ) : 0;
+        OPAData::celldata_t mes( sc, pc );
+        data.addMeasurement( proteinAc, msrun, mes );
+    }
+}
+
+OPAData OPADataImportCSV(
+    const char* proteinsFilename,
+    const char* expDesignFilename,
+    const char* measurementsFilename,
+    char sep
+){
+    OPAData data;
+    ImportProteins( data, proteinsFilename, sep );
+    ImportExpDesign( data, expDesignFilename, sep );
+    ImportMeasurements( data, measurementsFilename, sep );
+    return ( data );
+}

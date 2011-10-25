@@ -1,0 +1,257 @@
+\documentclass[microtype,a4paper,article,10pt,oneside,final]{memoir}
+
+\usepackage[utf8x]{inputenc}
+\usepackage[hyperref,svgnames]{xcolor}
+\usepackage[xetex]{hyperref}
+\usepackage{xspace}
+\usepackage[a4paper,scale=0.8]{geometry}
+
+%opening
+\title{BI-MAP User Guide}
+\author{Alexey Stukalov}
+\date{October 2011}
+
+\hypersetup{pdftitle={BI-MAP User Guide},
+            colorlinks=true, linkcolor=DarkSlateGray, citecolor=DarkBlue, urlcolor=NavyBlue}
+
+\counterwithout{section}{chapter}
+
+\newcommand{\bimap}{\texttt{BI-MAP}\xspace}
+
+\begin{document}
+
+\maketitle
+
+\setcounter{tocdepth}{3}
+\tableofcontents
+\vspace*{1cm}
+
+\section{Software Requirements}
+
+To run \bimap the following packages need to be installed:
+\begin{itemize}
+  \item \href{http://www.boost.org}{Boost} 1.43+ for extended set of C++ templates
+  \item \href{http://www.gnu.org/s/gsl/}{GSL} 1.10+ for mathematical and statistical routines
+  \item \href{http://r-project.org}{R} 2.13+ for results analysis and visualization (optional)
+  \item \href{http://dirk.eddelbuettel.com/code/rcpp.html}{Rcpp} 0.9+ for loading \bimap results into R session (optional)
+  \item \href{http://www.open-mpi.org/}{MPI Implementation} 1.5+ for parallel version of \bimap sampler (optional)
+\end{itemize}
+
+\bimap is distributed both as LGPL-licensed source code and precompiled binaries package.
+The users of binary package could skip the compilation section.
+
+\section{Compilation}
+
+\bimap requires \href{http://www.cmake.org}{CMake} 2.6+ build system for compiling from the source code.
+
+Compilation requires the ``development'' versions of the packages listed at software requirements section to be installed.
+For unit tests compilation and executing \href{http://code.google.com/p/googletest/}{GoogleTest} 1.5+ is required.
+
+To initialize the build environment, run
+\begin{verbatim}
+> cmake
+\end{verbatim}
+from the command prompt of root \bimap folder.
+It should automatically locate all required packages.
+Refer to the CMake manual for more options.
+Upon successful execution \texttt{cmake} generates standard UNIX Makefiles.
+To start the compilation, execute
+\begin{verbatim}
+> make
+\end{verbatim}
+
+\section{Installation}
+
+Simply unpack the contents of \bimap binary package.
+The following binaries are provided:
+\begin{itemize}
+  \item \texttt{libBIMAP.so} -- dynamic library with core \bimap functions
+  \item \texttt{BIMAP-sampler} -- single-process \bimap executable
+  \item \texttt{BIMAP-sampler-mpi} -- multi-process \bimap sampler that uses MPI
+  \item \texttt{libRBIMAP.so} -- R $\leftrightarrow$ \bimap interface dynamic library
+\end{itemize}
+
+\section{Running}
+
+\subsection{Input Data}
+
+For modules inference \bimap requires the description of 
+AP-MS experiments, experimental data
+and some properties of the identified proteins.
+This should be provided in 3 plain-text files (tab-separated tables),
+see table~\ref{table:params:input}.
+
+\vspace{0.2cm}
+
+\begin{table}[h]
+\caption{Parameters for Input Files specification}
+\begin{tabular}{rp{0.3\textwidth}p{0.4\textwidth}}
+\bimap option & Description & Example \\
+\hline
+\verb|--exp_design_file|
+& Experimental design table:
+  Bait Accession Code,
+  Biological Sample Identifier,
+  MS run Identifier,
+  MS run normalization constant ($m(e)$)
+&
+\vspace{-0.5cm}
+\begin{verbatim}
+Bait_AC  Sample_ID  MSrun_ID     mult
+Prot1    Prot1_WT   Prot1_WT-1   1.0
+Prot1    Prot1_WT   Prot1_WT-2   0.9
+Prot1    Prot1_Mut  Prot1_Mut-1  0.5
+Prot2    Prot2_WT   Prot2_WT-1   1.0
+...
+\end{verbatim}
+\\
+\verb|--measurements_file|
+& MS spectral counts table:
+
+MS run identifier,
+protein Accession Code, spectral counts
+&
+\vspace{-0.5cm}
+\begin{verbatim}
+MSrun_ID    Prey_AC  SC
+Prot1_WT-1  Prot1    500
+Prot1_WT-1  Prot3    10
+Prot2_WT-1  Prot1    5
+Prot2_WT-1  Prot2    600
+...
+\end{verbatim}
+\\
+\verb|--proteins_file|
+& Proteins table:
+
+Accession Code, AA Sequence Length
+&
+\vspace{-0.5cm}
+\begin{verbatim}
+AC     SeqLength
+Prot1  1000
+Prot2  1200
+...
+\end{verbatim}
+\\
+\verb|--input_file|
+&
+\emph{Optional}.
+XML file with combined information\footnotemark[1].
+\end{tabular}
+\label{table:params:input}
+\end{table}
+
+\footnotetext[1]{Alternatively, required information could be prepared within R session and serialized into by \texttt{OPASaveData()} function.
+See \texttt{samples/tip49/analysis.R} script for further details of preparing AP-MS data and running \bimap within R session.}
+
+\subsection{Method and Model Parameters}
+
+\bimap provides access to most of its parameters.
+Parameters could be specified at command-line
+or be supplied in .INI file via \verb|--config_file| option.
+
+There are the following groups of parameters
+(correspond to sections in .INI file or serve as dot-separated prefix
+to the parameter name when specified at command line):
+\begin{enumerate}
+  \item \texttt{prior}. Parameters for prior model (Pitman-Yor distribution for proteins and experiments etc).
+  \item \texttt{hyperprior}. Hyperprior model parameters (normal-scaled inverse-gamma distribution for protein module abundance).
+  \item \texttt{signal}. Parameters of spectral counts distribution (\texttt{signal\_counts\_shape} -- Lagrangian Poisson distribution shape parameter,
+\texttt{seq\_length\_factor} -- $\beta_L$ parameter in (8)).
+  \item \texttt{precomputed}. \texttt{object}/\texttt{probe\_freq\_threshold} parameters control
+the maximum frequency of proteins and experiments to be used for the calculation of
+preliminary protein--protein and experiment--experiment distances.
+  \item \texttt{cascade}. Parameters of the equi-energy sampler: number of processes (\emph{turbines}),
+parameters of temperature ladder, size of intermediate steps cache etc (see \texttt{--help}).
+  \item \texttt{sampler}. Parameters for Gibbs sampling steps and the rates of the steps.
+\end{enumerate}
+
+To get the description of all available \bimap options, run
+\begin{verbatim}
+> BIMAP-sampler --help
+\end{verbatim}
+
+\begin{table}[h]
+\caption{Sampler parameters affecting \bimap execution times and the quality of the biclustering models distribution}
+
+\begin{tabular}{rp{0.5\textwidth}r}
+Command-line Parameter & Description & Default value \\
+\hline
+
+\verb|--cascade.burnin_iterations|
+& number of \emph{burn-in} iterations to estimate initial parameters of the model.
+Longer burn-in period might be required for larger datasets to ensure that near-optimal values have been found.
+& $2 \cdot 10^5$ \\
+\verb|--samples| & number of samples to collect & 1000 \\
+\verb|--storage_period| & period (\# of sampler iterations) before new sample is collected.
+Longer period might be required for larger datasets to ensure statistical independence of
+subsequently collected samples.
+& 1000 \\
+\verb|--priors_storage_period| & period (\# of cluster samples collected)
+before new sample of prior parameters is collected.
+Longer period might be required for larger datasets to ensure statistical independence.
+& 5
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\caption{Model parameters affecting matrix blocks granularity}
+
+\begin{tabular}{p{0.2\textwidth}p{0.5\textwidth}r}
+Parameter & Description & Default value \\
+\hline
+
+{\scriptsize\texttt{--prior.obj/probe\_ clustering\_ concentration/discount}}
+& $(\theta_P, \alpha_P)$, $(\theta_E, \alpha_E)$ --
+concentration and discount parameters for 
+Pitman-Yor prior distribution for rows and columns.
+Larger concentration values increase the number of clusters & (0.3, 0.3)
+\\
+{\scriptsize\texttt{--signal.signal\_counts\_shape}}
+& $\lambda$, shape parameter of Lagrangian Poisson spectral counts distribution.
+Larger values reduce sensitivity to spectral counts and result in larger matrix blocks.
+& 0.1
+\\
+{\scriptsize\texttt{--precomputed.object/probe \_freq\_threshold}} &
+Threshold to exclude frequent proteins/experiments
+from the calculation of preliminary protein-protein and
+experiment-experiment distances.
+The optimal threshold depends on the cleanliness of the dataset.
+& 0.7
+\end{tabular}
+\end{table}
+
+The recommended values for the other parameters are provided in \texttt{samples/tip49/config.ini}.
+
+\section{Results Analysis and Visualization}
+
+The output of \texttt{BIMAP-sampler} (or \texttt{BIMAP-sampler-mpi})
+is a collection of chessboard biclustering models generated by MCMC sampler.
+The name of the output file is specified by \verb|--output_file| option.
+
+\bimap comes with a set of scripts to analyse the sampling results.
+\begin{itemize}
+  \item \texttt{BIMAP.R} -- \bimap running, \bimap results reading,
+individual biclustering extraction
+  \item \texttt{BIMAP\_plot.R} -- matrix plot of chessboard biclustering models
+  \item \texttt{BIMAP\_graphml.R} -- export biclustering model to GraphML
+  \item \texttt{ms\_data\_exttools.R} -- reading NestedCluster results and conversion into chessboard biclustering models
+\end{itemize}
+
+These scripts require \texttt{libRBIMAP.so}.
+Before loading these scripts into R session,
+\texttt{RBIMAP.libpath} variable should be set to point to the location of \texttt{libRBIMAP.so}.
+
+Some of the key functions, provided by these scripts:
+\begin{itemize}
+\item \texttt{BIMAP.walk.load()} loads the output of \bimap.
+\item \texttt{BIMAP.extract\_clustering()} extracts the biclustering with specified ID,
+\item \texttt{plot.bimap()} visualizes extracted \bimap model as a block matrix
+\item \texttt{bimap.graphML()} converts extracted \bimap model into network representation and exports to GraphML format
+(could be read by graph editors like \href{http://yed.yworks.com}{yEd}).
+\end{itemize}
+
+The sample R script that reads and analyses TIP49 dataset is \texttt{samples/tip49/analysis.R}.
+
+\end{document}
