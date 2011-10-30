@@ -5,7 +5,7 @@ find_package( Boost REQUIRED COMPONENTS serialization iostreams filesystem progr
 find_package( ZLIB )
 find_package( BZip2 )
 
-find_package( GSL )
+find_package( GSL REQUIRED )
 
 set( BIMAP_Sources
      "OPAData.cpp"
