@@ -26,8 +26,8 @@ bool BIMAPParamsRead(
     TurbineCascadeParams&           cascadeParams,
     CellSignalParams&               signalParams,
     PrecomputedDataParams&          precomputedDataParams,
-    ChessboardBiclusteringPriors&          priors,
-    BIMAPSampleCollectorParams&    collectorParams,
-    BIMAPIOParams&                 ioParams
+    ChessboardBiclusteringPriors&   priors,
+    BIMAPSampleCollectorParams&     collectorParams,
+    BIMAPIOParams&                  ioParams
 );
 

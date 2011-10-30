@@ -393,7 +393,7 @@ SEXP ConvertClusterToRObject(
 #endif
 
 /**
-    Converts BBClusteringPriors object to R-complatible (S4) object.
+    Converts BIMAP Priors object to R-compatible (S4) object.
  */
 Rcpp::DataFrame ConvertPriorParamsWalkToRDataFrame(
     const BIMAPWalk&       walk   /** @param[in] MCMC biclustering walk to convert */
@@ -432,7 +432,7 @@ Rcpp::DataFrame ConvertPriorParamsWalkToRDataFrame(
 }
 
 /**
-    Converts BBClustering object to R-complatible (S4) object.
+    Converts BIMAP walk to R-compatible (S4) object.
  */
 SEXP ConvertBIMAPWalkToRObject(
     const objects_label_map_type&       objects,
@@ -966,7 +966,7 @@ public:
 };
 
 /**
-    Bi-clusterizes Mass-spectrometry data.
+    Runs BI-MAP.
  */
 RcppExport SEXP BIMAPWalkEval(
     SEXP    proteinsDataExp,        /**< @param[in] proteins data frame: 1 - protein label, 2 - sequence length */

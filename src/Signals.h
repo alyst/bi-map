@@ -23,13 +23,13 @@ public:
     double                          sequenceLengthFactor;   /// the power to raise sequence length to for normalizing
     double                          scShape;                /// shape parameter for object's spectral counts distribution
     signal_t                        scRateStep;             /// discretization step for spectral counts distribution parameter
-    signal_t                        zeroInflationFactor;     /// zero-inflation coefficient
+    signal_t                        zeroInflationFactor;    /// zero-inflation coefficient
     preliminary_signal_prior_type   preliminarySignalPrior; /// prior distribution of preliminary signal rate
 
     CellSignalParams( log_prob_t sequenceLengthFactor = 0.5,
                       log_prob_t scShape = 0,
                       signal_t   scRateStep = 1E-2,
-                      signal_t   zeroInflationFactor = 0.5,
+                      signal_t   zeroInflationFactor = 0.0,
                       log_prob_t preliminarySignalShape = 1.5,
                       log_prob_t preliminarySignalScale = 2 )
     : sequenceLengthFactor( sequenceLengthFactor )

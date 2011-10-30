@@ -21,9 +21,9 @@ bool BIMAPParamsRead(
     TurbineCascadeParams&           cascadeParams,
     CellSignalParams&               signalParams,
     PrecomputedDataParams&          precomputedDataParams,
-    ChessboardBiclusteringPriors&          priors,
-    BIMAPSampleCollectorParams&    collectorParams,
-    BIMAPIOParams&                 ioParams
+    ChessboardBiclusteringPriors&   priors,
+    BIMAPSampleCollectorParams&     collectorParams,
+    BIMAPIOParams&                  ioParams
 ){
     // Declare the supported options
     po::positional_options_description p;
