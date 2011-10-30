@@ -14,6 +14,10 @@ csvrow_tokenizer_t RowTokenizer( const std::string& row, char sep = '\t' )
     return ( csvrow_tokenizer_t( row, csv_listsep_t( '\\', sep ) ) ); 
 }
 
+/**
+ *  Imports proteins information from CSV file.
+ *  Columns: protein AC, sequence length.
+ */
 void ImportProteins(
     OPAData&    data,
     const char* proteinsFilename,
@@ -35,6 +39,10 @@ void ImportProteins(
     }
 }
 
+/**
+ *  Imports experimental design information from CSV file.
+ *  Columns: bait Accession Code, sample ID, MS run ID, MS run multiplier
+ */
 void ImportExpDesign(
     OPAData&    data,
     const char* expDesignFilename,
@@ -68,6 +76,10 @@ void ImportExpDesign(
     }
 }
 
+/**
+ *  Imports measurements information from CSV file.
+ *  Columns: MS run ID, protein AC, spectral counts, peptide counts (optional).
+ */
 void ImportMeasurements(
     OPAData&    data,
     const char* measurementsFilename,
@@ -93,6 +105,12 @@ void ImportMeasurements(
     }
 }
 
+/**
+ *  Imports CSV files into OPAData.
+ *  @see ImportProteins()
+ *  @see ImportExpDesign()
+ *  @see ImportMeasurements()
+ */
 OPAData OPADataImportCSV(
     const char* proteinsFilename,
     const char* expDesignFilename,
