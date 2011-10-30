@@ -112,10 +112,6 @@ bool BIMAPParamsRead(
             "failure rate of geometrical distribution, which is prior expectation of the number of objects clusters related to probes cluster via probes baits" )
         ( "prior.probes_clusters_off_objects_cluster_rate", po::value<prob_t>( &priors.probesCluOffObjectsCluRate )->default_value( priors.probesCluOffObjectsCluRate ),
             "failure rate of geometrical distribution, which is prior expectation of the number of probes clusters related to objects cluster via probes baits" )
-        ( "prior.objects_clusters_per_probes_cluster_rate", po::value<prob_t>(),
-            "success rate of geometrical distribution, which is prior expectation of the number of objects clusters related to probes cluster via probes baits" )
-        ( "prior.probes_clusters_per_objects_cluster_rate", po::value<prob_t>(),
-            "success rate of geometrical distribution, which is prior expectation of the number of probes clusters related to objects cluster via probes baits" )
         ( "prior.false_hits", po::value<prob_t>( &priors.noise.failures )->default_value( priors.noise.failures ),
             "prior counts of false protein discoveries (in disabled cross-clusters)" )
         ( "prior.true_misses", po::value<prob_t>( &priors.noise.successes )->default_value( priors.noise.successes ),
@@ -269,16 +265,6 @@ bool BIMAPParamsRead(
                     opt_map );
     }
     po::notify( opt_map );
-
-    // use _per_, if available and _off_ not provided
-    if ( opt_map.count( "prior.probes_clusters_off_objects_cluster_rate" ) == 0
-         && opt_map.count( "prior.probes_clusters_per_objects_cluster_rate" ) > 0 ) {
-        priors.probesCluOffObjectsCluRate = 1.0 - opt_map[ "prior.probes_clusters_per_objects_cluster_rate" ].as<prob_t>();
-    }
-    if ( opt_map.count( "prior.objects_clusters_off_probes_cluster_rate" ) == 0
-         && opt_map.count( "prior.objects_clusters_per_probes_cluster_rate" ) > 0 ) {
-        priors.objectsCluOffProbesCluRate = 1.0 - opt_map[ "prior.objects_clusters_per_probes_cluster_rate" ].as<prob_t>();
-    }
 
     // check output path existence
     boost::filesystem::path out_path( opt_map[ "output_file" ].as<std::string>() );
