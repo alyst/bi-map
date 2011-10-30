@@ -267,11 +267,18 @@ bool BIMAPParamsRead(
     po::notify( opt_map );
 
     // check output path existence
+    if ( opt_map.count("output_file") == 0 ) {
+        THROW_EXCEPTION( std::invalid_argument, "Output file not specified" );
+    }
     boost::filesystem::path out_path( opt_map[ "output_file" ].as<std::string>() );
-    if ( !boost::filesystem::exists( out_path.parent_path() ) ) {
+    if ( !out_path.parent_path().empty()
+     && !boost::filesystem::exists( out_path.parent_path() )
+    ){
         THROW_EXCEPTION( std::invalid_argument, "Output folder doesn't exist: " << out_path.parent_path() );
     }
-    if ( !boost::filesystem::is_directory( out_path.parent_path() ) ) {
+    if ( !out_path.parent_path().empty()
+     && !boost::filesystem::is_directory( out_path.parent_path() )
+    ){
         THROW_EXCEPTION( std::invalid_argument, "Output path is not a folder: " << out_path.parent_path() );
     }
 
