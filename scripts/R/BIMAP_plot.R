@@ -3,8 +3,8 @@
 # Author: Alexey Stukalov
 ###############################################################################
 
-source( file.path( ppi_scripts_path, "BIMAP.R" ) )
-source( file.path( ppi_scripts_path, "misc_utils.R" ) )
+source( file.path( bimap_scripts_path, "BIMAP.R" ) )
+source( file.path( bimap_scripts_path, "misc_utils.R" ) )
 
 require( ggplot2 )
 require( lattice )

@@ -3,10 +3,10 @@
 # Author: Alexey Stukalov
 ###############################################################################
 
-ppi_scripts_path <- ".."
-source( paste( ppi_scripts_path, "BIMAP.R", sep = .Platform$file.sep ) )
-source( paste( ppi_scripts_path, "BIMAP_plot.R", sep = .Platform$file.sep ) )
-source( paste( ppi_scripts_path, "BIMAP_gen.R", sep = .Platform$file.sep ) )
+bimap_scripts_path <- ".."
+source( paste( bimap_scripts_path, "BIMAP.R", sep = .Platform$file.sep ) )
+source( paste( bimap_scripts_path, "BIMAP_plot.R", sep = .Platform$file.sep ) )
+source( paste( bimap_scripts_path, "BIMAP_gen.R", sep = .Platform$file.sep ) )
 
 require( compoisson )
 

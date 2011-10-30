@@ -3,8 +3,8 @@
 # Author: Alexey Stukalov
 ###############################################################################
 
-source( paste( ppi_scripts_path, "BIMAP.R", sep = .Platform$file.sep ) )
-source( paste( ppi_scripts_path, "BIMAPMath.R", sep = .Platform$file.sep ) )
+source( paste( bimap_scripts_path, "BIMAP.R", sep = .Platform$file.sep ) )
+source( paste( bimap_scripts_path, "BIMAPMath.R", sep = .Platform$file.sep ) )
 
 #' Loads cross-clusters matrix from file
 #' @param matrix_file 

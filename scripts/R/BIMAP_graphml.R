@@ -5,7 +5,7 @@
 
 require( plyr )
 
-source( file.path( ppi_scripts_path, "graphml_support.R" ) )
+source( file.path( bimap_scripts_path, "graphml_support.R" ) )
 
 bimap.graph.dataframe <- function( bimap.props,
     protein.info, sample.info, msrun.info,

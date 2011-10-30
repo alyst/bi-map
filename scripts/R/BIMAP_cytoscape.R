@@ -5,8 +5,8 @@
 
 require(plyr)
 
-source( paste( ppi_scripts_path, "cytoscape_support.R", sep = .Platform$file.sep ) )
-source( paste( ppi_scripts_path, "BIMAP.R", sep = .Platform$file.sep ) )
+source( paste( bimap_scripts_path, "cytoscape_support.R", sep = .Platform$file.sep ) )
+source( paste( bimap_scripts_path, "BIMAP.R", sep = .Platform$file.sep ) )
 
 setClass( "BIMAPCytoscapeFilesWriter",
     contains = c( 'CytoscapeFilesWriter' ),

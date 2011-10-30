@@ -1,4 +1,4 @@
-source( paste( ppi_scripts_path, "cytoscape_support.R", sep = .Platform$file.sep ) )
+source( paste( bimap_scripts_path, "cytoscape_support.R", sep = .Platform$file.sep ) )
 
 # write Cytoscape's SIF file for given data.frame
 writeDataframeSIF <- function( dataframe, col_bait_ac, col_prey_ac, col_edge_type, filename_prefix = 'ppi', directed_edges = TRUE )
