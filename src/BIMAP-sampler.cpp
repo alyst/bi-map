@@ -22,10 +22,14 @@ int main( int argc, char* argv[] )
     BIMAPIOParams                  ioParams;
     bool                           mapBaitsToObjects = true;
 
-    BIMAPParamsRead( argc, argv,
+    if ( !BIMAPParamsRead( argc, argv,
                       hyperpriors, gibbsParams, cascadeParams,
                       signalParams, precomputedDataParams, priors,
-                      collectorParams, ioParams, mapBaitsToObjects );
+                      collectorParams, ioParams, mapBaitsToObjects ) )
+    {
+        // --help option was given, no computation
+        return ( 0 );
+    }
 
     OPAData data;
     if ( !ioParams.dataFilename.empty() ) {

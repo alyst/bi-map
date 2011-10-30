@@ -109,6 +109,7 @@ int main( int argc, char* argv[] )
     boost::scoped_ptr<BIMAPSampleCollectorParams>    collectorParams;
     boost::scoped_ptr<BIMAPIOParams>  ioParams;
     bool mapBaitsToObjects = true;
+    bool params_res = false;
     if ( world.rank() == 0 ) {
         priors.reset( new ChessboardBiclusteringPriors() );
         priors->probeClustering.concentration = 0.01;
@@ -123,11 +124,12 @@ int main( int argc, char* argv[] )
         ioParams.reset( new BIMAPIOParams() );
         collectorParams.reset( new BIMAPSampleCollectorParams() );
 
-        BIMAPParamsRead( argc, argv,
+        params_res = BIMAPParamsRead( argc, argv,
                           hyperpriors, gibbsParams, cascadeParams,
                           *signalParams, *precomputedDataParams, *priors,
                           *collectorParams, *ioParams, mapBaitsToObjects );
 
+        if ( params_res ) {
         if ( !ioParams->dataFilename.empty() ) {
             boost::filesystem::path data_file_path( ioParams->dataFilename );
             LOG_DEBUG1( "#" << world.rank() << ": loading data from " << data_file_path << "..." );
@@ -160,10 +162,14 @@ int main( int argc, char* argv[] )
 
         LOG_INFO( "Precomputing..." );
         precomputed.reset( new PrecomputedData( *data, *precomputedDataParams, *signalParams ) );
+        }
     }
     LOG_INFO( "#" << world.rank() << ": " 
               << ( world.rank() == 0 ? "broadcasting" : "receiving" )
               << " input data" );
+    mpi::broadcast( world, params_res, 0 );
+    if ( !params_res ) return ( 0 ); // --help option, no computation
+
     mpi::broadcast( world, hyperpriors, 0 );
     mpi::broadcast( world, gibbsParams, 0 );
     mpi::broadcast( world, cascadeParams, 0 );
