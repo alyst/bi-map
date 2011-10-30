@@ -61,8 +61,9 @@ ProbesClusterParams::ProbesClusterParams(
 
 ChessboardBiclustering::ChessboardBiclustering(
     size_t  objectsCount,
-    size_t  probesCount
-) : ChessboardBiclusteringData( ChessboardBiclusteringDerivedPriors(), signal_params_type(), noise_params_type() )
+    size_t  probesCount,
+    bool    mapBaitsToObjects
+) : ChessboardBiclusteringData( ChessboardBiclusteringDerivedPriors(), signal_params_type(), noise_params_type(), mapBaitsToObjects )
   , _objectToCluster( objectsCount, CLUSTER_NA )
   , _probeToCluster( probesCount, CLUSTER_NA )
   , _objectsClustersCleanupRequired( false )
@@ -77,8 +78,9 @@ ChessboardBiclustering::ChessboardBiclustering(
     const signal_params_type&               baselineSignal,
     const noise_params_type&                noiseParams,
     const PitmanYorSample&                  objectsClusters,
-    const PitmanYorSample&                  probesClusters
-) : ChessboardBiclusteringData( derivedPriors, baselineSignal, noiseParams )
+    const PitmanYorSample&                  probesClusters,
+    bool  mapBaitsToObjects
+) : ChessboardBiclusteringData( derivedPriors, baselineSignal, noiseParams, mapBaitsToObjects )
   , _objectToCluster( objectsClusters.samplesCount(), CLUSTER_NA )
   , _probeToCluster( probesClusters.samplesCount(), CLUSTER_NA )
   , _objectsClustersCleanupRequired( false )

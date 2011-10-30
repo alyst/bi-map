@@ -23,7 +23,8 @@ bool BIMAPParamsRead(
     PrecomputedDataParams&          precomputedDataParams,
     ChessboardBiclusteringPriors&   priors,
     BIMAPSampleCollectorParams&     collectorParams,
-    BIMAPIOParams&                  ioParams
+    BIMAPIOParams&                  ioParams,
+    bool&                           mapBaitsToObjects
 ){
     // Declare the supported options
     po::positional_options_description p;
@@ -46,6 +47,9 @@ bool BIMAPParamsRead(
             "MS measurements table (MS run ID, protein AC, Spectral Counts, [Peptide Counts]) in CSV (tab-separated) format, required if not input_file provided" )
         ( "csv_column_separator", po::value<char>( &ioParams.csvColumnSeparator )->default_value( ioParams.csvColumnSeparator ),
             "CSV files column separator" )
+
+        ( "map_baits_to_preys", po::value<bool>( &mapBaitsToObjects )->default_value( mapBaitsToObjects ),
+          "if true, baits are regarded as proteins and experimental design likelihood component is calculated" )
 
         ( "output_file", po::value< std::string >( &ioParams.outputFilename ),
             "output filename <serialized BIMAP walk>" );

@@ -140,19 +140,23 @@ struct ChessboardBiclusteringData {
     typedef ObjectsClusterSignal    signal_params_type;
     typedef GeometricDistribution   noise_params_type;
 
-    ChessboardBiclusteringDerivedPriors    _derivedPriors;         /**< priors derived from hyperpriors */
+    ChessboardBiclusteringDerivedPriors    _derivedPriors;  /**< priors derived from hyperpriors */
     signal_params_type              _baselineSignalParams;  /**< mean signal from cells (calibration constant + "variance") */
     noise_params_type               _noiseParams;           /**< signal from cells, uncovered by clustering -- i.e. true/false negatives */
+    bool                            _mapBaitsToObjects;     /**< If baits would be mapped to objects */
 
     ChessboardBiclusteringData()
     {}
 
-    ChessboardBiclusteringData( const ChessboardBiclusteringDerivedPriors& derivedPriors,
-                         const signal_params_type& baselineSignalParams,
-                         const noise_params_type& noiseParams
+    ChessboardBiclusteringData(
+        const ChessboardBiclusteringDerivedPriors& derivedPriors,
+        const signal_params_type& baselineSignalParams,
+        const noise_params_type& noiseParams,
+        bool  mapBaitsToObjects = true
     ) : _derivedPriors( derivedPriors )
       , _baselineSignalParams( baselineSignalParams )
       , _noiseParams( noiseParams )
+      , _mapBaitsToObjects( mapBaitsToObjects )
     {
     }
 
@@ -162,6 +166,7 @@ struct ChessboardBiclusteringData {
         ar & boost::serialization::make_nvp( "derivedPriors", _derivedPriors );
         ar & boost::serialization::make_nvp( "baselineSignalParams", _baselineSignalParams );
         ar & boost::serialization::make_nvp( "noiseParams", _noiseParams );
+        ar & boost::serialization::make_nvp( "mapBaitsToObjects", _mapBaitsToObjects );
     }
 };
 

@@ -153,8 +153,8 @@ public:
     }
     ChessboardBiclusteringDerivedPriors randomPriors() const;
     void randomizeMissingData( ChessboardBiclustering& clus ) const;
-    ChessboardBiclustering randomClustering() const;
-    ChessboardBiclustering trivialClustering() const;
+    ChessboardBiclustering randomClustering( bool mapBaitsToObjects = true ) const;
+    ChessboardBiclustering trivialClustering( bool mapBaitsToObjects = true ) const;
 };
 
 struct BIMAPSampleCollectorParams {

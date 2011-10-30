@@ -108,6 +108,7 @@ int main( int argc, char* argv[] )
     boost::scoped_ptr<PrecomputedData> precomputed;
     boost::scoped_ptr<BIMAPSampleCollectorParams>    collectorParams;
     boost::scoped_ptr<BIMAPIOParams>  ioParams;
+    bool mapBaitsToObjects = true;
     if ( world.rank() == 0 ) {
         priors.reset( new ChessboardBiclusteringPriors() );
         priors->probeClustering.concentration = 0.01;
@@ -125,7 +126,7 @@ int main( int argc, char* argv[] )
         BIMAPParamsRead( argc, argv,
                           hyperpriors, gibbsParams, cascadeParams,
                           *signalParams, *precomputedDataParams, *priors,
-                          *collectorParams, *ioParams );
+                          *collectorParams, *ioParams, mapBaitsToObjects );
 
         if ( !ioParams->dataFilename.empty() ) {
             boost::filesystem::path data_file_path( ioParams->dataFilename );
@@ -180,7 +181,7 @@ int main( int argc, char* argv[] )
 
     LOG_DEBUG1( "#" << world.rank() << ": setting initial clustering..." );
     ChessboardBiclustering iniClus;
-    if ( world.rank() == 0 ) iniClus = helper.trivialClustering();
+    if ( world.rank() == 0 ) iniClus = helper.trivialClustering( mapBaitsToObjects );
     mpi::broadcast( world, iniClus, 0 );
 
     StdOutPTCExecutionMonitor   mon( 1 );

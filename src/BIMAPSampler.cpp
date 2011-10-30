@@ -135,9 +135,10 @@ void BIMAPSamplerHelper::randomizeMissingData( ChessboardBiclustering& clus ) co
     BOOST_ASSERT( clus.checkCrossClusters() );
 }
 
-ChessboardBiclustering BIMAPSamplerHelper::randomClustering() const
-{
-    ChessboardBiclustering res( data().objectsCount(), data().probesCount() );
+ChessboardBiclustering BIMAPSamplerHelper::randomClustering(
+    bool mapBaitsToObjects
+) const {
+    ChessboardBiclustering res( data().objectsCount(), data().probesCount(), mapBaitsToObjects );
     randomizeMissingData( res );
     return ( res );
 }
@@ -146,9 +147,10 @@ ChessboardBiclustering BIMAPSamplerHelper::randomClustering() const
  *  Put it object and probe to separate cluster,
  *  enable bicluster, if non-zero data in the cell.
  */
-ChessboardBiclustering BIMAPSamplerHelper::trivialClustering() const
-{
-    ChessboardBiclustering res( data().objectsCount(), data().probesCount() );
+ChessboardBiclustering BIMAPSamplerHelper::trivialClustering(
+    bool mapBaitsToObjects
+) const {
+    ChessboardBiclustering res( data().objectsCount(), data().probesCount(), mapBaitsToObjects );
     LOG_DEBUG2( "Putting each probe to separate cluster..." );
     for ( probe_index_t probeIx = 0; probeIx < res.probesCount(); probeIx++ ) {
         res.addProbeCluster( probeIx );

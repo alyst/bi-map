@@ -28,6 +28,7 @@ bool BIMAPParamsRead(
     PrecomputedDataParams&          precomputedDataParams,
     ChessboardBiclusteringPriors&   priors,
     BIMAPSampleCollectorParams&     collectorParams,
-    BIMAPIOParams&                  ioParams
+    BIMAPIOParams&                  ioParams,
+    bool&                           mapBaitsToObjects
 );
 

@@ -20,11 +20,12 @@ int main( int argc, char* argv[] )
     ChessboardBiclusteringPriors           priors;
     BIMAPSampleCollectorParams     collectorParams;
     BIMAPIOParams                  ioParams;
+    bool                           mapBaitsToObjects = true;
 
     BIMAPParamsRead( argc, argv,
                       hyperpriors, gibbsParams, cascadeParams,
                       signalParams, precomputedDataParams, priors,
-                      collectorParams, ioParams );
+                      collectorParams, ioParams, mapBaitsToObjects );
 
     OPAData data;
     if ( !ioParams.dataFilename.empty() ) {
@@ -61,10 +62,10 @@ int main( int argc, char* argv[] )
 
     LOG_DEBUG1( "Initializing sampler..." );
     BIMAPSamplerHelper         helper( precomputed,
-                                        hyperpriors, priors, gibbsParams, 1981 );
+                                       hyperpriors, priors, gibbsParams, 1981 );
 
     LOG_DEBUG1( "Setting initial clustering..." );
-    ChessboardBiclustering iniClus = helper.trivialClustering();
+    ChessboardBiclustering iniClus = helper.trivialClustering( mapBaitsToObjects );
 
     StdOutPTCExecutionMonitor   mon( 1 );
     ChessboardBiclusteringsIndexing    ccIndexing;
