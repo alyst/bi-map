@@ -25,8 +25,6 @@ TEST( BIMAPSampler, one_by_one_parameter_estimation )
     ChessboardBiclusteringHyperPriors  hyperpriors;
     ChessboardBiclusteringPriors       priors;
     PrecomputedDataParams       precomputedDataParams;
-    precomputedDataParams.objectNeighbourThreshold =
-    precomputedDataParams.probeNeighbourThreshold = 0.2;
     CellSignalParams            signalParams;
     GibbsSamplerParams          gibbsParams;
     TurbineCascadeParams        cascadeParams;
@@ -372,8 +370,6 @@ protein 1-1 1-2 1-3 1-4   2-1   2-2   2-3   2-4 3-1 3-2 3-3 3-4   4-1   4-2   4-
     //priors.noise = BetaDistribution( 1000, 1 );
     priors.cellEnablementProb = 0.01;
     PrecomputedDataParams       precomputedDataParams;
-    precomputedDataParams.objectNeighbourThreshold =
-    precomputedDataParams.probeNeighbourThreshold = 1;
     CellSignalParams            signalParams;
     signalParams.sequenceLengthFactor = 0.5;
     signalParams.scShape = 0.5;

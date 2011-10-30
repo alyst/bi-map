@@ -12,8 +12,6 @@ ENABLE_STATIC_TRACKING( PrecomputedData )
 PrecomputedDataParams::PrecomputedDataParams()
 : objectFreqThreshold( 0.65 )
 , probeFreqThreshold( 0.65 )
-, objectNeighbourThreshold( 0.05 )
-, probeNeighbourThreshold( 0.05 )
 {
 }
 
@@ -28,15 +26,11 @@ PrecomputedData::PrecomputedData(
   , _probeCoHitsDistances( ProbesObservations( data ), params.objectFreqThreshold, true )
   , _objectCoSignalDistances( _llhMaximizer.evalObjectCoSignalDistances() )
   , _probeCoSignalDistances( _llhMaximizer.evalProbeCoSignalDistances() )
-  , _objectsNeighbourhood( CreateCoOccurrenceGraph( _objectCoHitsDistances.allObservations(),
-                                                    _objectCoHitsDistances.specificObservations(),
-                                                     params.objectNeighbourThreshold ) )
-  , _probesNeighbourhood( CreateCoOccurrenceGraph( _probeCoHitsDistances.allObservations(),
-                                                   _probeCoHitsDistances.specificObservations(),
-                                                   params.probeNeighbourThreshold ) )
 {
-    LOG_INFO( "Objects sampling bias ln_odds_ratio=" << boost::format( "%.3f" ) % _probeCoHitsDistances.observationsBias() );
-    LOG_INFO( "Probes sampling bias ln_odds_ratio=" << boost::format( "%.3f" ) % _objectCoHitsDistances.observationsBias() );
+    LOG_INFO( "Objects sampling bias ln_odds_ratio="
+              << boost::format( "%.3f" ) % _probeCoHitsDistances.observationsBias() );
+    LOG_INFO( "Probes sampling bias ln_odds_ratio="
+              << boost::format( "%.3f" ) % _objectCoHitsDistances.observationsBias() );
 }
 
 /**

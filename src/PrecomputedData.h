@@ -52,9 +52,6 @@ struct PrecomputedDataParams {
     prob_t    objectFreqThreshold;      /** max frequency of object (for probes neighbourhood) */
     prob_t    probeFreqThreshold;       /** max frequency of probe (for objects neighbourhood) */
 
-    prob_t    objectNeighbourThreshold; /** max p-value for objects to be neighbours */
-    prob_t    probeNeighbourThreshold;  /** max p-value for probes to be neighbours */
-
     PrecomputedDataParams();
 
     template<class Archive>
@@ -62,8 +59,6 @@ struct PrecomputedDataParams {
     {
         ar & BOOST_SERIALIZATION_NVP( objectFreqThreshold );
         ar & BOOST_SERIALIZATION_NVP( probeFreqThreshold );
-        ar & BOOST_SERIALIZATION_NVP( objectNeighbourThreshold );
-        ar & BOOST_SERIALIZATION_NVP( probeNeighbourThreshold );
     }
 };
 

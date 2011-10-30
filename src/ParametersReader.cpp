@@ -152,10 +152,6 @@ bool BIMAPParamsRead(
             "maximal frequence of object occurences in probes to be still used for probes neighbourhood checking" )
         ( "precomputed.probe_freq_threshold", po::value<double>( &precomputedDataParams.probeFreqThreshold )->default_value( precomputedDataParams.probeFreqThreshold ),
             "maximal frequence of object occurences in probes to be still used for probes neighbourhood checking" )
-        ( "precomputed.object_neighbour_threshold", po::value<double>( &precomputedDataParams.objectNeighbourThreshold )->default_value( precomputedDataParams.objectNeighbourThreshold ),
-            "p-value threshold for objects to be considered neighbouring for sampling" )
-        ( "precomputed.probe_neighbour_threshold", po::value<double>( &precomputedDataParams.probeNeighbourThreshold )->default_value( precomputedDataParams.probeNeighbourThreshold ),
-            "p-value threshold for probes to be considered neighbouring for sampling" )
     ;
 
     po::options_description gibbs_sampler_params_desc( "Gibbs sampler parameters" );
