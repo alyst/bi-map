@@ -63,12 +63,14 @@ BIMAP.import_msdata <- function( ms_data, protein_info, msrun.multipliers = NULL
 ){
     ms_data_noglob <- ms_data[ ms_data[, msrun_column ] != '#glob#', ]
     measurements.df <- data.frame(
-            prey_ac = as.character( ms_data_noglob[, prey_column ] ),
             msrun = as.character( ms_data_noglob[, msrun_column ] ),
+            prey_ac = as.character( ms_data_noglob[, prey_column ] ),
             sc = as.integer( ms_data_noglob[, sc_column ] ),
-            pc = as.integer( ms_data_noglob[, pc_column ] ),
             stringsAsFactors = FALSE
         )
+    if ( !is.null( pc_column ) ) {
+        measurements.df$pc <- as.integer( ms_data_noglob[, pc_column ] )
+    }
     samples.df <- unique( subset( ms_data_noglob, select = unique( c( sample_column, bait_column ) ) ) )
     samples.df <- data.frame( 
             sample = as.character( samples.df[, sample_column ] ), 

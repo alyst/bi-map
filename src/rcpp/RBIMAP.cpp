@@ -223,8 +223,8 @@ OPAData ReadMassSpecData(
     // protein-id msrun-id sc pc
     {
         Rprintf( "Reading measurements...\n" );
-        Rcpp::StringVector proteinAc = measurementsFrame[ 0 ];
-        Rcpp::StringVector msrunCode = measurementsFrame[ 1 ];
+        Rcpp::StringVector msrunCode = measurementsFrame[ 0 ];
+        Rcpp::StringVector proteinAc = measurementsFrame[ 1 ];
         Rcpp::IntegerVector scVec = measurementsFrame[ 2 ];
         Rcpp::IntegerVector pcVec = measurementsFrame.size() >= 4
                                ? measurementsFrame[ 3 ] : Rcpp::IntegerVector();
