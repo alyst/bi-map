@@ -15,6 +15,7 @@ struct BIMAPIOParams {
     std::string     expDesignFilename;
     std::string     measurementsFilename;
     char            csvColumnSeparator;
+    bool            mapBaitsToObjects;
 
     BIMAPIOParams();
 };
@@ -28,7 +29,6 @@ bool BIMAPParamsRead(
     PrecomputedDataParams&          precomputedDataParams,
     ChessboardBiclusteringPriors&   priors,
     BIMAPSampleCollectorParams&     collectorParams,
-    BIMAPIOParams&                  ioParams,
-    bool&                           mapBaitsToObjects
+    BIMAPIOParams&                  ioParams
 );
 

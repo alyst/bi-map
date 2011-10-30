@@ -54,11 +54,11 @@ public:
     observations_mask_type compactObjectsMask( const observations_mask_type& objectsMask ) const;
 
     log_prob_t probeClustersPerObjectClusterLLH( size_t probeClustersCount ) const {
-        return ( _clustering.isMapBaitsToObjects() && probeClustersCount > 0
+        return ( data().isMapBaitsToObjects() && probeClustersCount > 0
                  ? _probeCluPerObjClu( probeClustersCount ) : 0 );
     }
     log_prob_t objectClustersPerProbeClusterLLH( size_t objectClustersCount ) const {
-        return ( _clustering.isMapBaitsToObjects() && objectClustersCount > 0
+        return ( data().isMapBaitsToObjects() && objectClustersCount > 0
                  ? _objCluPerProbeClu( objectClustersCount ) : 0 );
     }
 };

@@ -31,8 +31,9 @@ std::string entity_error::compose_error_msg(
     return ( out.str() );
 }
 
-OPAData::OPAData()
+OPAData::OPAData( bool mapBaitsToObjects )
     : _hitsDirty( true )
+    , _mapBaitsToObjects( mapBaitsToObjects )
 {
 }
 
@@ -106,13 +107,15 @@ OPAData::const_probe_ptr_t OPAData::addProbe(
         throw std::runtime_error( "Cannot add probe, measurements matrix already initialized" );
     }
     const_object_ptr_t  pBait = NULL;
-    if ( !baitLabel.empty() ) {
-        pBait = object( baitLabel );
-        if ( !pBait ) {
-            throw entity_not_found( "Bait", baitLabel );
+    if ( isMapBaitsToObjects() ) {
+        if ( !baitLabel.empty() ) {
+            pBait = object( baitLabel );
+            if ( !pBait ) {
+                throw entity_not_found( "Bait", baitLabel );
+            }
+        } else {
+            LOG_WARN( "No bait label for probe '" << label << "', assuming no bait" );
         }
-    } else {
-        LOG_WARN( "No bait label for probe '" << label << "', assuming no bait" );
     }
     const_probe_ptr_t  pPrevProbe = probe( label );
     if ( pPrevProbe ) {

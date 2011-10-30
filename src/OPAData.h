@@ -197,6 +197,7 @@ private:
     typedef boost::unordered_map<assay_label_t, assay_index_t>      assay_label_to_index_map_t;
     typedef boost::unordered_multimap<object_index_t, probe_index_t>   bait_to_probe_mmap_t;
 
+    bool                        _mapBaitsToObjects;     /**< If baits would be mapped to objects */
     probe_vector_t              _probes;
     object_vector_t             _objects;
 
@@ -240,6 +241,7 @@ protected:
     template<class Archive>
     void load(Archive & ar, const unsigned int version)
     {
+        ar >> boost::serialization::make_nvp( "mapBaitsToObjects", _mapBaitsToObjects );
         ar >> boost::serialization::make_nvp( "probes", _probes );
         ar >> boost::serialization::make_nvp( "objects", _objects );
         ar >> boost::serialization::make_nvp( "assays", _assays );
@@ -251,6 +253,7 @@ protected:
     template<class Archive>
     void save(Archive & ar, const unsigned int version) const
     {
+        ar << boost::serialization::make_nvp( "mapBaitsToObjects", _mapBaitsToObjects );
         ar << boost::serialization::make_nvp( "probes", _probes );
         ar << boost::serialization::make_nvp( "objects", _objects );
         ar << boost::serialization::make_nvp( "assays", _assays );
@@ -262,8 +265,11 @@ public:
     typedef OPAObject const*                const_object_ptr_t;
     typedef bait_to_probe_mmap_t::const_iterator const_bait_to_probe_iterator;
 
-    OPAData();
+    OPAData( bool mapBaitsToObjects = true );
 
+    bool isMapBaitsToObjects() const {
+        return ( _mapBaitsToObjects );
+    }
     size_type objectsCount() const {
         return ( _objects.size() );
     }

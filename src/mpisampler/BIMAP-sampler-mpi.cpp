@@ -108,7 +108,6 @@ int main( int argc, char* argv[] )
     boost::scoped_ptr<PrecomputedData> precomputed;
     boost::scoped_ptr<BIMAPSampleCollectorParams>    collectorParams;
     boost::scoped_ptr<BIMAPIOParams>  ioParams;
-    bool mapBaitsToObjects = true;
     bool params_res = false;
     if ( world.rank() == 0 ) {
         priors.reset( new ChessboardBiclusteringPriors() );
@@ -127,7 +126,7 @@ int main( int argc, char* argv[] )
         params_res = BIMAPParamsRead( argc, argv,
                           hyperpriors, gibbsParams, cascadeParams,
                           *signalParams, *precomputedDataParams, *priors,
-                          *collectorParams, *ioParams, mapBaitsToObjects );
+                          *collectorParams, *ioParams );
 
         if ( params_res ) {
         if ( !ioParams->dataFilename.empty() ) {
@@ -155,6 +154,7 @@ int main( int argc, char* argv[] )
             data.reset( new OPAData( OPADataImportCSV( proteins_file_path.string().c_str(),
                                     exp_design_file_path.string().c_str(),
                                     measurements_file_path.string().c_str(),
+                                    ioParams->mapBaitsToObjects,
                                     ioParams->csvColumnSeparator ) ) );
         } else {
             THROW_RUNTIME_ERROR( "No input data" );
@@ -187,7 +187,7 @@ int main( int argc, char* argv[] )
 
     LOG_DEBUG1( "#" << world.rank() << ": setting initial clustering..." );
     ChessboardBiclustering iniClus;
-    if ( world.rank() == 0 ) iniClus = helper.trivialClustering( mapBaitsToObjects );
+    if ( world.rank() == 0 ) iniClus = helper.trivialClustering();
     mpi::broadcast( world, iniClus, 0 );
 
     StdOutPTCExecutionMonitor   mon( 1 );

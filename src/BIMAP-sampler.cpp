@@ -20,12 +20,11 @@ int main( int argc, char* argv[] )
     ChessboardBiclusteringPriors           priors;
     BIMAPSampleCollectorParams     collectorParams;
     BIMAPIOParams                  ioParams;
-    bool                           mapBaitsToObjects = true;
 
     if ( !BIMAPParamsRead( argc, argv,
                       hyperpriors, gibbsParams, cascadeParams,
                       signalParams, precomputedDataParams, priors,
-                      collectorParams, ioParams, mapBaitsToObjects ) )
+                      collectorParams, ioParams ) )
     {
         // --help option was given, no computation
         return ( 0 );
@@ -56,6 +55,7 @@ int main( int argc, char* argv[] )
         data = OPADataImportCSV( proteins_file_path.string().c_str(),
                                  exp_design_file_path.string().c_str(),
                                  measurements_file_path.string().c_str(),
+                                 ioParams.mapBaitsToObjects,
                                  ioParams.csvColumnSeparator );
     } else {
         THROW_RUNTIME_ERROR( "No input data" );
@@ -69,7 +69,7 @@ int main( int argc, char* argv[] )
                                        hyperpriors, priors, gibbsParams, 1981 );
 
     LOG_DEBUG1( "Setting initial clustering..." );
-    ChessboardBiclustering iniClus = helper.trivialClustering( mapBaitsToObjects );
+    ChessboardBiclustering iniClus = helper.trivialClustering();
 
     StdOutPTCExecutionMonitor   mon( 1 );
     ChessboardBiclusteringsIndexing    ccIndexing;

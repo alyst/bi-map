@@ -11,6 +11,7 @@ BIMAPIOParams::BIMAPIOParams()
     , minObjectsPtnRefCount( 1 )
     , minProbesPtnRefCount( 1 )
     , csvColumnSeparator( '\t' )
+    , mapBaitsToObjects( true )
 {
 }
 
@@ -23,8 +24,7 @@ bool BIMAPParamsRead(
     PrecomputedDataParams&          precomputedDataParams,
     ChessboardBiclusteringPriors&   priors,
     BIMAPSampleCollectorParams&     collectorParams,
-    BIMAPIOParams&                  ioParams,
-    bool&                           mapBaitsToObjects
+    BIMAPIOParams&                  ioParams
 ){
     // Declare the supported options
     po::positional_options_description p;
@@ -48,7 +48,7 @@ bool BIMAPParamsRead(
         ( "csv_column_separator", po::value<char>( &ioParams.csvColumnSeparator )->default_value( ioParams.csvColumnSeparator ),
           "CSV files column separator (TAB used by default)" )
 
-        ( "map_baits_to_preys", po::value<bool>( &mapBaitsToObjects )->default_value( mapBaitsToObjects ),
+        ( "map_baits_to_preys", po::value<bool>( &ioParams.mapBaitsToObjects )->default_value( ioParams.mapBaitsToObjects ),
           "if true, baits are regarded as proteins and experimental design likelihood component is calculated" )
 
         ( "output_file", po::value< std::string >( &ioParams.outputFilename ),

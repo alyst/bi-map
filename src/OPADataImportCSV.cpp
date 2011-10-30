@@ -115,9 +115,10 @@ OPAData OPADataImportCSV(
     const char* proteinsFilename,
     const char* expDesignFilename,
     const char* measurementsFilename,
-    char sep
+    bool        mapBaitsToObjects,
+    char        sep
 ){
-    OPAData data;
+    OPAData data( mapBaitsToObjects );
     ImportProteins( data, proteinsFilename, sep );
     ImportExpDesign( data, expDesignFilename, sep );
     ImportMeasurements( data, measurementsFilename, sep );

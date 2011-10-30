@@ -366,13 +366,11 @@ public:
     class ProbesClusterParamsProxy;
     friend class ProbesClusterParamsProxy;
 
-    ChessboardBiclustering( size_t objectsCount = 0, size_t probesCount = 0,
-                            bool mapBaitsToObjects = true );
+    ChessboardBiclustering( size_t objectsCount = 0, size_t probesCount = 0 );
 
     ChessboardBiclustering( const ChessboardBiclusteringDerivedPriors& derivedPriors,
                      const signal_params_type& baselineSignal, const noise_params_type& noiseParams,
-                     const PitmanYorSample& objectsClusters, const PitmanYorSample& probesClusters,
-                     bool mapBaitsToObjects = true );
+                     const PitmanYorSample& objectsClusters, const PitmanYorSample& probesClusters );
 
     static cluster_cell_key_type clusterCellKey( object_clundex_t objCluIx, probe_clundex_t probeCluIx )
     {
@@ -538,9 +536,6 @@ public:
     }
     const noise_params_type& noiseParams() const {
         return ( _noiseParams );
-    }
-    bool isMapBaitsToObjects() const {
-        return ( _mapBaitsToObjects );
     }
 
     void setNoiseParams( const noise_params_type& noiseParams ) {
