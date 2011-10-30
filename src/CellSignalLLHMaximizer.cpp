@@ -242,7 +242,7 @@ log_prob_t CellSignalLLHMaximizer::maximizeSignalLLHA(
  *   Distances between vectors of measurements
  *   based on LLH of cluster containing these 2 elements.
  */
-log_prob_t CellSignalLLHMaximizer::evalObjectsCoSignalLLH(
+log_prob_t CellSignalLLHMaximizer::evalObjectsPrelimDistance(
     object_index_t  obj1ix,
     object_index_t  obj2ix
 ) const {
@@ -254,7 +254,7 @@ log_prob_t CellSignalLLHMaximizer::evalObjectsCoSignalLLH(
     objs.insert( obj1ix );
     objs.insert( obj2ix );
     const size_t MaxMultiple = 3; // maximum object multiple to test
-    log_prob_t maxLLH = unset();
+    log_prob_t minDist = unset();
     for ( size_t mult1 = 1; mult1 <= MaxMultiple; mult1++ ) {
         for ( size_t mult2 = 1; mult2 <= MaxMultiple; mult2++ ) {
             if ( mult1 == mult2 && mult1 > 1 ) continue;
@@ -263,27 +263,20 @@ log_prob_t CellSignalLLHMaximizer::evalObjectsCoSignalLLH(
 
             const OPAData::celldata_t*  cell1DataVec = &data().measurement( obj1ix, 0 );
             const OPAData::celldata_t*  cell2DataVec = &data().measurement( obj2ix, 0 );
-            double llh = 0;
+            double dist = 0;
             // calculate signal for each assay individually
             for ( assay_index_t assayIx = 0; assayIx < data().assaysCount(); assayIx++ ) {
-                assays.set( assayIx );
+                double v1 = (double)(cell1DataVec++)->sc / mult1;
+                double v2 = (double)(cell2DataVec++)->sc / mult2;
 
-                double noiseLLH = noiseModel.lnPdf( (cell1DataVec++)->sc )
-                                + noiseModel.lnPdf( (cell2DataVec++)->sc ); // q-value for geom.distr
-
-                // evaluate signalLLH using signal that maximizes it
-                signal_t signal = clusterSignalA( objs, assays, _multCache );
-                log_prob_t  signalLLH = maximizeSignalLLHA( objs, assays,
-                                                           _multCache, signal );
-
-                llh += std::max( signalLLH, noiseLLH );
-                assays.set( assayIx, false );
+                dist += gsl_pow_2( v1 - v2 );
             }
-            if ( is_unset( maxLLH ) || maxLLH < llh ) maxLLH = llh;
+            dist = sqrt( dist );
+            if ( is_unset( minDist ) || minDist > dist ) minDist = dist;
         }
     }
-    BOOST_ASSERT( !is_unset( maxLLH ) );
-    return ( maxLLH );
+    BOOST_ASSERT( !is_unset( minDist ) );
+    return ( minDist );
 }
 
 /**
@@ -297,51 +290,40 @@ symmetric_array2d<log_prob_t> CellSignalLLHMaximizer::evalObjectCoSignalDistance
     symmetric_array2d<log_prob_t>   distances( data().objectsCount() );
     for ( object_index_t elm1Ix = 0; elm1Ix < distances.size(); ++elm1Ix ) {
         for ( object_index_t elm2Ix = elm1Ix; elm2Ix < distances.size(); ++elm2Ix ) {
-            distances( elm1Ix, elm2Ix ) = -evalObjectsCoSignalLLH( elm1Ix, elm2Ix );
+            distances( elm1Ix, elm2Ix ) = evalObjectsPrelimDistance( elm1Ix, elm2Ix );
         }
     }
     return ( distances );
 }
 
-log_prob_t CellSignalLLHMaximizer::evalProbesCoSignalLLH(
+log_prob_t CellSignalLLHMaximizer::evalProbesPrelimDistance(
     probe_index_t  probe1ix,
     probe_index_t  probe2ix
 ) const {
     typedef GeometricDistribution noise_params_type;
     static noise_params_type noiseModel = noise_params_type::ByFailureRate( 1E-4, 0 );
 
-    assay_bitset_t assays( _data.assaysCount() );
-
     double maxLLH = unset();
     // _multCache.assign( _multCache.size(), 1 ); not required -- we don't care about signal
     const OPAProbe& probe1 = _data.probe( probe1ix );
     const OPAProbe& probe2 = _data.probe( probe2ix );
-    for ( assay_container_t::const_iterator a1it = probe1.assayIndexes().begin(); a1it != probe1.assayIndexes().end(); ++a1it ) {
-        assays.set( *a1it );
-        for ( assay_container_t::const_iterator a2it = probe2.assayIndexes().begin(); a2it != probe2.assayIndexes().end(); ++a2it ) {
-            assays.set( *a2it );
-            double llh = 0;
-            for ( object_index_t objIx = 0; objIx < data().objectsCount(); objIx++ ) {
-                object_set_t objs;
-                objs.insert( objIx );
-                const OPAData::celldata_t* cellDataVec = &data().measurement( objIx, 0 );
+    double llh = 0;
+    for ( object_index_t objIx = 0; objIx < data().objectsCount(); objIx++ ) {
+	const OPAData::celldata_t* cellDataVec = &data().measurement( objIx, 0 );
 
-                double noiseLLH = 0;
-                foreach_bit( assay_index_t, assayIx, assays ) {
-                    noiseLLH += noiseModel.lnPdf( cellDataVec[assayIx].sc );
-                }
+	double v1 = 0;
+	for ( assay_container_t::const_iterator a1it = probe1.assayIndexes().begin(); a1it != probe1.assayIndexes().end(); ++a1it ) {
+	    v1 += cellDataVec[*a1it].sc;
+	}
+	double v2 = 0;
+	for ( assay_container_t::const_iterator a2it = probe2.assayIndexes().begin(); a2it != probe2.assayIndexes().end(); ++a2it ) {
+	    v2 += cellDataVec[*a2it].sc;
+	}
 
-                // evaluate signal LLH using signal that maximizes it
-                signal_t signal = clusterSignalA( objs, assays, _multCache );
-                log_prob_t  signalLLH = maximizeSignalLLHA( objs, assays,
-                                                            _multCache, signal );
-                llh += std::max( signalLLH, noiseLLH );
-            }
-            if ( *a1it != *a2it ) assays.set( *a2it, false );
-            maxLLH = is_unset( maxLLH ) ? llh : std::max( maxLLH, llh );
-        }
-        assays.set( *a1it, false );
+	llh += gsl_pow_2( v1 - v2 );
     }
+    llh = sqrt( llh );
+    maxLLH = is_unset( maxLLH ) ? llh : std::max( maxLLH, llh );
     BOOST_ASSERT( !is_unset( maxLLH ) );
     return ( maxLLH );
 }
@@ -357,7 +339,7 @@ symmetric_array2d<log_prob_t> CellSignalLLHMaximizer::evalProbeCoSignalDistances
     symmetric_array2d<log_prob_t>   distances( data().probesCount() );
     for ( probe_index_t elm1Ix = 0; elm1Ix < distances.size(); ++elm1Ix ) {
         for ( probe_index_t elm2Ix = elm1Ix; elm2Ix < distances.size(); ++elm2Ix ) {
-            distances( elm1Ix, elm2Ix ) = -evalProbesCoSignalLLH( elm1Ix, elm2Ix );
+            distances( elm1Ix, elm2Ix ) = evalProbesPrelimDistance( elm1Ix, elm2Ix );
         }
     }
     return ( distances );

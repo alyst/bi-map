@@ -33,9 +33,9 @@ public:
         return ( _preliminarySignals );
     }
 
-    log_prob_t evalObjectsCoSignalLLH( object_index_t obj1ix,
+    log_prob_t evalObjectsPrelimDistance( object_index_t obj1ix,
                                       object_index_t obj2ix ) const;
-    log_prob_t evalProbesCoSignalLLH( probe_index_t probe1ix,
+    log_prob_t evalProbesPrelimDistance( probe_index_t probe1ix,
                                       probe_index_t probe2ix ) const;
     symmetric_array2d<log_prob_t> evalObjectCoSignalDistances() const;
     symmetric_array2d<log_prob_t> evalProbeCoSignalDistances() const;
