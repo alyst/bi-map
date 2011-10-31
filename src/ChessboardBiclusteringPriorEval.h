@@ -17,7 +17,7 @@ private:
     const ChessboardBiclustering&              _clustering;
 
 public:
-    typedef ChessboardBiclustering::const_cross_cluster_iterator const_cross_cluster_iterator;
+    typedef ChessboardBiclustering::const_block_iterator const_block_iterator;
 
     ChessboardBiclusteringPriorEval( const OPAData& data,
                               const ChessboardBiclusteringPriors& priors,
@@ -54,17 +54,17 @@ public:
         const GaussianDistribution& signalPrior = clustering().derivedPriors().signalPrior;
         return ( signalPrior( signal ) );
     }
-    log_prob_t crossClusterLPP( const ChessboardBiclustering::cross_cluster_proxy& crossCluster ) const;
-    log_prob_t crossClusterLPP( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const;
+    log_prob_t blockLPP( const ChessboardBiclustering::block_proxy& block ) const;
+    log_prob_t blockLPP( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const;
 
     /**
      *  Prior that also includes current signal prior.
      */
-    struct CrossClusterEnablementPrior {
+    struct BlockEnablementPrior {
         log_prob_t  lppEnabled;
         log_prob_t  lppDisabled;
 
-        CrossClusterEnablementPrior( 
+        BlockEnablementPrior( 
             const ChessboardBiclusteringPriors&        priors1,
             const ChessboardBiclusteringDerivedPriors& priors2,
             signal_t                            signal );
@@ -75,12 +75,12 @@ public:
         }
     };
 
-    CrossClusterEnablementPrior crossClusterEnablementPrior( signal_t signal ) const {
-        return ( CrossClusterEnablementPrior( _priors, _clustering.derivedPriors(), signal ) );
+    BlockEnablementPrior blockEnablementPrior( signal_t signal ) const {
+        return ( BlockEnablementPrior( _priors, _clustering.derivedPriors(), signal ) );
     }
 
-    const BernoulliDistribution& crossClusterEnablementPrior() const {
-        return ( _priors.crossClusterEnablementPrior );
+    const BernoulliDistribution& blockEnablementPrior() const {
+        return ( _priors.blockEnablementPrior );
     }
 
     const GeometricDistribution& objectMultiplePrior( size_t objects ) const {

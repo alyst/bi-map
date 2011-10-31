@@ -85,7 +85,7 @@ private:
         >
     > PriorParamsStepsIndexing;
 
-    ChessboardBiclusteringsIndexing&   _crossClusteringsIndexing;        /** walker's indexer of biclusterings */
+    ChessboardBiclusteringsIndexing&   _chessboardBiclusteringsIndexing;        /** walker's indexer of biclusterings */
     StepsIndexing               _steps;
     PriorParamsStepsIndexing    _priorParamsSteps;
 
@@ -103,10 +103,10 @@ private:
             ar << boost::serialization::make_nvp( "llh", stepit->llh );
             ar << boost::serialization::make_nvp( "lpp", stepit->lpp );
             default_serial_t serial = cclus.serial();
-            ar << boost::serialization::make_nvp( "crossClusteringSerial", serial );
+            ar << boost::serialization::make_nvp( "chessboardBiclusteringSerial", serial );
             ar << boost::serialization::make_nvp( "clusteringData", cclus );
             LOG_DEBUG2( stepit->iteration << ": " << cclus._objectClusterData.size() );
-            ar << boost::serialization::make_nvp( "crossClustersData", cclus._crossClustersData );
+            ar << boost::serialization::make_nvp( "blocksData", cclus._blocksData );
             ar << boost::serialization::make_nvp( "objectsData", cclus._objectsData );
         }
         ar << boost::serialization::make_nvp( "priorParamSteps", _priorParamsSteps );
@@ -128,20 +128,20 @@ private:
             ar >> BOOST_SERIALIZATION_NVP( llh );
             log_prob_t      lpp;
             ar >> BOOST_SERIALIZATION_NVP( lpp );
-            default_serial_t crossClusteringSerial;
-            ar >> BOOST_SERIALIZATION_NVP( crossClusteringSerial );
-            ChessboardBiclusteringsIndexing::const_serial_iterator pScaffoldIt = _crossClusteringsIndexing.iterator_to( crossClusteringSerial );
-            if ( pScaffoldIt == _crossClusteringsIndexing.serial_not_found() ) {
-                THROW_RUNTIME_ERROR( "Chessboard biclustering #" << crossClusteringSerial << " not found the index" );
+            default_serial_t chessboardBiclusteringSerial;
+            ar >> BOOST_SERIALIZATION_NVP( chessboardBiclusteringSerial );
+            ChessboardBiclusteringsIndexing::const_serial_iterator pScaffoldIt = _chessboardBiclusteringsIndexing.iterator_to( chessboardBiclusteringSerial );
+            if ( pScaffoldIt == _chessboardBiclusteringsIndexing.serial_not_found() ) {
+                THROW_RUNTIME_ERROR( "Chessboard biclustering #" << chessboardBiclusteringSerial << " not found the index" );
             }
             ChessboardBiclusteringData clusteringData;
             ar >> BOOST_SERIALIZATION_NVP( clusteringData );
-            ChessboardBiclusteringIndexed::cross_cluster_data_map_type crossClustersData;
-            ar >> BOOST_SERIALIZATION_NVP( crossClustersData );
+            ChessboardBiclusteringIndexed::block_data_map_type blocksData;
+            ar >> BOOST_SERIALIZATION_NVP( blocksData );
             multiple_map_t      objectsData;
             ar >> BOOST_SERIALIZATION_NVP( objectsData );
 
-            _steps.get<0>().push_back( BIMAPStep( time, turbineIx, ChessboardBiclusteringIndexed( *pScaffoldIt, crossClustersData, objectsData, clusteringData ), llh, lpp ) );
+            _steps.get<0>().push_back( BIMAPStep( time, turbineIx, ChessboardBiclusteringIndexed( *pScaffoldIt, blocksData, objectsData, clusteringData ), llh, lpp ) );
         }
         ar >> boost::serialization::make_nvp( "priorParamSteps", _priorParamsSteps );
     }
@@ -150,23 +150,23 @@ protected:
     friend class BIMAPSampler;
 
 public:
-    BIMAPWalk( ChessboardBiclusteringsIndexing& crossClusteringsIndexing );
+    BIMAPWalk( ChessboardBiclusteringsIndexing& chessboardBiclusteringsIndexing );
 
     typedef StepsIndexing::const_iterator const_step_iterator;
     typedef PriorParamsStepsIndexing::const_iterator const_priors_step_iterator;
 
     void step( step_time_t time, size_t turbineIx, const ChessboardBiclustering& clu, log_prob_t llh, log_prob_t lpp ) {
-        _steps.get<0>().push_back( BIMAPStep( time, turbineIx, clu, llh, lpp, _crossClusteringsIndexing ) );
+        _steps.get<0>().push_back( BIMAPStep( time, turbineIx, clu, llh, lpp, _chessboardBiclusteringsIndexing ) );
     }
     void step( step_time_t time, size_t turbineIx, const ChessboardBiclusteringDerivedPriors& priors ) {
         _priorParamsSteps.get<0>().push_back( BIMAPPriorParamsStep( time, turbineIx, priors ) );
     }
 
     const ChessboardBiclusteringsIndexing& indexing() const {
-        return ( _crossClusteringsIndexing );
+        return ( _chessboardBiclusteringsIndexing );
     }
     ChessboardBiclusteringsIndexing& indexing() {
-        return ( _crossClusteringsIndexing );
+        return ( _chessboardBiclusteringsIndexing );
     }
 
     size_t stepsCount() const {

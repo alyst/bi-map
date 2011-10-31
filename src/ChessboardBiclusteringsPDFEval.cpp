@@ -76,7 +76,7 @@ ChessboardBiclusteringsPDFEval::ChessboardBiclusteringsPDFEval
     _probePtnPartsPdf = PartitionPartsPDF( probePtnColl );
 
     evalCellsMaskFreqMap( walk );
-    evalCrossClustersFreqMap( walk );
+    evalBlocksFreqMap( walk );
 }
 
 /**
@@ -168,7 +168,7 @@ void ChessboardBiclusteringsPDFEval::evalCellsMaskFreqMap(
 /**
  *  Calculate frequency of cross-clusters in the samples, and frequency of their on/off probes.
  */
-void ChessboardBiclusteringsPDFEval::evalCrossClustersFreqMap(
+void ChessboardBiclusteringsPDFEval::evalBlocksFreqMap(
     const BIMAPWalk& walk
 ){
     // collection of maps from submask id to its counts,
@@ -184,11 +184,11 @@ void ChessboardBiclusteringsPDFEval::evalCrossClustersFreqMap(
             for ( ChessboardBiclusteringScaffold::const_probe_cluster_iterator scluIt = clustering.probeClusterBegin();
                 scluIt != clustering.probeClusterEnd(); ++scluIt
             ){
-                cross_cluster_id id( (*ocluIt)->serial(), (*scluIt)->serial() );
-                bool isEnabled = clustering.isCrossClusterEnabled( id.first, id.second );
-                cross_cluster_stats_map::iterator ccIt = _ccStats.find( id );
+                block_id id( (*ocluIt)->serial(), (*scluIt)->serial() );
+                bool isEnabled = clustering.isBlockEnabled( id.first, id.second );
+                block_stats_map::iterator ccIt = _ccStats.find( id );
                 if ( ccIt == _ccStats.end() ) {
-                    _ccStats.insert( ccIt, std::pair<cross_cluster_id, cross_cluster_stats>( id, cross_cluster_stats( 1, isEnabled ? 1 : 0 ) ) );
+                    _ccStats.insert( ccIt, std::pair<block_id, block_stats>( id, block_stats( 1, isEnabled ? 1 : 0 ) ) );
                 } else {
                     ccIt->second.first++;
                     if ( isEnabled ) ccIt->second.second++;

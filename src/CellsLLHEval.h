@@ -52,7 +52,7 @@ public:
         return ( _precomputed.data() );
     }
 
-    const ChessboardBiclusteringData& crossClusteringParams() const {
+    const ChessboardBiclusteringData& biclusteringParams() const {
         return ( _clusData );
     }
 
@@ -63,7 +63,7 @@ public:
     log_prob_t cellNoiseLnPdf( object_index_t objectIx, probe_index_t probeIx ) const;
     log_prob_t cellSignalLnPdf( object_index_t objectIx, probe_index_t probeIx ) const;
 
-    static log_prob_t CrossClusterBlockLLH(
+    static log_prob_t BlockLLH(
         const object_set_t&         objects,
         const probe_bitset_t&       probes,
         const lnprob_matrix_type&   lnPdf

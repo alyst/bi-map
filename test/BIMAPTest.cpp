@@ -21,7 +21,7 @@ TEST( BIMAPSampler, one_by_one_parameter_estimation )
 //      probe signal = 5, object.multiple = 1
     OPAData    data = loadTestOPAData( "osadata_1x1.xml" );
 
-    ChessboardBiclusteringsIndexing    crossClusteringsIndexing;
+    ChessboardBiclusteringsIndexing    chessboardBiclusteringsIndexing;
     ChessboardBiclusteringHyperPriors  hyperpriors;
     ChessboardBiclusteringPriors       priors;
     PrecomputedDataParams       precomputedDataParams;
@@ -34,7 +34,7 @@ TEST( BIMAPSampler, one_by_one_parameter_estimation )
     gibbsParams.objectMultipleRate = 0;
     gibbsParams.objectMembershipRate = gibbsParams.objectsSplitMergeRate = 0.0;
     gibbsParams.probeMembershipRate = gibbsParams.probesSplitMergeRate = 0.0;
-    gibbsParams.crossClusterFlipRate = gibbsParams.objectMembershipRate = 0.0;
+    gibbsParams.blockFlipRate = gibbsParams.objectMembershipRate = 0.0;
     signalParams.sequenceLengthFactor = 0.5;
     BIMAPSampleCollectorParams collectorParams;
     collectorParams.walkSamples = 200;
@@ -44,12 +44,12 @@ TEST( BIMAPSampler, one_by_one_parameter_estimation )
     clus.addObjectCluster( 0 );
     clus.addProbeCluster( 0 );
     clus.setObjectMultiple( 0, 1 );
-    clus.setCrossCluster( 0, 0, true );
+    clus.setBlock( 0, 0, true );
     StdOutPTCExecutionMonitor   mon( 1 );
     PrecomputedData    precomputed( data, precomputedDataParams, signalParams );
     BIMAPSamplerHelper         helper( precomputed,
                                         hyperpriors, priors, gibbsParams );
-    BIMAPWalk walk = BIMAPSampler_run( helper, crossClusteringsIndexing, gibbsParams, cascadeParams, 
+    BIMAPWalk walk = BIMAPSampler_run( helper, chessboardBiclusteringsIndexing, gibbsParams, cascadeParams, 
                                          collectorParams, clus, &mon );
     EXPECT_NO_THROW( walk.check() );
     LOG_INFO( "Clustering steps recorded: " << walk.stepsCount() );
@@ -62,8 +62,8 @@ TEST( BIMAPSampler, one_by_one_parameter_estimation )
 
     for ( BIMAPWalk::const_step_iterator it = walk.stepsBegin(); it != walk.stepsEnd(); ++it ) {
         const ChessboardBiclusteringIndexed& clus = it->clustering;
-        ASSERT_EQ( clus.crossClustersData().size(), 1 );
-        signal_t signal = clus.crossClustersData().begin()->second;
+        ASSERT_EQ( clus.blocksData().size(), 1 );
+        signal_t signal = clus.blocksData().begin()->second;
         signalSum += signal;
         signalSqrSum += signal * signal;
     }
@@ -181,7 +181,7 @@ TEST( BIMAPSampler, objects_partition )
             EXPECT_GT( data.measurement( objIx, assayIx ), 0 );
         }
     }
-    ChessboardBiclusteringsIndexing    crossClusteringsIndexing;
+    ChessboardBiclusteringsIndexing    chessboardBiclusteringsIndexing;
     PrecomputedDataParams       precomputedDataParams;
     CellSignalParams            signalParams;
     signalParams.sequenceLengthFactor = 0.5;
@@ -194,7 +194,7 @@ TEST( BIMAPSampler, objects_partition )
     GibbsSamplerParams          gibbsParams;
     gibbsParams.objectMembershipRate = 0;
     gibbsParams.objectsSplitMergeRate = 0.1; 
-    gibbsParams.crossClusterFlipRate = 0.5;
+    gibbsParams.blockFlipRate = 0.5;
     gibbsParams.probeMembershipRate = gibbsParams.probesSplitMergeRate = 0;
     gibbsParams.objectMultipleRate = 0;
     TurbineCascadeParams        cascadeParams;
@@ -209,7 +209,7 @@ TEST( BIMAPSampler, objects_partition )
     PrecomputedData    precomputed( data, precomputedDataParams, signalParams );
     BIMAPSamplerHelper         helper( precomputed,
                                         hyperpriors, priors, gibbsParams );
-    BIMAPWalk walk = BIMAPSampler_run( helper, crossClusteringsIndexing, gibbsParams, cascadeParams,
+    BIMAPWalk walk = BIMAPSampler_run( helper, chessboardBiclusteringsIndexing, gibbsParams, cascadeParams,
                                          collectorParams, helper.randomClustering(), &mon );
     RecordProperty( "Clustering steps recorded", walk.stepsCount() );
     RecordProperty( "Prior parameters steps recorded", walk.priorParamsStepsCount() );
@@ -230,7 +230,7 @@ TEST( BIMAPSampler, objects_partition )
             bool  hasA = objs.find( 0 ) != objs.end();
             bool  hasB = objs.find( 1 ) != objs.end();
             bool  hasC = objs.find( 2 ) != objs.end();
-            bool  isEnabled = clus.isCrossClusterEnabled( (*cluIt)->serial(), (*clus.probesClusters().begin())->serial() );
+            bool  isEnabled = clus.isBlockEnabled( (*cluIt)->serial(), (*clus.probesClusters().begin())->serial() );
 
             for ( size_t i = 0; i < stats.size(); i++ ) {
                 stats[i].update( hasA, hasB, hasC, isEnabled );
@@ -299,8 +299,8 @@ TEST_F2( GslRngTestF, BIMAPSamplerRng, noise_prediction )
     size_t  signalProb = 0;
 
     for ( size_t i = 0; i < trials; i++ ) {
-        crossClu.setCrossCluster( 0, 0, gibbsHelper.sampleCrossClusterEnablement( 0, 0 ).value );
-        if ( crossClu.isCrossClusterEnabled( 0, 0 ) ) {
+        crossClu.setBlock( 0, 0, gibbsHelper.sampleBlockEnablement( 0, 0 ).value );
+        if ( crossClu.isBlockEnabled( 0, 0 ) ) {
             ObjectsClusterParams params = crossClu.objectsClusterParams( 0 );
             if ( params.probeSignal.empty() ) {
                 params.probeSignal[0] = gibbsHelper.initialSignal( crossClu.objectsCluster( 0 ).items(),
@@ -309,8 +309,8 @@ TEST_F2( GslRngTestF, BIMAPSamplerRng, noise_prediction )
             }
             signalProb++;
         }
-        crossClu.setCrossCluster( 1, 0, gibbsHelper.sampleCrossClusterEnablement( 1, 0 ).value );
-        if ( crossClu.isCrossClusterEnabled( 1, 0 ) ) {
+        crossClu.setBlock( 1, 0, gibbsHelper.sampleBlockEnablement( 1, 0 ).value );
+        if ( crossClu.isBlockEnabled( 1, 0 ) ) {
             ObjectsClusterParams params = crossClu.objectsClusterParams( 1 );
             if ( params.probeSignal.empty() ) {
                 params.probeSignal[0] = gibbsHelper.initialSignal( crossClu.objectsCluster( 1 ).items(),
@@ -335,8 +335,8 @@ TEST_F2( GslRngTestF, BIMAPSamplerRng, noise_prediction )
     signalProb = 0;
 
     for ( size_t i = 0; i < trials; i++ ) {
-        if ( gibbsHelper.sampleCrossClusterEnablement( 0, 0 ).value ) signalProb++;
-        if ( !gibbsHelper.sampleCrossClusterEnablement( 1, 0 ).value ) noiseProb++;
+        if ( gibbsHelper.sampleBlockEnablement( 0, 0 ).value ) signalProb++;
+        if ( !gibbsHelper.sampleBlockEnablement( 1, 0 ).value ) noiseProb++;
     }
 
     LOG_INFO( "Noise prediction: " << noiseProb << "/" << trials );
@@ -358,7 +358,7 @@ protein 1-1 1-2 1-3 1-4   2-1   2-2   2-3   2-4 3-1 3-2 3-3 3-4   4-1   4-2   4-
 
     OPAData    data = loadTestOPAData( "osadata_4x4_diag.xml" );
 
-    ChessboardBiclusteringsIndexing    crossClusteringsIndexing;
+    ChessboardBiclusteringsIndexing    chessboardBiclusteringsIndexing;
     ChessboardBiclusteringHyperPriors  hyperpriors;
     //hyperpriors.signalHyperprior.meanVarScale = 20;
     ChessboardBiclusteringPriors       priors;
@@ -390,7 +390,7 @@ protein 1-1 1-2 1-3 1-4   2-1   2-2   2-3   2-4 3-1 3-2 3-3 3-4   4-1   4-2   4-
     PrecomputedData    precomputed( data, precomputedDataParams, signalParams );
     BIMAPSamplerHelper         helper( precomputed,
                                         hyperpriors, priors, gibbsParams );
-    BIMAPWalk walk = BIMAPSampler_run( helper, crossClusteringsIndexing, gibbsParams, cascadeParams,
+    BIMAPWalk walk = BIMAPSampler_run( helper, chessboardBiclusteringsIndexing, gibbsParams, cascadeParams,
                                          collectorParams, helper.randomClustering(), &mon );
     EXPECT_NO_THROW( walk.check() );
     RecordProperty( "Clustering steps recorded", walk.stepsCount() );
@@ -464,7 +464,7 @@ protein 1-1 1-2 1-3 1-4   2-1   2-2   2-3   2-4 3-1 3-2 3-3 3-4   4-1   4-2   4-
                 bool  has3 = probes.test( 2 );
                 bool  has4 = probes.test( 3 );
 
-                if ( clus.isCrossClusterEnabled( (*oCluIt)->serial(), (*sCluIt)->serial() ) ) {
+                if ( clus.isBlockEnabled( (*oCluIt)->serial(), (*sCluIt)->serial() ) ) {
                     if ( ( ( hasA || hasB ) && ( has3 || has4 ) )
                         || ( ( hasC || hasD ) && ( has1 || has2 ) )
                     ){
@@ -546,7 +546,7 @@ TEST( BIMAPSampler, DISABLED_objects_n_probes_partition_2 )
 //       C  45  48  59  53  37  35  37  36
 //       D  72  50  65  54  35  39  34  28
 
-    ChessboardBiclusteringsIndexing    crossClusteringsIndexing;
+    ChessboardBiclusteringsIndexing    chessboardBiclusteringsIndexing;
     ChessboardBiclusteringHyperPriors  hyperpriors;
     ChessboardBiclusteringPriors       priors;
     priors.objectClustering.concentration = 0.1;
@@ -574,7 +574,7 @@ TEST( BIMAPSampler, DISABLED_objects_n_probes_partition_2 )
     PrecomputedData    precomputed( data, precomputedDataParams, signalParams );
     BIMAPSamplerHelper         helper( precomputed,
                                         hyperpriors, priors, gibbsParams );
-    BIMAPWalk walk = BIMAPSampler_run( helper, crossClusteringsIndexing, gibbsParams, cascadeParams,
+    BIMAPWalk walk = BIMAPSampler_run( helper, chessboardBiclusteringsIndexing, gibbsParams, cascadeParams,
                                          collectorParams, helper.randomClustering(), &mon );
     EXPECT_NO_THROW( walk.check() );
     RecordProperty( "Clustering steps recorded", walk.stepsCount() );
@@ -651,7 +651,7 @@ TEST( BIMAPSampler, DISABLED_objects_n_probes_partition_2 )
                 bool  has3 = probes.test( 2 );
                 bool  has4 = probes.test( 3 );
 
-                if ( clus.isCrossClusterEnabled( (*oCluIt)->serial(), (*sCluIt)->serial() ) ) {
+                if ( clus.isBlockEnabled( (*oCluIt)->serial(), (*sCluIt)->serial() ) ) {
                     if ( ( ( hasA || hasB ) && ( has3 || has4 ) )
                         && ( ( hasC || hasD ) && ( has1 || has2 ) )
                     ){
@@ -707,7 +707,7 @@ TEST( BIMAPSampler, DISABLED_objects_n_probes_partition_2 )
 TEST( BIMAPSampler, DISABLED_sampling_test_run )
 {
     OPAData                     data = generateTestOPAData();
-    ChessboardBiclusteringsIndexing    crossClusteringsIndexing;
+    ChessboardBiclusteringsIndexing    chessboardBiclusteringsIndexing;
     PrecomputedDataParams       precomputedDataParams;
     CellSignalParams            signalParams;
     ChessboardBiclusteringHyperPriors  hyperpriors;
@@ -723,7 +723,7 @@ TEST( BIMAPSampler, DISABLED_sampling_test_run )
     PrecomputedData    precomputed( data, precomputedDataParams, signalParams );
     BIMAPSamplerHelper         helper( precomputed,
                                         hyperpriors, priors, gibbsParams );
-    BIMAPWalk walk = BIMAPSampler_run( helper, crossClusteringsIndexing, gibbsParams, cascadeParams,
+    BIMAPWalk walk = BIMAPSampler_run( helper, chessboardBiclusteringsIndexing, gibbsParams, cascadeParams,
                                          collectorParams, helper.randomClustering(), &mon );
     EXPECT_NO_THROW( walk.check() );
     RecordProperty( "Clustering steps recorded", walk.stepsCount() );

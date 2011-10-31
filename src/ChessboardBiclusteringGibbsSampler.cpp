@@ -9,7 +9,7 @@
 
 GibbsSamplerParams::GibbsSamplerParams()
     : priorsUpdatePeriod( 50 )
-    , crossClusterResamples( 20 )
+    , blockResamples( 20 )
     , objectsSplitMergeParams( 11, 5 )
     , objectClusterParams( 5, 5 )
     , objectsSplitMergeRate( 0.05 )
@@ -18,7 +18,7 @@ GibbsSamplerParams::GibbsSamplerParams()
     , probeClusterParams( 5, 5 )
     , probesSplitMergeRate( 0.04 )
     , probeMembershipRate( 0.015 )
-    , crossClusterFlipRate( 0.15 )
+    , blockFlipRate( 0.15 )
     , objectMultipleRate( 0.07 )
     , signalRate( 0.1 )
     , meanObjectRank( 2 )
@@ -56,7 +56,7 @@ probability_vector_t ChessboardBiclusteringGibbsSampler::elementsPickupRates(
         const object_set_t& objs = clus.objectsCluster( objCluIx ).items();
         for ( probe_clundex_t probeCluIx = 0; probeCluIx < clus.probesClusters().size(); ++probeCluIx ) {
             const probe_bitset_t& probes = clus.probesCluster( probeCluIx ).items();
-            bool isCCEnabled = clus.isCrossClusterEnabled( objCluIx, probeCluIx );
+            bool isCCEnabled = clus.isBlockEnabled( objCluIx, probeCluIx );
             for ( object_set_t::const_iterator oit = objs.begin(); oit != objs.end(); ++oit ) {
                 foreach_bit( probe_index_t, probeIx, probes ) {
                     const assay_container_t& assays = clus.data().probe( probeIx ).assayIndexes();
@@ -146,8 +146,8 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
             obj_split_merge_step::result_type res = smStep( ObjectsPartitionEx( clus ), obj1ix, obj2Dist.first );
             if ( res.modified ) {
                 clus = (const ChessboardBiclusteringFit&)res.ptn;
-                clus.setObjectsClusterSamples( res.cluIx1, _params.crossClusterResamples );
-                clus.setObjectsClusterSamples( res.cluIx2, _params.crossClusterResamples );
+                clus.setObjectsClusterSamples( res.cluIx1, _params.blockResamples );
+                clus.setObjectsClusterSamples( res.cluIx2, _params.blockResamples );
             }
             BOOST_ASSERT( clus.checkObjectsPartition() );
         } else if ( cluObjs.size() > 1 ) {
@@ -169,8 +169,8 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
             obj_split_merge_step::result_type res = smStep( ObjectsPartitionEx( clus ), obj1ix, obj2Dist.first );
             if ( res.modified ) {
                 clus = (const ChessboardBiclusteringFit&)res.ptn;
-                clus.setObjectsClusterSamples( res.cluIx1, _params.crossClusterResamples );
-                clus.setObjectsClusterSamples( res.cluIx2, _params.crossClusterResamples );
+                clus.setObjectsClusterSamples( res.cluIx1, _params.blockResamples );
+                clus.setObjectsClusterSamples( res.cluIx2, _params.blockResamples );
             }
             BOOST_ASSERT( clus.checkObjectsPartition() );
         } else {
@@ -227,8 +227,8 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
             }
             clus.objectsClusterParams( newCluIx ) = paramsNew;
             clus.objectsClusterParams( objCluIx ) = paramsOld;
-            clus.setObjectsClusterSamples( objCluIx, _params.crossClusterResamples );
-            clus.setObjectsClusterSamples( newCluIx, _params.crossClusterResamples );
+            clus.setObjectsClusterSamples( objCluIx, _params.blockResamples );
+            clus.setObjectsClusterSamples( newCluIx, _params.blockResamples );
             clus.cleanupClusters();
 #if defined(_DEBUG)
             REPORT_PROB_ERROR_IF( std::abs( prevLLH + newCluIx.oddsRatio.llhRatio - clus.llh() ) > LN_PROB_ERROR_TOL,
@@ -282,8 +282,8 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
             probe_split_merge_step::result_type res = smStep( ProbesPartitionEx( clus ), probe1ix, probe2Dist.first );
             if ( res.modified ) {
                 clus = (const ChessboardBiclusteringFit&)res.ptn;
-                clus.setProbesClusterSamples( res.cluIx1, _params.crossClusterResamples );
-                clus.setProbesClusterSamples( res.cluIx2, _params.crossClusterResamples );
+                clus.setProbesClusterSamples( res.cluIx1, _params.blockResamples );
+                clus.setProbesClusterSamples( res.cluIx2, _params.blockResamples );
             }
             BOOST_ASSERT( clus.checkProbesPartition() );
         } else if ( cluProbes.count() > 1 ) {
@@ -305,8 +305,8 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
             probe_split_merge_step::result_type res = smStep( ProbesPartitionEx( clus ), probe1ix, probe2Dist.first );
             if ( res.modified ) {
                 clus = (const ChessboardBiclusteringFit&)res.ptn;
-                clus.setProbesClusterSamples( res.cluIx1, _params.crossClusterResamples );
-                clus.setProbesClusterSamples( res.cluIx2, _params.crossClusterResamples );
+                clus.setProbesClusterSamples( res.cluIx1, _params.blockResamples );
+                clus.setProbesClusterSamples( res.cluIx2, _params.blockResamples );
             }
             BOOST_ASSERT( clus.checkProbesPartition() );
         } else {
@@ -363,8 +363,8 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
             }
             clus.probesClusterParams( newCluIx ) = paramsNew;
             clus.probesClusterParams( probeCluIx ) = paramsOld;
-            clus.setProbesClusterSamples( probeCluIx, _params.crossClusterResamples );
-            clus.setProbesClusterSamples( newCluIx, _params.crossClusterResamples );
+            clus.setProbesClusterSamples( probeCluIx, _params.blockResamples );
+            clus.setProbesClusterSamples( newCluIx, _params.blockResamples );
             clus.cleanupClusters();
 #if defined(_DEBUG)
             REPORT_PROB_ERROR_IF( std::abs( prevLLH + newCluIx.oddsRatio.llhRatio - clus.llh() ) > LN_PROB_ERROR_TOL,
@@ -390,7 +390,7 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
         }
         BOOST_ASSERT( clus.checkProbesPartition() );
     }
-    BOOST_ASSERT( clus.checkCrossClusters() );
+    BOOST_ASSERT( clus.checkBlocks() );
 
     typedef std::pair<object_clundex_t, probe_clundex_t> cc_id;
 
@@ -402,8 +402,8 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
         // sample cross clusters
         for ( object_clundex_t objCluIx = 0; objCluIx < clus.objectsClusters().size(); objCluIx++ ) {
             for ( probe_clundex_t probeCluIx = 0; probeCluIx < clus.probesClusters().size(); probeCluIx++ ) {
-                if ( clus.crossClusterToSample( objCluIx, probeCluIx ) > 0 
-                     || gsl_ran_bernoulli( rndNumGen(), _params.crossClusterFlipRate )
+                if ( clus.blockToSample( objCluIx, probeCluIx ) > 0 
+                     || gsl_ran_bernoulli( rndNumGen(), _params.blockFlipRate )
                 ){
                     ccQueue.push_back( cc_id( objCluIx, probeCluIx ) );
                 }
@@ -416,18 +416,18 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
         for ( size_t i = 0; i < ccToProcess.size(); i++ ) {
             const cc_id& ccId = ccToProcess[ i ];
             LOG_DEBUG2( "Sampling cross-cluster (" << ccId.first << ", " << ccId.second << ")" );
-            bool enableCluster = helper.sampleCrossClusterEnablement( ccId.first, ccId.second ).value;
-            bool wasEnabled = clus.isCrossClusterEnabled( ccId.first, ccId.second );
+            bool enableCluster = helper.sampleBlockEnablement( ccId.first, ccId.second ).value;
+            bool wasEnabled = clus.isBlockEnabled( ccId.first, ccId.second );
             if ( enableCluster == wasEnabled ) continue;
-            ChessboardBiclustering::cross_cluster_iterator cluIt = clus.setCrossCluster( ccId.first, ccId.second, enableCluster );
+            ChessboardBiclustering::block_iterator cluIt = clus.setBlock( ccId.first, ccId.second, enableCluster );
             if ( enableCluster ) {
-                BOOST_ASSERT( cluIt != clus.crossClusterNotFound() );
+                BOOST_ASSERT( cluIt != clus.blockNotFound() );
                 GibbsSample<signal_t> newSignalSample = helper.sampleSignal( *cluIt );
                 cluIt->setSignal( newSignalSample.value );
-                if ( !wasEnabled ) clus.setCrossClusterSamples( ccId.first, ccId.second, _params.crossClusterResamples );
+                if ( !wasEnabled ) clus.setBlockSamples( ccId.first, ccId.second, _params.blockResamples );
             }
         }
-        BOOST_ASSERT( clus.checkCrossClusters() );
+        BOOST_ASSERT( clus.checkBlocks() );
     }
 #endif
 
@@ -443,9 +443,9 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
         LOG_DEBUG2( "Sampling signals" );
         std::vector<cc_id> ccQueue;
         ChessboardBiclusteringGibbsHelper helper = createGibbsHelper( clus );
-        for ( ChessboardBiclustering::cross_cluster_iterator cluIt = clus.begin(); cluIt != clus.end(); ++cluIt ) {
+        for ( ChessboardBiclustering::block_iterator cluIt = clus.begin(); cluIt != clus.end(); ++cluIt ) {
             if ( cluIt->isEnabled() && 
-                ( clus.crossClusterToSample( cluIt->objectsClusterIndex(), cluIt->probesClusterIndex() ) > 0 
+                ( clus.blockToSample( cluIt->objectsClusterIndex(), cluIt->probesClusterIndex() ) > 0 
                 ||  gsl_ran_bernoulli( rndNumGen(), _params.signalRate ) ) ) {
                 ccQueue.push_back( cc_id( cluIt->objectsClusterIndex(), cluIt->probesClusterIndex() ) );
             }
@@ -454,13 +454,13 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
         std::vector<cc_id> ccToProcess( std::min( MAX_CROSS_CLUSTER_SAMPLES, ccQueue.size() ) );
         gsl_ran_choose( rndNumGen(), ccToProcess.data(), ccToProcess.size(), ccQueue.data(), ccQueue.size(), sizeof( cc_id ) );
         for ( size_t i = 0; i < ccToProcess.size(); i++ ) {
-            ChessboardBiclustering::cross_cluster_iterator cluIt = clus.findCrossCluster( ccToProcess[ i ].first, ccToProcess[ i ].second );
-            BOOST_ASSERT( cluIt != clus.crossClusterNotFound() );
+            ChessboardBiclustering::block_iterator cluIt = clus.findBlock( ccToProcess[ i ].first, ccToProcess[ i ].second );
+            BOOST_ASSERT( cluIt != clus.blockNotFound() );
             LOG_DEBUG2( "Sampling signals of cluster (" 
                     << cluIt->objectsClusterIndex() << ", " << cluIt->probesClusterIndex() << ")" );
             GibbsSample<signal_t> newSignalSample = helper.sampleSignal( *cluIt );
             cluIt->setSignal( newSignalSample.value );
-            clus.decCrossClusterSamples( cluIt->objectsClusterIndex(), cluIt->probesClusterIndex() );
+            clus.decBlockSamples( cluIt->objectsClusterIndex(), cluIt->probesClusterIndex() );
         }
     }
 

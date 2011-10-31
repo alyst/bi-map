@@ -36,7 +36,7 @@ typedef cluster_index_t object_clundex_t;
 typedef std::vector<size_t>     multiple_map_t;
 typedef std::vector<signal_t>   signal_map_t;
 
-typedef boost::dynamic_bitset<> cross_clusters_mask_t;
+typedef boost::dynamic_bitset<> blocks_mask_t;
 
 class ChessboardBiclustering;
 
@@ -146,7 +146,7 @@ private:
     array2d<signal_t>                   _signals;   /** signals for object-probe pair, in clustering, 
                                                         all objects of the cluster should have the same signal */
 
-    cross_clusters_mask_t               _crossClustersMask; /** 2D array mask of enabled cross clusters */
+    blocks_mask_t               _blocksMask; /** 2D array mask of enabled cross clusters */
 
     objects_cluster_index_remap cleanupObjectsClusters();
     probes_cluster_index_remap cleanupProbesClusters();
@@ -159,7 +159,7 @@ private:
     /**
         Wrapper for bi-cluster, a cross product of objects cluster and probes cluster.
     */
-    class CrossClusterProxy {
+    class BlockProxy {
     private:
         friend class ChessboardBiclustering;
         friend class ChessboardBiclusteringIterator;
@@ -168,8 +168,8 @@ private:
         size_t              _ccIndex;       /** index of cross-cluster in cross-clusters mask */
         probe_clundex_t     _probesClusterIndex;
 
-        CrossClusterProxy( ChessboardBiclustering& clustering,
-                    size_t index = cross_clusters_mask_t::npos
+        BlockProxy( ChessboardBiclustering& clustering,
+                    size_t index = blocks_mask_t::npos
         ) : _clustering( clustering ), _ccIndex( index )
         {
         }
@@ -184,14 +184,14 @@ private:
         };
 
         bool isEnabled() const {
-            return ( _clustering._crossClustersMask.test( _ccIndex ) );
+            return ( _clustering._blocksMask.test( _ccIndex ) );
         }
 
         void setEnabled( bool enabled = true ) {
             bool oldEnabled = isEnabled();
             if ( oldEnabled != enabled ) {
-                _clustering._crossClustersMask.set( _ccIndex, enabled );
-                _clustering.afterCrossClusterFlipped( objectsClusterIndex(), probesClusterIndex() );
+                _clustering._blocksMask.set( _ccIndex, enabled );
+                _clustering.afterBlockFlipped( objectsClusterIndex(), probesClusterIndex() );
             }
         }
 
@@ -206,7 +206,7 @@ private:
         }
 
         object_clundex_t objectsClusterIndex() const {
-            return ( _ccIndex != cross_clusters_mask_t::npos 
+            return ( _ccIndex != blocks_mask_t::npos 
                     ? _ccIndex / _clustering.probesClusters().size()
                     : CLUSTER_NA );
         }
@@ -214,7 +214,7 @@ private:
             return ( _clustering.objectsCluster( objectsClusterIndex() ) );
         }
         probe_clundex_t probesClusterIndex() const {
-            return ( _ccIndex != cross_clusters_mask_t::npos 
+            return ( _ccIndex != blocks_mask_t::npos 
                     ? _ccIndex % _clustering.probesClusters().size()
                     : CLUSTER_NA );
         }
@@ -225,22 +225,22 @@ private:
     };
 
     template<class Reference>
-    class CrossClusterIterator {
+    class BlockIterator {
     private:
         friend class ChessboardBiclustering;
-        typedef CrossClusterIterator<Reference> self_type;
+        typedef BlockIterator<Reference> self_type;
 
-        CrossClusterProxy    _ccProxy;
+        BlockProxy    _ccProxy;
 
-        CrossClusterIterator( ChessboardBiclustering& clustering, bool init )
+        BlockIterator( ChessboardBiclustering& clustering, bool init )
         : _ccProxy( clustering,
-                    init ? clustering._crossClustersMask.find_first() 
-                         : cross_clusters_mask_t::npos )
+                    init ? clustering._blocksMask.find_first() 
+                         : blocks_mask_t::npos )
         {
         }
 
         template<class ThatReference>
-        void check_clustering( const CrossClusterIterator<ThatReference>& that ) const
+        void check_clustering( const BlockIterator<ThatReference>& that ) const
         {
             if ( &that._ccProxy._clustering != &_ccProxy._clustering ) {
                 throw std::invalid_argument( "Cross-cluster iterator references another clustering" );
@@ -249,33 +249,33 @@ private:
 
         void check_position() const
         {
-            if ( _ccProxy._ccIndex == cross_clusters_mask_t::npos ) {
+            if ( _ccProxy._ccIndex == blocks_mask_t::npos ) {
                 throw std::runtime_error( "Cannot advance cross-cluster iterator: position not specified" );
             }
         }
 
     public:
         template<class ThatReference>
-        CrossClusterIterator( const CrossClusterIterator<ThatReference>& it )
+        BlockIterator( const BlockIterator<ThatReference>& it )
         : _ccProxy( it._ccProxy )
         {
         }
 
         template<class ThatReference>
-        self_type& operator=( const CrossClusterIterator<ThatReference>& that )
+        self_type& operator=( const BlockIterator<ThatReference>& that )
         {
             check_clustering( that );
             _ccProxy._ccIndex = that._ccProxy._ccIndex;
             return ( *this );
         }
         template<class ThatReference>
-        bool operator==( const CrossClusterIterator<ThatReference>& that ) const
+        bool operator==( const BlockIterator<ThatReference>& that ) const
         {
             check_clustering( that );
             return ( _ccProxy._ccIndex == that._ccProxy._ccIndex );
         }
         template<class ThatReference>
-        bool operator!=( const CrossClusterIterator<ThatReference>& that ) const
+        bool operator!=( const BlockIterator<ThatReference>& that ) const
         {
             check_clustering( that );
             return ( _ccProxy._ccIndex != that._ccProxy._ccIndex );
@@ -284,13 +284,13 @@ private:
         {
             check_position();
             self_type res( _ccProxy._clustering, false );
-            res._ccProxy._ccIndex = res._ccProxy._clustering._crossClustersMask.find_next( res._ccProxy._ccIndex );
+            res._ccProxy._ccIndex = res._ccProxy._clustering._blocksMask.find_next( res._ccProxy._ccIndex );
             return ( res );
         }
         self_type& operator++()
         {
             check_position();
-            _ccProxy._ccIndex = _ccProxy._clustering._crossClustersMask.find_next( _ccProxy._ccIndex );
+            _ccProxy._ccIndex = _ccProxy._clustering._blocksMask.find_next( _ccProxy._ccIndex );
             return ( *this );
         }
         const Reference& operator*() const {
@@ -326,7 +326,7 @@ private:
         _objectsClustersCleanupRequired = _probesClustersCleanupRequired = false;
         ar >> boost::serialization::make_nvp( "objectMultiples", _objectMultiples );
         ar >> boost::serialization::make_nvp( "signals", _signals );
-        ar >> boost::serialization::make_nvp( "crossClustersMask", _crossClustersMask );
+        ar >> boost::serialization::make_nvp( "blocksMask", _blocksMask );
         BOOST_ASSERT( check() );
 //        if ( !check() ) THROW_RUNTIME_ERROR( "check() failed for clustering just loaded" );
     }
@@ -347,15 +347,15 @@ private:
         ar << boost::serialization::make_nvp( "probeToCluster", _probeToCluster );
         ar << boost::serialization::make_nvp( "objectMultiples", _objectMultiples );
         ar << boost::serialization::make_nvp( "signals", _signals );
-        ar << boost::serialization::make_nvp( "crossClustersMask", _crossClustersMask );
+        ar << boost::serialization::make_nvp( "blocksMask", _blocksMask );
     }
 
-    void resizeCrossClusterMask( size_t objectClustersCount, size_t probeClustersCount );
+    void resizeBlockMask( size_t objectClustersCount, size_t probeClustersCount );
 
 public:
-    typedef CrossClusterProxy cross_cluster_proxy;
-    typedef CrossClusterIterator<cross_cluster_proxy> cross_cluster_iterator;
-    typedef CrossClusterIterator<const cross_cluster_proxy> const_cross_cluster_iterator;
+    typedef BlockProxy block_proxy;
+    typedef BlockIterator<block_proxy> block_iterator;
+    typedef BlockIterator<const block_proxy> const_block_iterator;
     typedef object_cluster_container_type::const_iterator const_object_cluster_iterator;
     typedef probe_cluster_container_type::const_iterator const_probe_cluster_iterator;
     typedef std::pair<object_clundex_t, probe_clundex_t> cluster_cell_key_type;
@@ -381,55 +381,55 @@ public:
         return ( *this );
     }
 
-    cross_cluster_iterator findCrossCluster( object_clundex_t objCluIx, probe_clundex_t probeCluIx, bool onlyEnabled = true ) {
-        cross_cluster_iterator res( const_cast<ChessboardBiclustering&>( *this ), false );
+    block_iterator findBlock( object_clundex_t objCluIx, probe_clundex_t probeCluIx, bool onlyEnabled = true ) {
+        block_iterator res( const_cast<ChessboardBiclustering&>( *this ), false );
         size_t ix = objCluIx * probesClusters().size() + probeCluIx;
-        if ( !onlyEnabled || _crossClustersMask.test( ix ) ) res._ccProxy._ccIndex = ix;
+        if ( !onlyEnabled || _blocksMask.test( ix ) ) res._ccProxy._ccIndex = ix;
         return ( res );
     }
-    const_cross_cluster_iterator findCrossCluster( object_clundex_t objCluIx, probe_clundex_t probeCluIx, bool onlyEnabled = true ) const {
-        const_cross_cluster_iterator res( const_cast<ChessboardBiclustering&>( *this ), false );
+    const_block_iterator findBlock( object_clundex_t objCluIx, probe_clundex_t probeCluIx, bool onlyEnabled = true ) const {
+        const_block_iterator res( const_cast<ChessboardBiclustering&>( *this ), false );
         size_t ix = objCluIx * probesClusters().size() + probeCluIx;
-        if ( !onlyEnabled || _crossClustersMask.test( ix ) ) res._ccProxy._ccIndex = ix;
+        if ( !onlyEnabled || _blocksMask.test( ix ) ) res._ccProxy._ccIndex = ix;
         return ( res );
     }
 
-    cross_cluster_iterator begin() {
-        return ( cross_cluster_iterator( *this, true ) );
+    block_iterator begin() {
+        return ( block_iterator( *this, true ) );
     }
-    cross_cluster_iterator end() {
-        return ( cross_cluster_iterator( *this, false ) );
-    }
-
-    const_cross_cluster_iterator begin() const {
-        return ( const_cross_cluster_iterator( const_cast<ChessboardBiclustering&>( *this ), true ) );
-    }
-    const_cross_cluster_iterator end() const {
-        return ( const_cross_cluster_iterator( const_cast<ChessboardBiclustering&>( *this ), false ) );
+    block_iterator end() {
+        return ( block_iterator( *this, false ) );
     }
 
-    cross_clusters_mask_t crossClustersMask( bool objectsMajor = true ) const;
-    size_t enabledCrossClustersCount() const {
-        return ( _crossClustersMask.count() );
+    const_block_iterator begin() const {
+        return ( const_block_iterator( const_cast<ChessboardBiclustering&>( *this ), true ) );
+    }
+    const_block_iterator end() const {
+        return ( const_block_iterator( const_cast<ChessboardBiclustering&>( *this ), false ) );
+    }
+
+    blocks_mask_t blocksMask( bool objectsMajor = true ) const;
+    size_t enabledBlocksCount() const {
+        return ( _blocksMask.count() );
     }
 
     dynamic_bitset_view objectsClusterSectionMask( object_clundex_t cluIx ) const {
-        return ( dynamic_bitset_view( _crossClustersMask, cluIx * _probesClusters.size(), 1, 
+        return ( dynamic_bitset_view( _blocksMask, cluIx * _probesClusters.size(), 1, 
                                       probesClusters().size() ) );
     }
 
     dynamic_bitset_view probesClusterSectionMask( probe_clundex_t cluIx ) const {
-        return ( dynamic_bitset_view( _crossClustersMask, cluIx, _probesClusters.size(), 
+        return ( dynamic_bitset_view( _blocksMask, cluIx, _probesClusters.size(), 
                                       objectsClusters().size() ) );
     }
 
-    bool isCrossClusterEnabled( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const {
-        return ( _crossClustersMask.test( objCluIx * _probesClusters.size() + probeCluIx ) );
+    bool isBlockEnabled( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const {
+        return ( _blocksMask.test( objCluIx * _probesClusters.size() + probeCluIx ) );
     }
-    cross_cluster_iterator setCrossCluster( object_clundex_t objCluIx, probe_clundex_t probeCluIx, bool enable = true );
+    block_iterator setBlock( object_clundex_t objCluIx, probe_clundex_t probeCluIx, bool enable = true );
 
-    const const_cross_cluster_iterator crossClusterNotFound() const {
-        return ( const_cross_cluster_iterator( const_cast<ChessboardBiclustering&>( *this ), false ) );
+    const const_block_iterator blockNotFound() const {
+        return ( const_block_iterator( const_cast<ChessboardBiclustering&>( *this ), false ) );
     }
 
     size_t objectsCount() const {
@@ -505,7 +505,7 @@ public:
     template<class Iterator>
     object_clundex_t addObjectCluster( const Iterator& begin, const Iterator& end )
     {
-        resizeCrossClusterMask( _objectsClusters.size() + 1, _probesClusters.size() );
+        resizeBlockMask( _objectsClusters.size() + 1, _probesClusters.size() );
         object_clundex_t newCluIx = _objectsClusters.size();
         _objectsClusters.push_back( ObjectsCluster() );
         afterObjectsClusterInserted( newCluIx );
@@ -521,7 +521,7 @@ public:
     template<class Iterator>
     probe_clundex_t addProbeCluster( const Iterator& begin, const Iterator& end )
     {
-        resizeCrossClusterMask( _objectsClusters.size(), _probesClusters.size() + 1 );
+        resizeBlockMask( _objectsClusters.size(), _probesClusters.size() + 1 );
         probe_clundex_t newCluIx = _probesClusters.size();
         _probesClusters.push_back( ProbesCluster( probesCount() ) );
         afterProbesClusterInserted( newCluIx );
@@ -556,7 +556,7 @@ public:
     }
     bool checkObjectsPartition() const;
     bool checkProbesPartition() const;
-    bool checkCrossClusters() const;
+    bool checkBlocks() const;
     bool check() const;
 
     const ObjectsClusterParamsProxy objectsClusterParams( object_clundex_t cluIx, const object_set_t& mask = object_set_t() ) const;
@@ -593,7 +593,7 @@ protected:
 
     virtual void afterSignalChanged( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const
     {}
-    virtual void afterCrossClusterFlipped( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const
+    virtual void afterBlockFlipped( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const
     {}
     virtual void afterSignalPriorChanged() const
     {}
@@ -605,7 +605,7 @@ protected:
     Parameters of the stripe of cells of object cluster.
  */
 struct ObjectsClusterParams {
-    cross_clusters_mask_t   crossClustersMask;  /** enablement of cross clusters in object stripe */
+    blocks_mask_t   blocksMask;  /** enablement of cross clusters in object stripe */
     signal_map_t&           probeSignal;        /** signals of object for each probe cluster (defined only for enabled cells) */
     multiple_map_t&         objectMultiple;     /** objects' multiplicity */
 
@@ -663,7 +663,7 @@ public:
     Parameters of the stripe of cells of object cluster.
  */
 struct ProbesClusterParams {
-    cross_clusters_mask_t   crossClustersMask;  /** enablement of cross clusters in probe stripe */
+    blocks_mask_t   blocksMask;  /** enablement of cross clusters in probe stripe */
     signal_map_t&           objectsSignal;      /** signals of probe for each objects cluster (defined only for enabled cells) */
 
     ProbesClusterParams( const ChessboardBiclustering& clustering );

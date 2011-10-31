@@ -17,7 +17,7 @@ setClass( "BIMAPCytoscapeFilesWriter",
         stateToBait = "character",
         simpleNodes = "character",
         stateClusters = "data.frame",
-        crossClusters = "data.frame"
+        blocks = "data.frame"
     )
 )
 
@@ -47,7 +47,7 @@ setMethod( 'writeNNF', "BIMAPCytoscapeFilesWriter", function( .Object ) {
     } ) 
     
     # output states nodes and interactions
-    ddply( .Object@crossClusters, .( objects.cluster.serial, state ), function( rows ) {
+    ddply( .Object@blocks, .( objects.cluster.serial, state ), function( rows ) {
             row <- rows[1,]
             bait <- .Object@stateToBait[ as.character( row$state ) ]
             if ( bait %in% .Object@simpleNodes ) {
@@ -92,7 +92,7 @@ setMethod( 'initialize', "BIMAPCytoscapeFilesWriter",
         names( .Object@stateToBait ) = as.character( samples$label )
         #print( .Object@stateToBait )
         # not cross-clusters, actually, since state clusters are exploded into states
-        .Object@crossClusters <- merge( subset( bimap.walk@crossClusters, clustering.serial == clusteringId,
+        .Object@blocks <- merge( subset( bimap.walk@blocks, clustering.serial == clusteringId,
             select = c( 'objects.cluster.serial', 'states.cluster.serial' ) ),
             subset( bimap.walk@states.clusters, states.cluster.serial %in% scIds ),
             by.x = c('states.cluster.serial'), by.y = c('states.cluster.serial') )[,c('objects.cluster.serial','state')]
@@ -157,7 +157,7 @@ setMethod( "cytoWrite", signature( .Object = "BIMAPCytoscapeFilesWriter",
         # start node attribute files
         fileAndName <- openCytoscapeAttributeFile( writable, .Object@filename_prefix, ext = 'eda' )
         
-        apply( .Object@crossClusters, 1, function( row ) {
+        apply( .Object@blocks, 1, function( row ) {
             bait <- .Object@stateToBait[ row$state ]
             if ( !( bait %in% .Object@simpleNodes ) ) {
                 baitNode <- .Object@objClusters[ .Object@objClusters$object == bait, 'objects.cluster.serial' ]

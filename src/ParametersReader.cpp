@@ -163,7 +163,7 @@ bool BIMAPParamsRead(
           "rate of on-block abundance sampling steps" )
         ( "gibbs.object_multiple_rate", po::value<prob_t>( &gibbsParams.objectMultipleRate )->default_value( gibbsParams.objectMultipleRate ),
           "rate of object multiple (stoichiometry) sampling steps" )
-        ( "gibbs.block_flip_rate", po::value<prob_t>( &gibbsParams.crossClusterFlipRate )->default_value( gibbsParams.crossClusterFlipRate ),
+        ( "gibbs.block_flip_rate", po::value<prob_t>( &gibbsParams.blockFlipRate )->default_value( gibbsParams.blockFlipRate ),
           "rate of on/off switching of random matrix blocks" )
         ( "gibbs.object_membership_rate", po::value<prob_t>( &gibbsParams.objectMembershipRate )->default_value( gibbsParams.objectMembershipRate ),
           "rate of changing cluster of single object" )
@@ -173,7 +173,7 @@ bool BIMAPParamsRead(
           "rate of objects clusters split/merge sampling steps" )
         ( "gibbs.probe_split_merge_rate", po::value<prob_t>( &gibbsParams.probesSplitMergeRate )->default_value( gibbsParams.probesSplitMergeRate ),
           "rate of objects clusters split/merge sampling steps" )
-        ( "gibbs.block_resamples", po::value<size_t>( &gibbsParams.crossClusterResamples )->default_value( gibbsParams.crossClusterResamples ),
+        ( "gibbs.block_resamples", po::value<size_t>( &gibbsParams.blockResamples )->default_value( gibbsParams.blockResamples ),
           "number of mandatory block abundance sampling steps after it was switched to on-state" )
 
         // object clustering steps parameters
@@ -209,7 +209,7 @@ bool BIMAPParamsRead(
     log_params_desc.add_options()
         ( "log.samples_reporting_period", po::value<prob_t>( &gibbsParams.signalRate )->default_value( gibbsParams.signalRate ),
           "period (# of samples collected) to output info about collected samples" )
-        ( "log.samples_max_reporting_delay", po::value<prob_t>( &gibbsParams.crossClusterFlipRate )->default_value( gibbsParams.crossClusterFlipRate ),
+        ( "log.samples_max_reporting_delay", po::value<prob_t>( &gibbsParams.blockFlipRate )->default_value( gibbsParams.blockFlipRate ),
           "maximal time without reporting about collected samples (in case it takes too long)" )
         ;
 

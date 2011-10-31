@@ -40,18 +40,18 @@
 
 #define BIMAP_PARAM_INITIAL_OBJECTS_PARTITION          "ini.objects.partition"
 #define BIMAP_PARAM_INITIAL_PROBES_PARTITION           "ini.probes.partition"
-#define BIMAP_PARAM_INITIAL_CROSS_CLUSTERS             "ini.crossClusters"
+#define BIMAP_PARAM_INITIAL_CROSS_CLUSTERS             "ini.blocks"
 
 #define BIMAP_PARAM_SAMPLE_RATE_OBJECT_MEMBERSHIP      "sampleRate.object.membership"
 #define BIMAP_PARAM_SAMPLE_RATE_OBJECTS_SPLIT_MERGE    "sampleRate.objects.splitMerge"
 #define BIMAP_PARAM_SAMPLE_RATE_PROBE_MEMBERSHIP       "sampleRate.probe.membership"
 #define BIMAP_PARAM_SAMPLE_RATE_PROBES_SPLIT_MERGE     "sampleRate.probes.splitMerge"
-#define BIMAP_PARAM_SAMPLE_RATE_CROSS_CLUSTER_FLIP     "sampleRate.crossCluster.flip"
+#define BIMAP_PARAM_SAMPLE_RATE_CROSS_CLUSTER_FLIP     "sampleRate.block.flip"
 #define BIMAP_PARAM_SAMPLE_RATE_OBJECT_MULTIPLE        "sampleRate.object.multiple"
 #define BIMAP_PARAM_SAMPLE_RATE_SIGNAL                 "sampleRate.signal"
 #define BIMAP_PARAM_SAMPLE_PERIOD_PRIORS               "samplePeriod.priors"
-#define BIMAP_PARAM_SAMPLE_PERIOD_CROSS_CLUSTERING     "samplePeriod.crossClustering"
-#define BIMAP_PARAM_CROSS_CLUSTER_RESAMPLES            "crossCluster.resamples"
+#define BIMAP_PARAM_SAMPLE_PERIOD_CROSS_CLUSTERING     "samplePeriod.chessboardBiclustering"
+#define BIMAP_PARAM_CROSS_CLUSTER_RESAMPLES            "block.resamples"
 
 #define BIMAP_PARAM_PRIOR_OBJECTS_CLUSTERING_CONCENTRATION      "prior.objects.clustering.concentration"
 #define BIMAP_PARAM_PRIOR_OBJECTS_CLUSTERING_DISCOUNT           "prior.objects.clustering.discount"
@@ -65,7 +65,7 @@
 #define BIMAP_PARAM_PRIOR_FALSE_HITS        "prior.false_hits"
 #define BIMAP_PARAM_PRIOR_TRUE_MISSES       "prior.true_misses"
 
-#define BIMAP_PARAM_PRIOR_CROSS_CLUSTER_ENABLED "prior.crossCluster.enabled"
+#define BIMAP_PARAM_PRIOR_CROSS_CLUSTER_ENABLED "prior.block.enabled"
 
 #define BIMAP_PARAM_HPRIOR_BASELINE_SIGNAL       "hyperprior.baseline"
 #define BIMAP_PARAM_HPRIOR_BASELINE_SCALE        "hyperprior.baseline.scale"
@@ -95,8 +95,8 @@
 #define R_SLOT_PROBES_CLUSTERS              "probes.clusters"
 #define R_SLOT_PROBES_CLUSTERS_INFO         "probes.clusters.info"
 
-#define R_SLOT_CROSS_CLUSTERS               "crossClusters"
-#define R_SLOT_CROSS_CLUSTERS_FREQUENCY     "crossClusters.freq"
+#define R_SLOT_BLOCKS                       "blocks"
+#define R_SLOT_BLOCKS_FREQUENCY             "blocks.freq"
 #define R_SLOT_SIGNALS                      "signals"
 #define R_SLOT_OBJECTS_DATA                 "objects.data"
 
@@ -322,17 +322,17 @@ probes_clu_code_map_t ReadProbesClusters(
     return ( codeMap );
 }
 
-void ReadCrossClusters(
-    ChessboardBiclustering&                clu,
+void ReadChessboardBiclusteringBlocks(
+    ChessboardBiclustering&         clu,
     const objects_clu_code_map_t&   objsCluCodeMap,
     const objects_clu_code_map_t&   probesCluCodeMap,
     SEXP                            crossCluExp
 ){
     Rcpp::DataFrame   cluFrame( crossCluExp );
 
-    Rprintf( "Reading cross clusters...\n" );
+    Rprintf( "Reading chessboard biclustering blocks...\n" );
     // print actual data frames passed
-    Rprintf_columns( cluFrame, "Cross clusters" );
+    Rprintf_columns( cluFrame, "Blocks" );
     Rcpp::StringVector objsCluCodeVec = cluFrame[ 0 ];
     Rcpp::StringVector probesCluCodeVec = cluFrame[ 1 ];
 
@@ -348,13 +348,13 @@ void ReadCrossClusters(
         if ( probesCluIt == probesCluCodeMap.end() ) {
             throw entity_not_found( "Probes cluster", probesCluCode );
         }
-        clu.setCrossCluster( objsCluIt->second, probesCluIt->second, true );
+        clu.setBlock( objsCluIt->second, probesCluIt->second, true );
     }
 }
 
 #if 0
 SEXP ConvertClusterToRObject(
-    const CrossClusterIndexed&    cluster,
+    const BlockIndexed&    cluster,
     const OPAData&             data
 ){
     RObject rClu( R_CLASS_BIMAP_CLUSTER );
@@ -435,10 +435,10 @@ Rcpp::DataFrame ConvertPriorParamsWalkToRDataFrame(
     Converts BIMAP walk to R-compatible (S4) object.
  */
 SEXP ConvertBIMAPWalkToRObject(
-    const objects_label_map_type&       objects,
-    const probes_label_map_type&        probes,
-    const BIMAPWalk&                   walk,       /** @param[in] MCMC biclustering walk to convert */
-    const ChessboardBiclusteringsPDFEval*    pdfAdjust   /** @param[in] PDF adjustment data */
+    const objects_label_map_type&           objects,
+    const probes_label_map_type&            probes,
+    const BIMAPWalk&                        walk,       /** @param[in] MCMC biclustering walk to convert */
+    const ChessboardBiclusteringsPDFEval*   pdfAdjust   /** @param[in] PDF adjustment data */
 ){
     Rprintf( "Exporting BIMAP walk...\n" );
     Rcpp::S4 rWalk( R_CLASS_BIMAP_WALK );
@@ -742,7 +742,7 @@ SEXP ConvertBIMAPWalkToRObject(
                     //Rprintf( "Getting probe's cluster serial...\n" );
                     const ChessboardBiclusteringIndexed::probes_cluster_serial_type probeCluSerial = (*probeCluIt)->serial();
                     //Rprintf( "Probes's cluster serial is %d\n", probeCluSerial );
-                    if ( clus.isCrossClusterEnabled( objCluSerial, probeCluSerial ) ) {
+                    if ( clus.isBlockEnabled( objCluSerial, probeCluSerial ) ) {
                         //Rprintf( "Cross-cluster is enabled\n" );
                         clusSerial.push_back( (*it)->serial() );
                         objectSetSerial.push_back( objCluSerial );
@@ -758,7 +758,7 @@ SEXP ConvertBIMAPWalkToRObject(
         objectSetVec = objectSetSerial;
         Rcpp::IntegerVector probeSetVec( probeSetSerial.size() );
         probeSetVec = probeSetSerial;
-        rWalk.slot( R_SLOT_CROSS_CLUSTERS ) = Rcpp::DataFrame::create(
+        rWalk.slot( R_SLOT_BLOCKS ) = Rcpp::DataFrame::create(
             Rcpp::Named( R_COLUMN_CLUSTERING_SERIAL, clusSerialVec ),
             Rcpp::Named( R_COLUMN_OBJECTS_CLUSTER_SERIAL, objectSetVec ),
             Rcpp::Named( R_COLUMN_PROBES_CLUSTER_SERIAL, probeSetVec ),
@@ -863,14 +863,14 @@ SEXP ConvertBIMAPWalkToRObject(
 
         {
         Rprintf( "Exporting cross-clusters frequency...\n" );
-        const ChessboardBiclusteringsPDFEval::cross_cluster_stats_map& ccStatsMap = pdfAdjust->crossClustersStatsMap();
+        const ChessboardBiclusteringsPDFEval::block_stats_map& ccStatsMap = pdfAdjust->blocksStatsMap();
         Rcpp::IntegerVector objectsSetSerialVec( ccStatsMap.size() );
         Rcpp::IntegerVector probesSetSerialVec( ccStatsMap.size() );
         Rcpp::IntegerVector totalVec( ccStatsMap.size() );
         Rcpp::IntegerVector enabledVec( ccStatsMap.size() );
 
         size_t ix = 0;
-        for ( ChessboardBiclusteringsPDFEval::cross_cluster_stats_map::const_iterator it = ccStatsMap.begin(); it != ccStatsMap.end(); ++it ) {
+        for ( ChessboardBiclusteringsPDFEval::block_stats_map::const_iterator it = ccStatsMap.begin(); it != ccStatsMap.end(); ++it ) {
             objectsSetSerialVec[ ix ] = it->first.first;
             probesSetSerialVec[ ix ] = it->first.second;
             totalVec[ ix ] = it->second.first;
@@ -878,7 +878,7 @@ SEXP ConvertBIMAPWalkToRObject(
             ix++;
         }
         Rprintf( "Creating cross-clusters frequency dataframe, nrow=%d\n", objectsSetSerialVec.size() );
-        rWalk.slot( R_SLOT_CROSS_CLUSTERS_FREQUENCY ) = Rcpp::DataFrame::create(
+        rWalk.slot( R_SLOT_BLOCKS_FREQUENCY ) = Rcpp::DataFrame::create(
             Rcpp::Named( R_COLUMN_OBJECTS_CLUSTER_SERIAL, objectsSetSerialVec ),
             Rcpp::Named( R_COLUMN_PROBES_CLUSTER_SERIAL, probesSetSerialVec ),
             Rcpp::Named( R_COLUMN_TOTAL, totalVec ),
@@ -903,8 +903,8 @@ SEXP ConvertBIMAPWalkToRObject(
         for ( BIMAPWalk::const_step_iterator stepIt = walk.stepsBegin(); stepIt != walk.stepsEnd(); ++stepIt ){
             const ChessboardBiclusteringIndexed& clus = stepIt->clustering;
             clus.check();
-            for ( ChessboardBiclusteringIndexed::cross_cluster_data_map_type::const_iterator ccDataIt = clus.crossClustersData().begin(); 
-                ccDataIt != clus.crossClustersData().end(); ++ccDataIt
+            for ( ChessboardBiclusteringIndexed::block_data_map_type::const_iterator ccDataIt = clus.blocksData().begin(); 
+                ccDataIt != clus.blocksData().end(); ++ccDataIt
             ){
                 step.push_back( stepIx );
                 objectsSetSerial.push_back( ccDataIt->first.first );
@@ -966,7 +966,7 @@ public:
 };
 
 /**
-    Runs BI-MAP.
+    Reads AP-MS data and runs BI-MAP.
  */
 RcppExport SEXP BIMAPWalkEval(
     SEXP    proteinsDataExp,        /**< @param[in] proteins data frame: 1 - protein label, 2 - sequence length */
@@ -1021,9 +1021,9 @@ RcppExport SEXP BIMAPWalkEval(
         MaybeReadRParam( samplerParams.objectsSplitMergeRate, params, BIMAP_PARAM_SAMPLE_RATE_OBJECTS_SPLIT_MERGE );
         MaybeReadRParam( samplerParams.probeMembershipRate, params, BIMAP_PARAM_SAMPLE_RATE_PROBE_MEMBERSHIP );
         MaybeReadRParam( samplerParams.probesSplitMergeRate, params, BIMAP_PARAM_SAMPLE_RATE_PROBES_SPLIT_MERGE );
-        MaybeReadRParam( samplerParams.crossClusterFlipRate, params, BIMAP_PARAM_SAMPLE_RATE_CROSS_CLUSTER_FLIP );
+        MaybeReadRParam( samplerParams.blockFlipRate, params, BIMAP_PARAM_SAMPLE_RATE_CROSS_CLUSTER_FLIP );
         MaybeReadRParam( samplerParams.signalRate, params, BIMAP_PARAM_SAMPLE_RATE_SIGNAL );
-        MaybeReadRParam( samplerParams.crossClusterResamples, params, BIMAP_PARAM_CROSS_CLUSTER_RESAMPLES );
+        MaybeReadRParam( samplerParams.blockResamples, params, BIMAP_PARAM_CROSS_CLUSTER_RESAMPLES );
         MaybeReadRParam( collectorParams.priorsStoragePeriod, params, BIMAP_PARAM_SAMPLE_PERIOD_PRIORS );
 
         MaybeReadRParam( signalParams.sequenceLengthFactor, params, BIMAP_PARAM_SIGNAL_SEQUENCE_LENGTH_FACTOR );
@@ -1101,7 +1101,7 @@ RcppExport SEXP BIMAPWalkEval(
                 if ( probesCluCode.empty() ) {
                     throw std::runtime_error( "Probes partition not specified, cannot read cross clusters" );
                 }
-                ReadCrossClusters( iniClus, objsCluCode, probesCluCode, crossClusExp );
+                ReadChessboardBiclusteringBlocks( iniClus, objsCluCode, probesCluCode, crossClusExp );
             }
             UNPROTECT( 1 );
         }
@@ -1110,7 +1110,7 @@ RcppExport SEXP BIMAPWalkEval(
     }
 
     Rprintf( "Initializing sampler...\n" );
-    ChessboardBiclusteringsIndexing  crossClusteringsIndexing( data.probesCount() );
+    ChessboardBiclusteringsIndexing  chessboardBiclusteringsIndexing( data.probesCount() );
     REESamplerExecutionMonitor execMonitor( 1, particleLogFilename.empty() ? NULL : particleLogFilename.c_str(), 
                                                eeJumpLogFilename.empty() ? NULL : eeJumpLogFilename.c_str() );
     Rprintf( "Evaluating preliminary signals...\n" );
@@ -1120,7 +1120,7 @@ RcppExport SEXP BIMAPWalkEval(
                                  samplerParams, 0, &execMonitor );
 
     Rprintf( "Bayesian Biclustering iterations in progress...\n" );
-    BIMAPWalk res = BIMAPSampler_run( helper, crossClusteringsIndexing,
+    BIMAPWalk res = BIMAPSampler_run( helper, chessboardBiclusteringsIndexing,
                                         samplerParams, cascadeParams,
                                         collectorParams,
                                         iniClus, &execMonitor );
@@ -1152,10 +1152,13 @@ RcppExport SEXP BIMAPWalkEval(
     END_RCPP
 }
 
+/**
+ *  Loads BI-MAP MCMC walk file and calculates independent components.
+ */
 RcppExport SEXP BIMAPWalkLoad(
-    SEXP filenameExp,
-    SEXP objectsComponentThresholdExp,
-    SEXP probesComponentThresholdExp
+    SEXP filenameExp,                   /** @param[in] filenameExp walk filename, character string */
+    SEXP objectsComponentThresholdExp,  /** @param[in] objectsComponentThresholdExp threshold for defining independent objects' components, numeric */
+    SEXP probesComponentThresholdExp    /** @param[in] probesComponentThresholdExp  threshold for defining independent objects' components, numeric */
 ){
     BEGIN_RCPP
 

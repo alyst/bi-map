@@ -14,7 +14,7 @@
 struct GibbsSamplerParams {
     size_t    priorsUpdatePeriod;           /** period (# of iterations) at which sampling step is made for prior parameters */
 
-    size_t    crossClusterResamples;        /** # of sampling steps to make after cross-cluster elements where modified */
+    size_t    blockResamples;        /** # of sampling steps to make after cross-cluster elements where modified */
 
     SplitMergeStepParams    objectsSplitMergeParams;
     ClusterOfElementStepParams  objectClusterParams;
@@ -26,7 +26,7 @@ struct GibbsSamplerParams {
     prob_t    probesSplitMergeRate;         /** rate of applying split-merge sampling step to probes partition */
     prob_t    probeMembershipRate;          /** rate of sampling single probe membership */
 
-    prob_t    crossClusterFlipRate;         /** rate of sampling on/off flag of cross-cluster */
+    prob_t    blockFlipRate;         /** rate of sampling on/off flag of cross-cluster */
 
     prob_t    objectMultipleRate;           /** rate of sampling object's multiple */
     prob_t    signalRate;                   /** rate of sampling signal of enabled cross-cluster */
@@ -40,7 +40,7 @@ struct GibbsSamplerParams {
     void serialize(Archive & ar, const unsigned int version)
     {
         ar & BOOST_SERIALIZATION_NVP( priorsUpdatePeriod );
-        ar & BOOST_SERIALIZATION_NVP( crossClusterResamples );
+        ar & BOOST_SERIALIZATION_NVP( blockResamples );
         ar & BOOST_SERIALIZATION_NVP( objectsSplitMergeParams );
         ar & BOOST_SERIALIZATION_NVP( objectClusterParams );
         ar & BOOST_SERIALIZATION_NVP( objectsSplitMergeRate );
@@ -49,7 +49,7 @@ struct GibbsSamplerParams {
         ar & BOOST_SERIALIZATION_NVP( probeClusterParams );
         ar & BOOST_SERIALIZATION_NVP( probesSplitMergeRate );
         ar & BOOST_SERIALIZATION_NVP( probeMembershipRate );
-        ar & BOOST_SERIALIZATION_NVP( crossClusterFlipRate );
+        ar & BOOST_SERIALIZATION_NVP( blockFlipRate );
         ar & BOOST_SERIALIZATION_NVP( objectMultipleRate );
         ar & BOOST_SERIALIZATION_NVP( signalRate );
         ar & BOOST_SERIALIZATION_NVP( meanObjectRank );

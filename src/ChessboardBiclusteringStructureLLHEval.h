@@ -26,7 +26,7 @@ public:
     typedef boost::dynamic_bitset<> observations_mask_type;
 
 public:
-    typedef ChessboardBiclustering::const_cross_cluster_iterator const_cross_cluster_iterator;
+    typedef ChessboardBiclustering::const_block_iterator const_block_iterator;
 
     ChessboardBiclusteringStructureLLHEval( const PrecomputedData& precomputed,
                                      prob_t priorCCEnabledProb,

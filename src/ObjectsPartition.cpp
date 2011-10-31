@@ -53,7 +53,7 @@ log_prob_t FixedObjectsPartitionStats::objectsLLH(
 
     ChessboardBiclusteringLLHEval eval = LLHEval( clusFit );
     // enabled cells
-    foreach_bit( probe_clundex_t, probeCluIx, params.crossClustersMask ) {
+    foreach_bit( probe_clundex_t, probeCluIx, params.blocksMask ) {
         const ProbesCluster&   cluster = clusFit.probesCluster( probeCluIx );
         BOOST_ASSERT( !is_unset( params.probeSignal[ probeCluIx ] ) );
         llh += eval.cellsDataLLH( objs, cluster.items(), params.probeSignal[ probeCluIx ],
@@ -62,7 +62,7 @@ log_prob_t FixedObjectsPartitionStats::objectsLLH(
     }
 
     // disabled cells
-    probe_bitset_t notMask = ~params.crossClustersMask;
+    probe_bitset_t notMask = ~params.blocksMask;
     const DataSignalNoiseCache& snCache = clusFit.signalNoiseCache();
     foreach_bit( probe_clundex_t, probeCluIx, notMask ) {
         llh += snCache.noiseLLH( objs, clusFit.probesCluster( probeCluIx ).items() );
@@ -142,10 +142,10 @@ log_prob_t FixedObjectsPartitionStats::paramsLPP(
 ) const {
     log_prob_t  lpp = 0;
     ChessboardBiclusteringPriorEval eval( clusFit.data(), clusFit.priors(), clusFit );
-    for ( probe_clundex_t i = 0; i < params.crossClustersMask.size(); i++ ) {
-        lpp += params.crossClustersMask.test( i )
-             ? eval.crossClusterEnablementPrior( params.probeSignal[i] )( true )
-             : eval.crossClusterEnablementPrior()( false );
+    for ( probe_clundex_t i = 0; i < params.blocksMask.size(); i++ ) {
+        lpp += params.blocksMask.test( i )
+             ? eval.blockEnablementPrior( params.probeSignal[i] )( true )
+             : eval.blockEnablementPrior()( false );
     }
     object_set_t unionObjs = clusterObjects;
     unionObjs.insert( sampledObjects.begin(), sampledObjects.end() );
@@ -183,17 +183,17 @@ bool FixedObjectsParamsSampler::operator()(
     for ( probe_clundex_t probeCluIx = 0; probeCluIx < clusHelper->clustering().probesClusters().size(); ++probeCluIx ) {
         const ProbesCluster&    probeClu = clusHelper->clustering().probesCluster( probeCluIx );
 
-        //bool wasEnabled = params.crossClustersMask.test( probeCluIx );
-        bool isEnabled = params.crossClustersMask.test( probeCluIx );
-        if ( overwrite && sampleCrossClusterMask ) {
+        //bool wasEnabled = params.blocksMask.test( probeCluIx );
+        bool isEnabled = params.blocksMask.test( probeCluIx );
+        if ( overwrite && sampleBlockMask ) {
             isEnabled = posterior
-                      ? clusHelper->sampleCrossClusterEnablement( allObjects, probeClu.items(), isEnabled ).value
+                      ? clusHelper->sampleBlockEnablement( allObjects, probeClu.items(), isEnabled ).value
                       : PriorEval( clusHelper->clusteringFit() )
-                        .crossClusterEnablementPrior()
+                        .blockEnablementPrior()
                         .generate( clusHelper->rndNumGen() );
             randomized = true;
         }
-        params.crossClustersMask.set( probeCluIx, isEnabled );
+        params.blocksMask.set( probeCluIx, isEnabled );
 
         if ( isEnabled && sampleSignals ) {
             LOG_DEBUG2( "Cross-Cluster is enabled" );
@@ -242,7 +242,7 @@ bool ObjectsParamsSampler::operator()(
     bool                        posterior
 ) const {
     ChessboardBiclusteringGibbsHelper helper = clusSampler->createGibbsHelper( ptn );
-    return ( FixedObjectsParamsSampler( helper, sampleCrossClusterMask, sampleSignals, sampleMultiples )
+    return ( FixedObjectsParamsSampler( helper, sampleBlockMask, sampleSignals, sampleMultiples )
                                       ( params, clusterObjects, sampledObjects,
                                         overwrite, posterior ) );
 }
@@ -263,15 +263,15 @@ log_prob_t ObjectsParamsSampler::transitionLP(
     log_prob_t  lnProb = 0;
 
     for ( probe_clundex_t probeCluIx = 0; probeCluIx < helperBefore.clustering().probesClusters().size(); ++probeCluIx ) {
-        ChessboardBiclustering::cross_cluster_proxy cluBefore = *((const ChessboardBiclustering&)before).findCrossCluster( cluIx, probeCluIx, false );
-        ChessboardBiclustering::cross_cluster_proxy cluAfter = *((const ChessboardBiclustering&)after).findCrossCluster( cluIx, probeCluIx, false );
+        ChessboardBiclustering::block_proxy cluBefore = *((const ChessboardBiclustering&)before).findBlock( cluIx, probeCluIx, false );
+        ChessboardBiclustering::block_proxy cluAfter = *((const ChessboardBiclustering&)after).findBlock( cluIx, probeCluIx, false );
         bool enabledBefore = cluBefore.isEnabled();
         bool enabledAfter = cluAfter.isEnabled();
         if ( enabledBefore != enabledAfter ) {
             // cross cluster probe transition probability
-            ChessboardBiclusteringGibbsHelper::CrossClusterEnablementDataLLHCached llhBefore( helperBefore.clusteringFit(), cluIx, probeCluIx );
-            ChessboardBiclusteringGibbsHelper::CrossClusterEnablementDataLLHCached llhAfter( helperAfter.clusteringFit(), cluIx, probeCluIx );
-            BernoulliDistribution prior = priorEval.crossClusterEnablementPrior();
+            ChessboardBiclusteringGibbsHelper::BlockEnablementDataLLHCached llhBefore( helperBefore.clusteringFit(), cluIx, probeCluIx );
+            ChessboardBiclusteringGibbsHelper::BlockEnablementDataLLHCached llhAfter( helperAfter.clusteringFit(), cluIx, probeCluIx );
+            BernoulliDistribution prior = priorEval.blockEnablementPrior();
             log_prob_t  lnOddsRatio = prior( enabledAfter ) - prior( enabledBefore )
                                     + llhAfter( enabledAfter ) - llhBefore( enabledBefore );
             lnProb += ln_odds_to_prob( lnOddsRatio );
@@ -285,8 +285,8 @@ log_prob_t ObjectsParamsSampler::transitionLP(
             BOOST_ASSERT( !is_unset( signalAfter ) );
             if ( signalBefore != signalAfter ) {
                 log_prob_t lnOddsRatio = signalPrior( signalAfter ) - signalPrior( signalBefore )
-                                        + helperAfter.clusteringFit().crossClusterLLH( cluIx, probeCluIx )
-                                        - helperBefore.clusteringFit().crossClusterLLH( cluIx, probeCluIx );
+                                        + helperAfter.clusteringFit().blockLLH( cluIx, probeCluIx )
+                                        - helperBefore.clusteringFit().blockLLH( cluIx, probeCluIx );
                 lnProb += ln_odds_to_prob( lnOddsRatio );
             }
         }
@@ -300,8 +300,8 @@ log_prob_t ObjectsParamsSampler::transitionLP(
         size_t multAfter = ((const ChessboardBiclustering&)after).objectMultiple( objIx );
         if ( multBefore != multAfter ) {
             for ( probe_clundex_t probeCluIx = 0; probeCluIx < helperBefore.clustering().probesClusters().size(); ++probeCluIx ) {
-                ChessboardBiclustering::cross_cluster_proxy cluBefore = *((const ChessboardBiclustering&)before).findCrossCluster( cluIx, probeCluIx, false );
-                ChessboardBiclustering::cross_cluster_proxy cluAfter = *((const ChessboardBiclustering&)after).findCrossCluster( after.clusterIndex( objIx ), probeCluIx, false );
+                ChessboardBiclustering::block_proxy cluBefore = *((const ChessboardBiclustering&)before).findBlock( cluIx, probeCluIx, false );
+                ChessboardBiclustering::block_proxy cluAfter = *((const ChessboardBiclustering&)after).findBlock( after.clusterIndex( objIx ), probeCluIx, false );
                 bool enabledBefore = cluBefore.isEnabled();
                 bool enabledAfter = cluAfter.isEnabled();
                 if ( enabledBefore && enabledAfter ) {

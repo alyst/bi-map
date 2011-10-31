@@ -23,19 +23,19 @@ probe_clundex_t ChessboardBiclusteringScaffold::probesClusterIndex(
     return ( CLUSTER_NA );
 }
 
-bool ChessboardBiclusteringScaffold::isCrossClusterEnabled(
+bool ChessboardBiclusteringScaffold::isBlockEnabled(
     objects_cluster_serial_type     objCluSerial,
     probes_cluster_serial_type      probeCluSerial
 ) const {
     object_clundex_t objCluIx = objectsClusterIndex( objCluSerial );
     probe_clundex_t probeCluIx = probesClusterIndex( probeCluSerial );
     return ( objCluIx != CLUSTER_NA && probeCluIx != CLUSTER_NA
-             && crossClusterMask.test( objCluIx * pProbesPartition->value().size() + probeCluIx ) );
+             && blockMask.test( objCluIx * pProbesPartition->value().size() + probeCluIx ) );
 }
 
 /**
  *  Gets mask of enabled/disabled probes of cells of object x probes
- *  array, induced by crossClustersMask().
+ *  array, induced by blocksMask().
  */
 void ChessboardBiclusteringScaffold::getCellsMask(
     cells_mask_t&   mask /** o  objects x probes mask of enabled/disabled probes */
@@ -54,7 +54,7 @@ void ChessboardBiclusteringScaffold::getCellsMask(
     mask.resize( nProbes * nObjects );
     mask.reset();
 
-    foreach_bit( size_t, ccIx, crossClusterMask ) {
+    foreach_bit( size_t, ccIx, blockMask ) {
         // enable cells of each enabled cross-cluster
         object_clundex_t objCluIx = ccIx / nProbeClus;
         probe_clundex_t  probeCluIx = ccIx % nProbeClus;
@@ -84,8 +84,8 @@ bool ChessboardBiclusteringScaffold::check() const
         THROW_RUNTIME_ERROR( "Objects partition #" << pObjectsPartition->serial() << " is empty" );
     }
     size_t expCCMaskSize = pProbesPartition->value().size() * pObjectsPartition->value().size();
-    if ( crossClusterMask.size() != expCCMaskSize ) {
-        THROW_RUNTIME_ERROR( "Incorrect cross clusters mask: size " << crossClusterMask.size() << ", should be " << expCCMaskSize );
+    if ( blockMask.size() != expCCMaskSize ) {
+        THROW_RUNTIME_ERROR( "Incorrect cross clusters mask: size " << blockMask.size() << ", should be " << expCCMaskSize );
     }
     return ( true );
 }
@@ -105,9 +105,9 @@ bool ChessboardBiclusteringIndexed::check() const
         ){
             probes_cluster_serial_type probeCluSerial = (*sit)->serial();
             probe_clundex_t probeCluIx = scaffold().probesClusterIndex( probeCluSerial );
-            cross_cluster_data_map_type::const_iterator ccDataIt = crossClustersData().find( cross_cluster_key_type( objCluSerial, probeCluSerial ) );
-            if ( scaffold().isCrossClusterEnabled( objCluSerial, probeCluSerial ) ) {
-                if ( ccDataIt != crossClustersData().end() ) {
+            block_data_map_type::const_iterator ccDataIt = blocksData().find( block_key_type( objCluSerial, probeCluSerial ) );
+            if ( scaffold().isBlockEnabled( objCluSerial, probeCluSerial ) ) {
+                if ( ccDataIt != blocksData().end() ) {
                     if ( is_unset( ccDataIt->second ) ) {
                         THROW_RUNTIME_ERROR( "Unset (NaN) signal for object cluster #" << objCluIx
                                                 << ", probe cluster #" << probeCluIx );
@@ -116,7 +116,7 @@ bool ChessboardBiclusteringIndexed::check() const
                         THROW_RUNTIME_ERROR( "No signal for object cluster #" << objCluIx
                                                 << ", probe cluster #" << probeCluIx );
                 }
-            } else if ( ccDataIt != crossClustersData().end() ) {
+            } else if ( ccDataIt != blocksData().end() ) {
                 THROW_RUNTIME_ERROR( "Signal exists for disabled cross cluster (" << objCluIx
                                         << ", " << probeCluIx << ")" );
             }
@@ -141,13 +141,13 @@ ChessboardBiclusteringIndexed ChessboardBiclusteringsIndexing::index(
     clustering.check();
 
     ChessboardBiclusteringScaffold    scaffold;
-    ChessboardBiclusteringIndexed::cross_cluster_data_map_type     crossClusterData;
+    ChessboardBiclusteringIndexed::block_data_map_type     blockData;
     scaffold.pObjectsPartition = _objectPartitionIndexing.index( clustering.objectsClusters().begin(), clustering.objectsClusters().end() );
     scaffold.pProbesPartition = _probePartitionIndexing.index( clustering.probesClusters().begin(), clustering.probesClusters().end() );
     // create a new cross clusters map, where object clusters and probe clusters would be reindexed with respect to their order in indexed partition
-    scaffold.crossClusterMask = ChessboardBiclusteringScaffold::cross_cluster_mask_t( clustering.objectsClusters().size() * clustering.probesClusters().size() );
+    scaffold.blockMask = ChessboardBiclusteringScaffold::block_mask_t( clustering.objectsClusters().size() * clustering.probesClusters().size() );
 
-    for ( ChessboardBiclustering::const_cross_cluster_iterator ccIt = clustering.begin(); ccIt != clustering.end(); ++ccIt ) {
+    for ( ChessboardBiclustering::const_block_iterator ccIt = clustering.begin(); ccIt != clustering.end(); ++ccIt ) {
         ChessboardBiclusteringIndexed::objects_cluster_serial_type objCluSerial = _objectPartitionIndexing.elementIndexing()
                     .index( ccIt->objectsCluster().items() )->serial();
         // get the index of the cluster in the indexed partition
@@ -156,11 +156,11 @@ ChessboardBiclusteringIndexed ChessboardBiclusteringsIndexing::index(
                     .index( ccIt->probesCluster().items() )->serial();
         // get the index of the cluster in the indexed partition
         probe_clundex_t newProbeCluIx = scaffold.probesClusterIndex( probeCluSerial );
-        scaffold.crossClusterMask.set( newObjCluIx * clustering.probesClusters().size() + newProbeCluIx );
-        crossClusterData[ ChessboardBiclusteringIndexed::cross_cluster_key_type( objCluSerial, probeCluSerial ) ] = ccIt->signal();
+        scaffold.blockMask.set( newObjCluIx * clustering.probesClusters().size() + newProbeCluIx );
+        blockData[ ChessboardBiclusteringIndexed::block_key_type( objCluSerial, probeCluSerial ) ] = ccIt->signal();
     }
-    BOOST_ASSERT( scaffold.crossClusterMask.count() == clustering.crossClustersMask().count() );
+    BOOST_ASSERT( scaffold.blockMask.count() == clustering.blocksMask().count() );
     base_type::entity_pointer_type pScaffold = base_type::index( scaffold );
 
-    return ( ChessboardBiclusteringIndexed( pScaffold, crossClusterData, clustering.objectMultiples(), clustering.clusteringData() ) );
+    return ( ChessboardBiclusteringIndexed( pScaffold, blockData, clustering.objectMultiples(), clustering.clusteringData() ) );
 }

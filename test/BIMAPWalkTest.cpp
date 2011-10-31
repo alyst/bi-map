@@ -119,7 +119,7 @@ protein 1-1 1-2 1-3 1-4   2-1   2-2   2-3   2-4 3-1 3-2 3-3 3-4   4-1   4-2   4-
     data.addMeasurement( "C", "4-4", 21015 );
     data.addMeasurement( "D", "4-4", 20977 );
 
-    ChessboardBiclusteringsIndexing    crossClusteringsIndexing;
+    ChessboardBiclusteringsIndexing    chessboardBiclusteringsIndexing;
     ChessboardBiclusteringHyperPriors  hyperpriors;
     hyperpriors.signalHyperprior.meanVarScale = 2;
     ChessboardBiclusteringPriors       priors;
@@ -141,7 +141,7 @@ protein 1-1 1-2 1-3 1-4   2-1   2-2   2-3   2-4 3-1 3-2 3-3 3-4   4-1   4-2   4-
     PrecomputedData    precomputed( data, precomputedDataParams, signalParams );
     BIMAPSamplerHelper         helper( precomputed,
                                         hyperpriors, priors, gibbsParams );
-    BIMAPWalk walk = BIMAPSampler_run( helper, crossClusteringsIndexing, gibbsParams, cascadeParams,
+    BIMAPWalk walk = BIMAPSampler_run( helper, chessboardBiclusteringsIndexing, gibbsParams, cascadeParams,
                                          collectorParams, helper.randomClustering(), &mon );
     EXPECT_NO_THROW( walk.check() );
     RecordProperty( "Clustering steps recorded", walk.stepsCount() );
@@ -161,7 +161,7 @@ protein 1-1 1-2 1-3 1-4   2-1   2-2   2-3   2-4 3-1 3-2 3-3 3-4   4-1   4-2   4-
     }
     oa << BOOST_SERIALIZATION_NVP( objects );
     oa << BOOST_SERIALIZATION_NVP( probes );
-    oa << BOOST_SERIALIZATION_NVP( crossClusteringsIndexing );
+    oa << BOOST_SERIALIZATION_NVP( chessboardBiclusteringsIndexing );
     oa << BOOST_SERIALIZATION_NVP( walk );
 }
 
@@ -169,8 +169,8 @@ TEST( BIMAPWalk, serialize_read )
 {
     boost::unordered_map<object_index_t, object_label_t> objects;
     boost::unordered_map<probe_index_t, probe_label_t> probes;
-    ChessboardBiclusteringsIndexing    crossClusteringsIndexing;
-    BIMAPWalk walk( crossClusteringsIndexing );
+    ChessboardBiclusteringsIndexing    chessboardBiclusteringsIndexing;
+    BIMAPWalk walk( chessboardBiclusteringsIndexing );
     std::ifstream ifs( "BIMAPWalkTest.xml" );//"/home/astukalov/test2walk.xml" );//);
     ASSERT_TRUE( ifs.good() );
     boost::archive::xml_iarchive ia(ifs);
@@ -178,8 +178,8 @@ TEST( BIMAPWalk, serialize_read )
     LOG_INFO( "Objects count: " << objects.size() );
     ia >> BOOST_SERIALIZATION_NVP( probes );
     LOG_INFO( "Probes count: " << probes.size() );
-    ia >> BOOST_SERIALIZATION_NVP( crossClusteringsIndexing );
-    LOG_INFO( "Indexing size: " << crossClusteringsIndexing.size() );
+    ia >> BOOST_SERIALIZATION_NVP( chessboardBiclusteringsIndexing );
+    LOG_INFO( "Indexing size: " << chessboardBiclusteringsIndexing.size() );
     ia >> BOOST_SERIALIZATION_NVP( walk );
     EXPECT_NO_THROW( walk.check() );
     LOG_INFO( "Steps read: " << walk.stepsCount() );
@@ -190,8 +190,8 @@ TEST( BIMAPWalk, DISABLED_serialize_read_compressed )
 {
     boost::unordered_map<object_index_t, object_label_t> objects;
     boost::unordered_map<probe_index_t, probe_label_t> probes;
-    ChessboardBiclusteringsIndexing    crossClusteringsIndexing;
-    BIMAPWalk walk( crossClusteringsIndexing );
+    ChessboardBiclusteringsIndexing    chessboardBiclusteringsIndexing;
+    BIMAPWalk walk( chessboardBiclusteringsIndexing );
     std::ifstream compressed_ifs( "/home/astukalov/projects/pcp/results/egfr/egfr_cc_walk.xml.gz" );//"/home/astukalov/test2walk.xml" );//);
     boost::iostreams::filtering_stream<boost::iostreams::input> ifs;
     ifs.push( boost::iostreams::gzip_decompressor() );
@@ -202,8 +202,8 @@ TEST( BIMAPWalk, DISABLED_serialize_read_compressed )
     LOG_INFO( "Objects count: " << objects.size() );
     ia >> BOOST_SERIALIZATION_NVP( probes );
     LOG_INFO( "Probes count: " << probes.size() );
-    ia >> BOOST_SERIALIZATION_NVP( crossClusteringsIndexing );
-    LOG_INFO( "Indexing size: " << crossClusteringsIndexing.size() );
+    ia >> BOOST_SERIALIZATION_NVP( chessboardBiclusteringsIndexing );
+    LOG_INFO( "Indexing size: " << chessboardBiclusteringsIndexing.size() );
     ia >> BOOST_SERIALIZATION_NVP( walk );
     EXPECT_NO_THROW( walk.check() );
     LOG_INFO( "Steps read: " << walk.stepsCount() );

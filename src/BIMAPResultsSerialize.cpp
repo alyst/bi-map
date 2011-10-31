@@ -40,7 +40,7 @@ void DeserializeResults(
     resultsArchive >> boost::serialization::make_nvp( "probes", probes );
 
     LOG_INFO( "Reading chessboard biclusterings index...\n" );
-    resultsArchive >> boost::serialization::make_nvp( "crossClusteringsIndexing", indexing );
+    resultsArchive >> boost::serialization::make_nvp( "chessboardBiclusteringsIndexing", indexing );
 
     LOG_INFO( "Reading walk...\n" );
     *pWalk = new BIMAPWalk( indexing );
@@ -73,7 +73,7 @@ void SerializeResults(
     resultsArchive << BOOST_SERIALIZATION_NVP( probes );
 
     //Rprintf( "Writing chessboard biclusterings index...\n" );
-    resultsArchive << boost::serialization::make_nvp( "crossClusteringsIndexing", walk.indexing() );
+    resultsArchive << boost::serialization::make_nvp( "chessboardBiclusteringsIndexing", walk.indexing() );
 
     //Rprintf( "Writing walk...\n" );
     resultsArchive << BOOST_SERIALIZATION_NVP( walk );

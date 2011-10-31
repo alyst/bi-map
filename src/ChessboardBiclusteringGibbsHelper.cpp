@@ -22,26 +22,26 @@ ChessboardBiclusteringGibbsHelper::ChessboardBiclusteringGibbsHelper(
 {
 }
 
-log_prob_t ChessboardBiclusteringGibbsHelper::CrossClusterEnablementDataLLHCached::operator()(
+log_prob_t ChessboardBiclusteringGibbsHelper::BlockEnablementDataLLHCached::operator()(
     bool isEnabled
 ) const {
     log_prob_t res = isEnabled
-               ? clusFit.crossClusterIsSignalLLH( objCluIx, probeCluIx )
-               : clusFit.crossClusterIsNoiseLLH( objCluIx, probeCluIx );
+               ? clusFit.blockIsSignalLLH( objCluIx, probeCluIx )
+               : clusFit.blockIsNoiseLLH( objCluIx, probeCluIx );
     LOG_DEBUG2( "CC_" << isEnabled << "[" << objCluIx << ", " << probeCluIx << "]=" << res );
     return ( res );
 }
 
-GibbsSample<bool> ChessboardBiclusteringGibbsHelper::sampleCrossClusterEnablement(
+GibbsSample<bool> ChessboardBiclusteringGibbsHelper::sampleBlockEnablement(
     object_clundex_t    objCluIx,
     probe_clundex_t     probeCluIx
 ){
-    ChessboardBiclustering::const_cross_cluster_iterator ccIt = _fit.findCrossCluster( objCluIx, probeCluIx, false );
+    ChessboardBiclustering::const_block_iterator ccIt = _fit.findBlock( objCluIx, probeCluIx, false );
     return ( MetropolisHastringsPosteriorSample<bool>(
         rndNumGen(), 
         BinaryTransition(),
-        CrossClusterEnablementDataLLHCached( _fit, objCluIx, probeCluIx ),
-        PriorEval( _fit ).crossClusterEnablementPrior( 
+        BlockEnablementDataLLHCached( _fit, objCluIx, probeCluIx ),
+        PriorEval( _fit ).blockEnablementPrior( 
                 ccIt->isEnabled() ? ccIt->signal()
                 : _fit.precomputed().clusterSignal( ccIt->objectsCluster().items(), 
                                                     ccIt->probesCluster().items(),
@@ -50,7 +50,7 @@ GibbsSample<bool> ChessboardBiclusteringGibbsHelper::sampleCrossClusterEnablemen
         ccIt->isEnabled(), _totalLnP, _samplingTransform ) );
 }
 
-GibbsSample<bool> ChessboardBiclusteringGibbsHelper::sampleCrossClusterEnablement(
+GibbsSample<bool> ChessboardBiclusteringGibbsHelper::sampleBlockEnablement(
     const object_set_t&     objects,
     const probe_bitset_t&   probes,
     bool                    curEnabled
@@ -58,8 +58,8 @@ GibbsSample<bool> ChessboardBiclusteringGibbsHelper::sampleCrossClusterEnablemen
     return ( MetropolisHastringsPosteriorSample<bool>( 
         rndNumGen(), 
         BinaryTransition(),
-        CrossClusterEnablementDataLLH( _fit.signalNoiseCache(), objects, probes ),
-        PriorEval( _fit ).crossClusterEnablementPrior( _fit.precomputed().clusterSignal( objects, probes, _fit.objectMultiples() ) ),
+        BlockEnablementDataLLH( _fit.signalNoiseCache(), objects, probes ),
+        PriorEval( _fit ).blockEnablementPrior( _fit.precomputed().clusterSignal( objects, probes, _fit.objectMultiples() ) ),
         curEnabled, _totalLnP, _samplingTransform ) );
 }
 
@@ -197,8 +197,8 @@ std::vector<signal_t> ChessboardBiclusteringGibbsHelper::Signals(
                 << " T=" << _samplingTransform.temperature << ")" );
     for ( probe_clundex_t probeCluIx = 0; probeCluIx < clustering.probesClusters().size(); probeCluIx++ ) {
         for ( object_clundex_t objCluIx = 0; objCluIx < clustering.objectsClusters().size(); objCluIx++ ) {
-            const ChessboardBiclustering::const_cross_cluster_iterator cluIt = clustering.findCrossCluster( objCluIx, probeCluIx );
-            if ( cluIt != clustering.crossClusterNotFound() ) {
+            const ChessboardBiclustering::const_block_iterator cluIt = clustering.findBlock( objCluIx, probeCluIx );
+            if ( cluIt != clustering.blockNotFound() ) {
                 signal_t signal = clustering.clusterSignal( objCluIx, probeCluIx );
                 if ( !is_unset( signal ) ) {
                     LOG_DEBUG2( "Signal " << signal );
@@ -223,8 +223,8 @@ std::vector<signal_t> ChessboardBiclusteringGibbsHelper::Measurements(
     for ( probe_clundex_t probeCluIx = 0; probeCluIx < clustering.probesClusters().size(); probeCluIx++ ) {
         const ProbesCluster& probesClu = clustering.probesCluster( probeCluIx );
         for ( object_clundex_t objCluIx = 0; objCluIx < clustering.objectsClusters().size(); objCluIx++ ) {
-            const ChessboardBiclustering::const_cross_cluster_iterator cluIt = clustering.findCrossCluster( objCluIx, probeCluIx );
-            bool isCCOn = cluIt != clustering.crossClusterNotFound();
+            const ChessboardBiclustering::const_block_iterator cluIt = clustering.findBlock( objCluIx, probeCluIx );
+            bool isCCOn = cluIt != clustering.blockNotFound();
             if ( ( isCCOn && enabled ) || ( !isCCOn && disabled ) ) {
                 foreach_bit( probe_index_t, probeIx, probesClu.items() ) {
                    const OPAProbe& probe = data.probe( probeIx );

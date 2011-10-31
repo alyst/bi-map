@@ -32,27 +32,27 @@ struct ChessboardBiclusteringScaffold {
     typedef default_serial_t objects_cluster_serial_type;
     typedef default_serial_t probes_cluster_serial_type;
 
-    typedef boost::dynamic_bitset<>         cross_cluster_mask_t;
+    typedef boost::dynamic_bitset<>         block_mask_t;
     typedef boost::dynamic_bitset<>         cells_mask_t;
 
     indexed_object_partition_pointer    pObjectsPartition;
     indexed_probe_partition_pointer     pProbesPartition;
 
-    cross_cluster_mask_t                crossClusterMask;
+    block_mask_t                blockMask;
 
     friend size_t hash_value( const ChessboardBiclusteringScaffold& value )
     {
         std::size_t seed = 0;
         boost::hash_combine(seed, value.pObjectsPartition->serial() );
         boost::hash_combine(seed, value.pProbesPartition->serial() );
-        boost::hash_combine(seed, hash_value( value.crossClusterMask ) );
+        boost::hash_combine(seed, hash_value( value.blockMask ) );
         return ( seed );
     }
 
     bool operator==( const ChessboardBiclusteringScaffold& that ) const {
         return ( pObjectsPartition == that.pObjectsPartition 
               && pProbesPartition == that.pProbesPartition 
-              && crossClusterMask == that.crossClusterMask );
+              && blockMask == that.blockMask );
     }
 
     object_clundex_t objectsClusterIndex( objects_cluster_serial_type objectsCluSerial ) const;
@@ -70,7 +70,7 @@ struct ChessboardBiclusteringScaffold {
         return ( pProbesPartition->value().end() );
     }
 
-    bool isCrossClusterEnabled( objects_cluster_serial_type objCluSerial, probes_cluster_serial_type probeCluSerial ) const;
+    bool isBlockEnabled( objects_cluster_serial_type objCluSerial, probes_cluster_serial_type probeCluSerial ) const;
 
     bool check() const;
 
@@ -142,12 +142,12 @@ public:
     typedef probe_partition_indexing::collection_type probes_cluster_collection_type;
 
 public:
-    typedef std::pair<objects_cluster_serial_type, probes_cluster_serial_type> cross_cluster_key_type;
-    typedef boost::unordered_map<cross_cluster_key_type, signal_t> cross_cluster_data_map_type;
+    typedef std::pair<objects_cluster_serial_type, probes_cluster_serial_type> block_key_type;
+    typedef boost::unordered_map<block_key_type, signal_t> block_data_map_type;
 
 private:
     clustering_pointer_type         _pScaffold;
-    cross_cluster_data_map_type     _crossClustersData;
+    block_data_map_type     _blocksData;
     multiple_map_t                  _objectsData;
 
 protected:
@@ -156,11 +156,11 @@ protected:
     friend class boost::serialization::access;
 
     ChessboardBiclusteringIndexed( const clustering_pointer_type&      pScaffold,
-                            const cross_cluster_data_map_type&  crossClustersData,
+                            const block_data_map_type&  blocksData,
                             const multiple_map_t&               objectsData,
                             const ChessboardBiclusteringData&          clusteringData
     ) : ChessboardBiclusteringData( clusteringData ), _pScaffold( pScaffold )
-      , _crossClustersData( crossClustersData ), _objectsData( objectsData )
+      , _blocksData( blocksData ), _objectsData( objectsData )
     {}
 
 public:
@@ -204,8 +204,8 @@ public:
         return ( _objectsData );
     }
 
-    const cross_cluster_data_map_type& crossClustersData() const {
-        return ( _crossClustersData );
+    const block_data_map_type& blocksData() const {
+        return ( _blocksData );
     }
 
     #if 0
@@ -267,12 +267,12 @@ public:
         return ( clusters().size() );
     }
 #endif
-    const ChessboardBiclusteringScaffold::cross_cluster_mask_t& crossClusterMask() const {
-        return ( _pScaffold->value().crossClusterMask );
+    const ChessboardBiclusteringScaffold::block_mask_t& blockMask() const {
+        return ( _pScaffold->value().blockMask );
     }
 
-    bool isCrossClusterEnabled( objects_cluster_serial_type objCluSerial, probes_cluster_serial_type probeCluSerial ) const {
-        return ( _pScaffold->value().isCrossClusterEnabled( objCluSerial, probeCluSerial ) );
+    bool isBlockEnabled( objects_cluster_serial_type objCluSerial, probes_cluster_serial_type probeCluSerial ) const {
+        return ( _pScaffold->value().isBlockEnabled( objCluSerial, probeCluSerial ) );
     }
 
     const signal_params_type& baselineSignalParams() const {
@@ -317,7 +317,7 @@ private:
         LOG_DEBUG3("Serializing probes index");
         ar & boost::serialization::make_nvp( "probesPartitionIndex", _probePartitionIndexing );
         LOG_DEBUG3("Serializing chessboard biclusterings index");
-        ar & boost::serialization::make_nvp( "crossClusteringsIndex", boost::serialization::base_object<base_type>(*this) );
+        ar & boost::serialization::make_nvp( "chessboardBiclusteringsIndex", boost::serialization::base_object<base_type>(*this) );
     }
 
 public:
@@ -373,7 +373,7 @@ struct ChessboardBiclusteringScaffoldSerializer
 
         ar << boost::serialization::make_nvp( "objectsPartitionSerial", objPtnSerial );
         ar << boost::serialization::make_nvp( "probesPartitionSerial", probePtnSerial );
-        ar << boost::serialization::make_nvp( "crossClusterMask", const_cast<ChessboardBiclusteringScaffold::cross_cluster_mask_t&>( v.crossClusterMask ) );
+        ar << boost::serialization::make_nvp( "blockMask", const_cast<ChessboardBiclusteringScaffold::block_mask_t&>( v.blockMask ) );
     }
 
     template<class Archive>
@@ -392,7 +392,7 @@ struct ChessboardBiclusteringScaffoldSerializer
         entity.pObjectsPartition = *indexing.objectPartitionIndexing().iterator_to( objPtnSerial );
         entity.pProbesPartition = *indexing.probePartitionIndexing().iterator_to( probePtnSerial );
         LOG_DEBUG3("Loading cross-cluster mask");
-        ar >> boost::serialization::make_nvp( "crossClusterMask", entity.crossClusterMask );
+        ar >> boost::serialization::make_nvp( "blockMask", entity.blockMask );
         return ( entity );
     }
 };

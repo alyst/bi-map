@@ -15,7 +15,7 @@ ChessboardBiclusteringPriorEval::ChessboardBiclusteringPriorEval(
 size_t ChessboardBiclusteringPriorEval::countMeasurements( bool signal ) const
 {
     size_t mesCnt = 0;
-    for ( ChessboardBiclustering::const_cross_cluster_iterator cluIt = clustering().begin(); cluIt != clustering().end(); ++cluIt ) {
+    for ( ChessboardBiclustering::const_block_iterator cluIt = clustering().begin(); cluIt != clustering().end(); ++cluIt ) {
         if ( cluIt->isEnabled() ) {
             mesCnt += data().assaysCount( clustering().probesCluster( cluIt->probesClusterIndex() ).items() )
                     * clustering().objectsCluster( cluIt->objectsClusterIndex() ).size();
@@ -65,12 +65,12 @@ struct ProbesClustersSizes {
     }
 };
 
-ChessboardBiclusteringPriorEval::CrossClusterEnablementPrior::CrossClusterEnablementPrior(
+ChessboardBiclusteringPriorEval::BlockEnablementPrior::BlockEnablementPrior(
     const ChessboardBiclusteringPriors&            priors1,
     const ChessboardBiclusteringDerivedPriors&     priors2,
     signal_t signal
-) : lppEnabled( priors1.crossClusterEnablementPrior( true ) + priors2.signalPrior( signal ) )
-  , lppDisabled( priors1.crossClusterEnablementPrior( false ) )
+) : lppEnabled( priors1.blockEnablementPrior( true ) + priors2.signalPrior( signal ) )
+  , lppDisabled( priors1.blockEnablementPrior( false ) )
 {
 }
 
@@ -92,14 +92,14 @@ log_prob_t ChessboardBiclusteringPriorEval::objectsMultiplesLPP() const
     return ( res );
 }
 
-log_prob_t ChessboardBiclusteringPriorEval::crossClusterLPP(
+log_prob_t ChessboardBiclusteringPriorEval::blockLPP(
     object_clundex_t    objCluIx,
     probe_clundex_t     probeCluIx
 ) const {
-    return ( crossClusterLPP( *_clustering.findCrossCluster( objCluIx, probeCluIx, false ) ) );
+    return ( blockLPP( *_clustering.findBlock( objCluIx, probeCluIx, false ) ) );
 }
 
-log_prob_t ChessboardBiclusteringPriorEval::crossClusterLPP( const ChessboardBiclustering::cross_cluster_proxy& cc ) const
+log_prob_t ChessboardBiclusteringPriorEval::blockLPP( const ChessboardBiclustering::block_proxy& cc ) const
 {
     if ( cc.isEnabled() ) {
         GaussianDistribution signalPrior = clustering().derivedPriors().signalPrior;
@@ -107,10 +107,10 @@ log_prob_t ChessboardBiclusteringPriorEval::crossClusterLPP( const ChessboardBic
         if ( is_unset( signal ) ) THROW_RUNTIME_ERROR( "lpp(): signal for ("
             << cc.objectsClusterIndex() << ", " << cc.probesClusterIndex()
             << ") not set" );
-        return ( signalPrior( signal ) + crossClusterEnablementPrior()( true ) );
+        return ( signalPrior( signal ) + blockEnablementPrior()( true ) );
     }
     else {
-        return ( crossClusterEnablementPrior()( false ) );
+        return ( blockEnablementPrior()( false ) );
     }
 }
 
@@ -124,7 +124,7 @@ log_prob_t ChessboardBiclusteringPriorEval::lpp() const
     {
         size_t enabledCnt = 0;
         GaussianDistribution signalPrior = clustering().derivedPriors().signalPrior;
-        for ( ChessboardBiclustering::const_cross_cluster_iterator ccIt = clustering().begin(); ccIt != clustering().end(); ++ccIt ) {
+        for ( ChessboardBiclustering::const_block_iterator ccIt = clustering().begin(); ccIt != clustering().end(); ++ccIt ) {
             if ( ccIt->isEnabled() ) {
                 enabledCnt++;
                 signal_t signal = ccIt->signal();
@@ -136,8 +136,8 @@ log_prob_t ChessboardBiclusteringPriorEval::lpp() const
             }
         }
         // cross-cluster probe prior
-        res += crossClusterEnablementPrior()( true ) * enabledCnt
-            + crossClusterEnablementPrior()( false ) * ( clustering().objectsClusters().size() * clustering().probesClusters().size() - enabledCnt );
+        res += blockEnablementPrior()( true ) * enabledCnt
+            + blockEnablementPrior()( false ) * ( clustering().objectsClusters().size() * clustering().probesClusters().size() - enabledCnt );
     }
 
     BOOST_ASSERT( res < 0 );

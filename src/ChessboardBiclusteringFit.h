@@ -57,19 +57,19 @@ protected:
 
     mutable lnprob_vector_type  _objClusterLPP;
 
-    mutable block_lnprob_matrix_type _crossClusterLLH;
-    mutable block_lnprob_matrix_type _crossClusterLPP;
+    mutable block_lnprob_matrix_type _blockLLH;
+    mutable block_lnprob_matrix_type _blockLPP;
 
-    mutable bool _crossClusterIsSignalLLHValid;
-    mutable block_lnprob_matrix_type _crossClusterIsSignalLLH;
-    mutable bool _crossClusterIsNoiseLLHValid;
-    mutable block_lnprob_matrix_type _crossClusterIsNoiseLLH;
+    mutable bool _blockIsSignalLLHValid;
+    mutable block_lnprob_matrix_type _blockIsSignalLLH;
+    mutable bool _blockIsNoiseLLHValid;
+    mutable block_lnprob_matrix_type _blockIsNoiseLLH;
 
-    block_counts_matrix_type _crossClusterToSample; /** how many each cross-cluster have to be sampled */
+    block_counts_matrix_type _blockToSample; /** how many each cross-cluster have to be sampled */
 
     log_prob_t evalLPP() const;
     log_prob_t evalLLH() const;
-    void updateCrossClustersProbesLLH() const;
+    void updateBlocksProbesLLH() const;
     void updateClustersLLH() const;
 
     void resetTotalLnP() const {
@@ -89,21 +89,21 @@ protected:
     template<class Archive>
     void load(Archive & ar, const unsigned int version)
     {
-        ar >> boost::serialization::make_nvp( "crossClustering", boost::serialization::base_object<ChessboardBiclustering>( *this ) );
-        ar >> boost::serialization::make_nvp( "crossClusterToSample", _crossClusterToSample );
-        ar >> boost::serialization::make_nvp( "crossClusterLLH", _crossClusterLLH );
-        ar >> boost::serialization::make_nvp( "crossClusterLPP", _crossClusterLPP );
-        ar >> boost::serialization::make_nvp( "crossClusterNoiseLLHValid", _crossClusterIsNoiseLLHValid );
-        if ( _crossClusterIsNoiseLLHValid ) {
-            ar >> boost::serialization::make_nvp( "crossClusterNoiseLLH", _crossClusterIsNoiseLLH );
+        ar >> boost::serialization::make_nvp( "chessboardBiclustering", boost::serialization::base_object<ChessboardBiclustering>( *this ) );
+        ar >> boost::serialization::make_nvp( "blockToSample", _blockToSample );
+        ar >> boost::serialization::make_nvp( "blockLLH", _blockLLH );
+        ar >> boost::serialization::make_nvp( "blockLPP", _blockLPP );
+        ar >> boost::serialization::make_nvp( "blockNoiseLLHValid", _blockIsNoiseLLHValid );
+        if ( _blockIsNoiseLLHValid ) {
+            ar >> boost::serialization::make_nvp( "blockNoiseLLH", _blockIsNoiseLLH );
         } else {
-            _crossClusterIsNoiseLLH.reset( objectsClusters().size(), probesClusters().size(), unset() );
+            _blockIsNoiseLLH.reset( objectsClusters().size(), probesClusters().size(), unset() );
         }
-        ar >> boost::serialization::make_nvp( "crossClusterSignalLLHValid", _crossClusterIsSignalLLHValid );
-        if ( _crossClusterIsSignalLLHValid ) {
-            ar >> boost::serialization::make_nvp( "crossClusterSignalLLH", _crossClusterIsSignalLLH );
+        ar >> boost::serialization::make_nvp( "blockSignalLLHValid", _blockIsSignalLLHValid );
+        if ( _blockIsSignalLLHValid ) {
+            ar >> boost::serialization::make_nvp( "blockSignalLLH", _blockIsSignalLLH );
         } else {
-            _crossClusterIsSignalLLH.reset( objectsClusters().size(), probesClusters().size(), unset() );
+            _blockIsSignalLLH.reset( objectsClusters().size(), probesClusters().size(), unset() );
         }
         ar >> boost::serialization::make_nvp( "llh", _llh );
         ar >> boost::serialization::make_nvp( "lpp", _lpp );
@@ -131,17 +131,17 @@ protected:
     template<class Archive>
     void save(Archive & ar, const unsigned int version) const
     {
-        ar << boost::serialization::make_nvp( "crossClustering", boost::serialization::base_object<ChessboardBiclustering>( *this ) );
-        ar << boost::serialization::make_nvp( "crossClusterToSample", _crossClusterToSample );
-        ar << boost::serialization::make_nvp( "crossClusterLLH", _crossClusterLLH );
-        ar << boost::serialization::make_nvp( "crossClusterLPP", _crossClusterLPP );
-        ar << boost::serialization::make_nvp( "crossClusterNoiseLLHValid", _crossClusterIsNoiseLLHValid );
-        if ( _crossClusterIsNoiseLLHValid ) {
-            ar << boost::serialization::make_nvp( "crossClusterNoiseLLH", _crossClusterIsNoiseLLH );
+        ar << boost::serialization::make_nvp( "chessboardBiclustering", boost::serialization::base_object<ChessboardBiclustering>( *this ) );
+        ar << boost::serialization::make_nvp( "blockToSample", _blockToSample );
+        ar << boost::serialization::make_nvp( "blockLLH", _blockLLH );
+        ar << boost::serialization::make_nvp( "blockLPP", _blockLPP );
+        ar << boost::serialization::make_nvp( "blockNoiseLLHValid", _blockIsNoiseLLHValid );
+        if ( _blockIsNoiseLLHValid ) {
+            ar << boost::serialization::make_nvp( "blockNoiseLLH", _blockIsNoiseLLH );
         }
-        ar << boost::serialization::make_nvp( "crossClusterSignalLLHValid", _crossClusterIsSignalLLHValid );
-        if ( _crossClusterIsSignalLLHValid ) {
-            ar << boost::serialization::make_nvp( "crossClusterSignalLLH", _crossClusterIsSignalLLH );
+        ar << boost::serialization::make_nvp( "blockSignalLLHValid", _blockIsSignalLLHValid );
+        if ( _blockIsSignalLLHValid ) {
+            ar << boost::serialization::make_nvp( "blockSignalLLH", _blockIsSignalLLH );
         }
         ar << boost::serialization::make_nvp( "llh", _llh );
         ar << boost::serialization::make_nvp( "lpp", _lpp );
@@ -151,7 +151,7 @@ protected:
     }
 
 public:
-    typedef ChessboardBiclustering::const_cross_cluster_iterator const_cross_cluster_iterator;
+    typedef ChessboardBiclustering::const_block_iterator const_block_iterator;
 
     ChessboardBiclusteringFit( const PrecomputedData& precomputed,
                         const ChessboardBiclusteringPriors& priors );
@@ -223,11 +223,11 @@ public:
 #endif
     }
 
-    log_prob_t crossClusterLLH( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const {
-        log_prob_t res = _crossClusterLLH( objCluIx, probeCluIx );
+    log_prob_t blockLLH( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const {
+        log_prob_t res = _blockLLH( objCluIx, probeCluIx );
         if ( is_unset( res ) ) {
             updateClustersLLH();
-            res = _crossClusterLLH( objCluIx, probeCluIx );
+            res = _blockLLH( objCluIx, probeCluIx );
         }
         return ( res );
     }
@@ -250,42 +250,42 @@ public:
         return ( res );
     }
 
-    log_prob_t crossClusterIsNoiseLLH( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const {
-        if ( !_crossClusterIsNoiseLLHValid ) {
-            updateCrossClustersProbesLLH();
+    log_prob_t blockIsNoiseLLH( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const {
+        if ( !_blockIsNoiseLLHValid ) {
+            updateBlocksProbesLLH();
         }
-        return ( _crossClusterIsNoiseLLH( objCluIx, probeCluIx ) );
+        return ( _blockIsNoiseLLH( objCluIx, probeCluIx ) );
     }
     const block_lnprob_matrix_type::section_type objectsClusterIsNoiseLLH( object_clundex_t cluIx ) const {
-        if ( !_crossClusterIsNoiseLLHValid ) {
-            updateCrossClustersProbesLLH(); // check if whole section1 is up-to-date
+        if ( !_blockIsNoiseLLHValid ) {
+            updateBlocksProbesLLH(); // check if whole section1 is up-to-date
         }
-        return ( _crossClusterIsNoiseLLH.section1( cluIx ) );
+        return ( _blockIsNoiseLLH.section1( cluIx ) );
     }
     const block_lnprob_matrix_type::section_type probesClusterIsNoiseLLH( probe_clundex_t cluIx ) const {
-        if ( !_crossClusterIsNoiseLLHValid ) {
-            updateCrossClustersProbesLLH(); // check if whole section2 is up-to-date
+        if ( !_blockIsNoiseLLHValid ) {
+            updateBlocksProbesLLH(); // check if whole section2 is up-to-date
         }
-        return ( _crossClusterIsNoiseLLH.section2( cluIx ) );
+        return ( _blockIsNoiseLLH.section2( cluIx ) );
     }
 
-    log_prob_t crossClusterIsSignalLLH( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const {
-        if ( !_crossClusterIsSignalLLHValid ) {
-            updateCrossClustersProbesLLH();
+    log_prob_t blockIsSignalLLH( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const {
+        if ( !_blockIsSignalLLHValid ) {
+            updateBlocksProbesLLH();
         }
-        return ( _crossClusterIsSignalLLH( objCluIx, probeCluIx ) );
+        return ( _blockIsSignalLLH( objCluIx, probeCluIx ) );
     }
     const block_lnprob_matrix_type::section_type objectsClusterIsSignalLLH( object_clundex_t cluIx ) const {
-        if ( !_crossClusterIsSignalLLHValid ) {
-            updateCrossClustersProbesLLH(); // check if whole section1 is up-to-date
+        if ( !_blockIsSignalLLHValid ) {
+            updateBlocksProbesLLH(); // check if whole section1 is up-to-date
         }
-        return ( _crossClusterIsSignalLLH.section1( cluIx ) );
+        return ( _blockIsSignalLLH.section1( cluIx ) );
     }
     const block_lnprob_matrix_type::section_type probesClusterIsSignalLLH( probe_clundex_t cluIx ) const {
-        if ( !_crossClusterIsSignalLLHValid ) {
-            updateCrossClustersProbesLLH(); // check if whole section2 is up-to-date
+        if ( !_blockIsSignalLLHValid ) {
+            updateBlocksProbesLLH(); // check if whole section2 is up-to-date
         }
-        return ( _crossClusterIsSignalLLH.section2( cluIx ) );
+        return ( _blockIsSignalLLH.section2( cluIx ) );
     }
 
     DataSignalNoiseCache& signalNoiseCache() const {
@@ -296,23 +296,23 @@ public:
         return ( *_signalNoiseCache );
     }
 
-    size_t crossClusterToSample( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const {
-        return ( (size_t)_crossClusterToSample( objCluIx, probeCluIx ) );
+    size_t blockToSample( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const {
+        return ( (size_t)_blockToSample( objCluIx, probeCluIx ) );
     }
-    const block_counts_matrix_type& crossClustersToSample() const {
-        return ( _crossClusterToSample );
+    const block_counts_matrix_type& blocksToSample() const {
+        return ( _blockToSample );
     }
-    void setCrossClusterSamples( object_clundex_t objCluIx, probe_clundex_t probeCluIx, size_t counts ) {
-        count_type& cnts = _crossClusterToSample( objCluIx, probeCluIx );
+    void setBlockSamples( object_clundex_t objCluIx, probe_clundex_t probeCluIx, size_t counts ) {
+        count_type& cnts = _blockToSample( objCluIx, probeCluIx );
         cnts = std::max( cnts, (count_type)counts );
     }
-    void decCrossClusterSamples( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) {
-        count_type& cnts = _crossClusterToSample( objCluIx, probeCluIx );
+    void decBlockSamples( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) {
+        count_type& cnts = _blockToSample( objCluIx, probeCluIx );
         if ( cnts > 0 ) cnts--;
     }
     void setObjectsClusterSamples( object_clundex_t objCluIx, size_t counts );
     void setProbesClusterSamples( probe_clundex_t probeCluIx, size_t counts );
-    void setAllCrossClusterSamples( size_t counts );
+    void setAllBlockSamples( size_t counts );
 
 protected:
     virtual void beforeObjectsClusterRemoved( object_clundex_t cluIx ) const;
@@ -323,7 +323,7 @@ protected:
     virtual void afterProbesClusterChanged( probe_clundex_t cluIx ) const;
     virtual void afterObjectMultipleChanged( object_index_t objIx ) const;
     virtual void afterSignalChanged( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const;
-    virtual void afterCrossClusterFlipped( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const;
+    virtual void afterBlockFlipped( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const;
     virtual void afterSignalPriorChanged() const;
     virtual void afterNoiseParamsChanged() const;
 };
@@ -339,7 +339,7 @@ struct StaticChessboardBiclustering {
     typedef ChessboardBiclusteringFit::block_counts_matrix_type block_counts_matrix_type;
 
     boost::shared_ptr<ChessboardBiclustering>      clustering;
-    boost::shared_ptr<block_counts_matrix_type> crossClustersToSample; /** how many each cross-cluster have to be sampled */
+    boost::shared_ptr<block_counts_matrix_type> blocksToSample; /** how many each cross-cluster have to be sampled */
     energy_type                             llh;    /** log of likelihood */
     energy_type                             lpp;    /** log of prior probability */
 
@@ -357,7 +357,7 @@ struct StaticChessboardBiclustering {
 
     StaticChessboardBiclustering( const ChessboardBiclusteringFit& clustering )
     : clustering( new ChessboardBiclustering( clustering ) )
-    , crossClustersToSample( new block_counts_matrix_type( clustering.crossClustersToSample() ) )
+    , blocksToSample( new block_counts_matrix_type( clustering.blocksToSample() ) )
     , llh( clustering.llh() )
     , lpp( clustering.lpp() )
     {
@@ -373,7 +373,7 @@ struct StaticChessboardBiclustering {
         ar & BOOST_SERIALIZATION_NVP( llh );
         ar & BOOST_SERIALIZATION_NVP( lpp );
         ar & BOOST_SERIALIZATION_NVP( clustering );
-        ar & BOOST_SERIALIZATION_NVP( crossClustersToSample );
+        ar & BOOST_SERIALIZATION_NVP( blocksToSample );
     }
 
     friend std::ostream& operator<<( std::ostream& out, const StaticChessboardBiclustering& cc )

@@ -52,7 +52,7 @@ private:
     log_prob_t                          _totalLnP;
 
 public:
-    typedef ChessboardBiclustering::const_cross_cluster_iterator const_cross_cluster_iterator;
+    typedef ChessboardBiclustering::const_block_iterator const_block_iterator;
     typedef boost::unordered_set<object_clundex_t> object_cluster_set_type;
     typedef boost::unordered_set<probe_clundex_t> probe_cluster_set_type;
 
@@ -86,12 +86,12 @@ public:
      *  Calculation of LLH for cross-cluster type,
      *  when cross cluster is part of current clustering.
      */
-    class CrossClusterEnablementDataLLHCached: public BaseLLH {
+    class BlockEnablementDataLLHCached: public BaseLLH {
         object_clundex_t    objCluIx;
         probe_clundex_t     probeCluIx;
 
     public:
-        CrossClusterEnablementDataLLHCached( const ChessboardBiclusteringFit& clusFit, object_clundex_t objCluIx, probe_clundex_t probeCluIx )
+        BlockEnablementDataLLHCached( const ChessboardBiclusteringFit& clusFit, object_clundex_t objCluIx, probe_clundex_t probeCluIx )
         : BaseLLH( clusFit ), objCluIx( objCluIx ), probeCluIx( probeCluIx )
         {}
 
@@ -146,13 +146,13 @@ public:
     }
     GibbsSample<signal_t> sampleSignal( const object_set_t& objects, const probe_bitset_t& probes, signal_t curSignal ) const;
     GibbsSample<signal_t> sampleSignal( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const;
-    GibbsSample<signal_t> sampleSignal( const ChessboardBiclustering::cross_cluster_proxy& crossCluster ) const {
-        return ( sampleSignal( crossCluster.objectsClusterIndex(),
-                               crossCluster.probesClusterIndex() ) );
+    GibbsSample<signal_t> sampleSignal( const ChessboardBiclustering::block_proxy& block ) const {
+        return ( sampleSignal( block.objectsClusterIndex(),
+                               block.probesClusterIndex() ) );
     }
 
-    GibbsSample<bool> sampleCrossClusterEnablement( const object_set_t& objects, const probe_bitset_t& probes, bool curEnabled );
-    GibbsSample<bool> sampleCrossClusterEnablement( object_clundex_t objCluIx, probe_clundex_t probeCluIx );
+    GibbsSample<bool> sampleBlockEnablement( const object_set_t& objects, const probe_bitset_t& probes, bool curEnabled );
+    GibbsSample<bool> sampleBlockEnablement( object_clundex_t objCluIx, probe_clundex_t probeCluIx );
 
     static std::vector<signal_t> Signals( const ChessboardBiclustering& clustering );
     static std::vector<signal_t> Measurements( const OPAData& data, const ChessboardBiclustering& clustering, bool enabled, bool disabled );

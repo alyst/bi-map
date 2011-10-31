@@ -1,9 +1,9 @@
 #include "BIMAPWalk.h"
 
 BIMAPWalk::BIMAPWalk(
-    ChessboardBiclusteringsIndexing&  crossClusteringsIndexing
+    ChessboardBiclusteringsIndexing&  chessboardBiclusteringsIndexing
 )
-: _crossClusteringsIndexing( crossClusteringsIndexing )
+: _chessboardBiclusteringsIndexing( chessboardBiclusteringsIndexing )
 {
 
 }

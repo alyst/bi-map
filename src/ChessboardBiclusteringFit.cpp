@@ -16,8 +16,8 @@ ChessboardBiclusteringFit::ChessboardBiclusteringFit(
   , _lpp( unset() )
   , _objCluLPP( unset() )
   , _probeCluLPP( unset() )
-  , _crossClusterIsSignalLLHValid( false )
-  , _crossClusterIsNoiseLLHValid( false )
+  , _blockIsSignalLLHValid( false )
+  , _blockIsNoiseLLHValid( false )
 {
     _baselineSignalParams._scShape = _precomputed.signalParams().scShape;
 }
@@ -35,13 +35,13 @@ ChessboardBiclusteringFit::ChessboardBiclusteringFit(
   , _probeClusterLLH( probesClusters().size(), unset() )
   , _probeClusterStructLLH( probesClusters().size(), unset() )
   , _objClusterLPP( objectsClusters().size(), unset() )
-  , _crossClusterLLH( objectsClusters().size(), probesClusters().size(), unset() )
-  , _crossClusterLPP( objectsClusters().size(), probesClusters().size(), unset() )
-  , _crossClusterIsSignalLLHValid( false )
-  , _crossClusterIsSignalLLH( objectsClusters().size(), probesClusters().size(), unset() )
-  , _crossClusterIsNoiseLLHValid( false )
-  , _crossClusterIsNoiseLLH( objectsClusters().size(), probesClusters().size(), unset() )
-  , _crossClusterToSample( objectsClusters().size(), probesClusters().size(), 0 )
+  , _blockLLH( objectsClusters().size(), probesClusters().size(), unset() )
+  , _blockLPP( objectsClusters().size(), probesClusters().size(), unset() )
+  , _blockIsSignalLLHValid( false )
+  , _blockIsSignalLLH( objectsClusters().size(), probesClusters().size(), unset() )
+  , _blockIsNoiseLLHValid( false )
+  , _blockIsNoiseLLH( objectsClusters().size(), probesClusters().size(), unset() )
+  , _blockToSample( objectsClusters().size(), probesClusters().size(), 0 )
 {
     _baselineSignalParams._scShape = _precomputed.signalParams().scShape;
 }
@@ -75,9 +75,9 @@ log_prob_t ChessboardBiclusteringFit::evalLPP() const
         if ( is_unset( objcLPP ) ) {
             double ccLnPSum = 0;
             for ( probe_clundex_t probeCluIx = 0; probeCluIx < probesClusters().size(); probeCluIx++ ) {
-                log_prob_t& ccLnP = _crossClusterLPP( objCluIx, probeCluIx );
+                log_prob_t& ccLnP = _blockLPP( objCluIx, probeCluIx );
                 if ( is_unset( ccLnP ) ) {
-                    ccLnP = eval.crossClusterLPP( objCluIx, probeCluIx );
+                    ccLnP = eval.blockLPP( objCluIx, probeCluIx );
                     if ( is_unset( ccLnP ) ) THROW_RUNTIME_ERROR( "Cross-cluster (" << objCluIx << ", " << probeCluIx << ") lpp eval error" );
                 }
                 ccLnPSum += ccLnP;
@@ -118,12 +118,12 @@ void ChessboardBiclusteringFit::updateClustersLLH() const
             const object_set_t& objects = objectsCluster( objCluIx ).items();
             double ccLLHSum = structEval.probeClustersPerObjectClusterLLH( boundProbesClusters( objects ).size() );
             for ( probe_clundex_t probeCluIx = 0; probeCluIx < probesClusters().size(); probeCluIx++ ) {
-                log_prob_t& ccLLH = _crossClusterLLH( objCluIx, probeCluIx );
+                log_prob_t& ccLLH = _blockLLH( objCluIx, probeCluIx );
                 if ( is_unset( ccLLH ) ) {
-                    ccLLH = isCrossClusterEnabled( objCluIx, probeCluIx )
-                          ? eval.crossClusterDataLLH( objCluIx, probeCluIx )
+                    ccLLH = isBlockEnabled( objCluIx, probeCluIx )
+                          ? eval.blockDataLLH( objCluIx, probeCluIx )
                           : snCache.noiseLLH( objects, probesCluster( probeCluIx ).items() );
-                    if ( is_unset( ccLLH ) ) THROW_RUNTIME_ERROR( "Cross-cluster[" << isCrossClusterEnabled( objCluIx, probeCluIx ) << "](" << objCluIx << ", " << probeCluIx << ") LLH eval error" );
+                    if ( is_unset( ccLLH ) ) THROW_RUNTIME_ERROR( "Cross-cluster[" << isBlockEnabled( objCluIx, probeCluIx ) << "](" << objCluIx << ", " << probeCluIx << ") LLH eval error" );
                 }
                 ccLLHSum += ccLLH;
             }
@@ -142,7 +142,7 @@ void ChessboardBiclusteringFit::updateClustersLLH() const
         if ( is_unset( cluLLH ) ) {
             double ccLLHSum = 0;
             for ( object_clundex_t objCluIx = 0; objCluIx < objectsClusters().size(); objCluIx++ ) {
-                const double& ccLLH = _crossClusterLLH( objCluIx, probeCluIx );
+                const double& ccLLH = _blockLLH( objCluIx, probeCluIx );
                 BOOST_ASSERT( !is_unset( ccLLH ) );
                 ccLLHSum += ccLLH;
             }
@@ -182,29 +182,29 @@ std::set<probe_clundex_t> ChessboardBiclusteringFit::boundProbesClusters(
     return ( res );
 }
 
-void ChessboardBiclusteringFit::updateCrossClustersProbesLLH() const
+void ChessboardBiclusteringFit::updateBlocksProbesLLH() const
 {
     // object cross-cluster probe LLH
     for ( probe_clundex_t probeCluIx = 0; probeCluIx < probesClusters().size(); probeCluIx++ ) {
         for ( object_clundex_t objCluIx = 0; objCluIx < objectsClusters().size(); objCluIx++ ) {
-            log_prob_t& noiseLLH = _crossClusterIsNoiseLLH( objCluIx, probeCluIx );
+            log_prob_t& noiseLLH = _blockIsNoiseLLH( objCluIx, probeCluIx );
             if ( is_unset( noiseLLH ) ) {
-                noiseLLH = CrossClusterEnablementDataLLH( signalNoiseCache(),
+                noiseLLH = BlockEnablementDataLLH( signalNoiseCache(),
                                                           objectsCluster( objCluIx ).items(),
                                                           probesCluster( probeCluIx ).items() )( false );
                 if ( is_unset( noiseLLH ) ) THROW_RUNTIME_ERROR( "Cross-cluster (" << objCluIx << ", " << probeCluIx << ") noise llh eval error" );
             }
-            log_prob_t& signalLLH = _crossClusterIsSignalLLH( objCluIx, probeCluIx );
+            log_prob_t& signalLLH = _blockIsSignalLLH( objCluIx, probeCluIx );
             if ( is_unset( signalLLH ) ) {
                 // P(N<=n|noise)P(N<=|min_signal) if enabled
-                signalLLH = CrossClusterEnablementDataLLH( signalNoiseCache(), 
+                signalLLH = BlockEnablementDataLLH( signalNoiseCache(), 
                                                            objectsCluster( objCluIx ).items(), 
                                                            probesCluster( probeCluIx ).items() )( true );
                 if ( is_unset( signalLLH ) ) THROW_RUNTIME_ERROR( "Cross-cluster (" << objCluIx << ", " << probeCluIx << ") signal llh eval error" );
             }
         }
     }
-    _crossClusterIsNoiseLLHValid = _crossClusterIsSignalLLHValid = true;
+    _blockIsNoiseLLHValid = _blockIsSignalLLHValid = true;
 }
 
 ChessboardBiclusteringFit& ChessboardBiclusteringFit::operator=( const ChessboardBiclustering& that )
@@ -213,7 +213,7 @@ ChessboardBiclusteringFit& ChessboardBiclusteringFit::operator=( const Chessboar
     if ( _signalNoiseCache ) {
         _signalNoiseCache->setChessboardBiclusteringData( that.clusteringData() );
     }
-    _crossClusterToSample.reset( objectsClusters().size(),
+    _blockToSample.reset( objectsClusters().size(),
                                  probesClusters().size(), 1 );
     resetAllCaches();
     return ( *this );
@@ -226,12 +226,12 @@ ChessboardBiclusteringFit& ChessboardBiclusteringFit::operator=( const StaticChe
     if ( _signalNoiseCache ) {
         _signalNoiseCache->setChessboardBiclusteringData( that.clustering->clusteringData() );
     }
-    if ( that.crossClustersToSample ) {
-        BOOST_ASSERT( that.crossClustersToSample->size1() == objectsClusters().size() );
-        BOOST_ASSERT( that.crossClustersToSample->size2() == probesClusters().size() );
-        _crossClusterToSample = *that.crossClustersToSample;
+    if ( that.blocksToSample ) {
+        BOOST_ASSERT( that.blocksToSample->size1() == objectsClusters().size() );
+        BOOST_ASSERT( that.blocksToSample->size2() == probesClusters().size() );
+        _blockToSample = *that.blocksToSample;
     } else {
-        _crossClusterToSample.reset( objectsClusters().size(),
+        _blockToSample.reset( objectsClusters().size(),
                                      probesClusters().size(), 1 );
     }
     resetAllCaches();
@@ -248,24 +248,24 @@ ChessboardBiclusteringFit& ChessboardBiclusteringFit::operator=(const Chessboard
     _probeClusterLLH = that._probeClusterLLH;
     _probeClusterStructLLH = that._probeClusterStructLLH;
     _signalNoiseCache = that._signalNoiseCache;
-    _crossClusterLLH = that._crossClusterLLH;
-    _crossClusterLPP = that._crossClusterLPP;
-    _crossClusterToSample = that._crossClusterToSample;
+    _blockLLH = that._blockLLH;
+    _blockLPP = that._blockLPP;
+    _blockToSample = that._blockToSample;
     _objClusterLLH = that._objClusterLLH;
     _objClusterLPP = that._objClusterLPP;
-    _crossClusterIsNoiseLLHValid = that._crossClusterIsNoiseLLHValid;
-    _crossClusterIsNoiseLLH = that._crossClusterIsNoiseLLH;
-    _crossClusterIsSignalLLHValid = that._crossClusterIsSignalLLHValid;
-    _crossClusterIsSignalLLH = that._crossClusterIsSignalLLH;
+    _blockIsNoiseLLHValid = that._blockIsNoiseLLHValid;
+    _blockIsNoiseLLH = that._blockIsNoiseLLH;
+    _blockIsSignalLLHValid = that._blockIsSignalLLHValid;
+    _blockIsSignalLLH = that._blockIsSignalLLH;
     ChessboardBiclustering::operator=( that );
     return ( *this );
 }
 
 void ChessboardBiclusteringFit::resetAllCaches() const
 {
-    _crossClusterLLH.reset( objectsClusters().size(),
+    _blockLLH.reset( objectsClusters().size(),
                             probesClusters().size(), unset() );
-    _crossClusterLPP.reset( objectsClusters().size(),
+    _blockLPP.reset( objectsClusters().size(),
                             probesClusters().size(), unset() );
     _objCluLPP = unset();
     _probeCluLPP = unset();
@@ -273,11 +273,11 @@ void ChessboardBiclusteringFit::resetAllCaches() const
     _objClusterLPP.assign( objectsClusters().size(), unset() );
     _probeClusterLLH.assign( probesClusters().size(), unset() );
     _probeClusterStructLLH.assign( probesClusters().size(), unset() );
-    _crossClusterIsNoiseLLHValid = false;
-    _crossClusterIsNoiseLLH.reset( objectsClusters().size(),
+    _blockIsNoiseLLHValid = false;
+    _blockIsNoiseLLH.reset( objectsClusters().size(),
                                    probesClusters().size(), unset() );
-    _crossClusterIsSignalLLHValid = false;
-    _crossClusterIsSignalLLH.reset( objectsClusters().size(),
+    _blockIsSignalLLHValid = false;
+    _blockIsSignalLLH.reset( objectsClusters().size(),
                                     probesClusters().size(), unset() );
     resetTotalLnP();
 }
@@ -286,13 +286,13 @@ void ChessboardBiclusteringFit::resetObjectsClusterCache(
     object_clundex_t    objCluIx,
     bool                contentsChanged
 ) const {
-    _crossClusterLLH.fill1( objCluIx, unset() );
-    _crossClusterLPP.fill1( objCluIx, unset() );
+    _blockLLH.fill1( objCluIx, unset() );
+    _blockLPP.fill1( objCluIx, unset() );
     if ( contentsChanged ) {
-        _crossClusterIsNoiseLLHValid = false;
-        _crossClusterIsSignalLLHValid = false;
-        _crossClusterIsSignalLLH.fill1( objCluIx, unset() );
-        _crossClusterIsNoiseLLH.fill1( objCluIx, unset() );
+        _blockIsNoiseLLHValid = false;
+        _blockIsSignalLLHValid = false;
+        _blockIsSignalLLH.fill1( objCluIx, unset() );
+        _blockIsNoiseLLH.fill1( objCluIx, unset() );
     }
     _objClusterLLH[ objCluIx ] = unset();
     _probeClusterLLH.assign( _probeClusterLLH.size(), unset() );
@@ -305,12 +305,12 @@ void ChessboardBiclusteringFit::resetObjectsClusterCache(
 void ChessboardBiclusteringFit::resetProbesClusterCache(
     probe_clundex_t probeCluIx
 ) const {
-    _crossClusterLLH.fill2( probeCluIx, unset() );
-    _crossClusterLPP.fill2( probeCluIx, unset() );
-    _crossClusterIsNoiseLLHValid = false;
-    _crossClusterIsSignalLLHValid = false;
-    _crossClusterIsSignalLLH.fill2( probeCluIx, unset() );
-    _crossClusterIsNoiseLLH.fill2( probeCluIx, unset() );
+    _blockLLH.fill2( probeCluIx, unset() );
+    _blockLPP.fill2( probeCluIx, unset() );
+    _blockIsNoiseLLHValid = false;
+    _blockIsSignalLLHValid = false;
+    _blockIsSignalLLH.fill2( probeCluIx, unset() );
+    _blockIsNoiseLLH.fill2( probeCluIx, unset() );
     _probeClusterLLH[ probeCluIx ] = unset();
     _probeClusterStructLLH[ probeCluIx ] = unset();
     _objClusterLLH.assign( _objClusterLLH.size(), unset() );
@@ -334,22 +334,22 @@ void ChessboardBiclusteringFit::resetCachesAfterLoading()
 void ChessboardBiclusteringFit::setObjectsClusterSamples( object_clundex_t objCluIx, size_t counts )
 {
     for ( probe_clundex_t cluIx = 0; cluIx < probesClusters().size(); cluIx++ ) {
-        setCrossClusterSamples( objCluIx, cluIx, counts );
+        setBlockSamples( objCluIx, cluIx, counts );
     }
 }
 
 void ChessboardBiclusteringFit::setProbesClusterSamples( probe_clundex_t probeCluIx, size_t counts )
 {
     for ( object_clundex_t cluIx = 0; cluIx < objectsClusters().size(); cluIx++ ) {
-        setCrossClusterSamples( cluIx, probeCluIx, counts );
+        setBlockSamples( cluIx, probeCluIx, counts );
     }
 }
 
-void ChessboardBiclusteringFit::setAllCrossClusterSamples(size_t counts)
+void ChessboardBiclusteringFit::setAllBlockSamples(size_t counts)
 {
     for ( object_clundex_t objCluIx = 0; objCluIx < objectsClusters().size(); objCluIx++ ) {
         for ( probe_clundex_t probeCluIx = 0; probeCluIx < probesClusters().size(); probeCluIx++ ) {
-            setCrossClusterSamples( objCluIx, probeCluIx, counts );
+            setBlockSamples( objCluIx, probeCluIx, counts );
         }
     }
 }
@@ -357,11 +357,11 @@ void ChessboardBiclusteringFit::setAllCrossClusterSamples(size_t counts)
 void ChessboardBiclusteringFit::beforeObjectsClusterRemoved(object_clundex_t cluIx) const
 {
     ChessboardBiclustering::beforeObjectsClusterRemoved(cluIx);
-    const_cast<block_counts_matrix_type&>( _crossClusterToSample ).remove1( cluIx );
-    _crossClusterLLH.remove1( cluIx );
-    _crossClusterLPP.remove1( cluIx );
-    _crossClusterIsNoiseLLH.remove1( cluIx );
-    _crossClusterIsSignalLLH.remove1( cluIx );
+    const_cast<block_counts_matrix_type&>( _blockToSample ).remove1( cluIx );
+    _blockLLH.remove1( cluIx );
+    _blockLPP.remove1( cluIx );
+    _blockIsNoiseLLH.remove1( cluIx );
+    _blockIsSignalLLH.remove1( cluIx );
     _objClusterLLH.erase( _objClusterLLH.begin() + cluIx );
     _objClusterLPP.erase( _objClusterLPP.begin() + cluIx );
     _probeClusterLLH.assign( _probeClusterLLH.size(), unset() );
@@ -373,11 +373,11 @@ void ChessboardBiclusteringFit::beforeObjectsClusterRemoved(object_clundex_t clu
 void ChessboardBiclusteringFit::beforeProbesClusterRemoved(probe_clundex_t cluIx) const
 {
     ChessboardBiclustering::beforeProbesClusterRemoved(cluIx);
-    const_cast<block_counts_matrix_type&>( _crossClusterToSample ).remove2( cluIx );
-    _crossClusterLLH.remove2( cluIx );
-    _crossClusterLPP.remove2( cluIx );
-    _crossClusterIsNoiseLLH.remove2( cluIx );
-    _crossClusterIsSignalLLH.remove2( cluIx );
+    const_cast<block_counts_matrix_type&>( _blockToSample ).remove2( cluIx );
+    _blockLLH.remove2( cluIx );
+    _blockLPP.remove2( cluIx );
+    _blockIsNoiseLLH.remove2( cluIx );
+    _blockIsSignalLLH.remove2( cluIx );
     _probeClusterLLH.erase( _probeClusterLLH.begin() + cluIx );
     _probeClusterStructLLH.erase( _probeClusterStructLLH.begin() + cluIx );
     _objClusterLLH.assign( _objClusterLLH.size(), unset() );
@@ -389,13 +389,13 @@ void ChessboardBiclusteringFit::beforeProbesClusterRemoved(probe_clundex_t cluIx
 void ChessboardBiclusteringFit::afterObjectsClusterInserted(object_clundex_t cluIx) const
 {
     ChessboardBiclustering::afterObjectsClusterInserted(cluIx);
-    const_cast<block_counts_matrix_type&>( _crossClusterToSample ).insert1( cluIx );
-    _crossClusterLLH.insert1( cluIx, unset() );
-    _crossClusterLPP.insert1( cluIx, unset() );
-    _crossClusterIsNoiseLLHValid = false;
-    _crossClusterIsSignalLLHValid = false;
-    _crossClusterIsNoiseLLH.insert1( cluIx, unset() );
-    _crossClusterIsSignalLLH.insert1( cluIx, unset() );
+    const_cast<block_counts_matrix_type&>( _blockToSample ).insert1( cluIx );
+    _blockLLH.insert1( cluIx, unset() );
+    _blockLPP.insert1( cluIx, unset() );
+    _blockIsNoiseLLHValid = false;
+    _blockIsSignalLLHValid = false;
+    _blockIsNoiseLLH.insert1( cluIx, unset() );
+    _blockIsSignalLLH.insert1( cluIx, unset() );
     _objClusterLLH.insert( _objClusterLLH.begin() + cluIx, unset() );
     _objClusterLPP.insert( _objClusterLPP.begin() + cluIx, unset() );
     _probeClusterLLH.assign( _probeClusterLLH.size(), unset() );
@@ -407,13 +407,13 @@ void ChessboardBiclusteringFit::afterObjectsClusterInserted(object_clundex_t clu
 void ChessboardBiclusteringFit::afterProbesClusterInserted(probe_clundex_t cluIx) const
 {
     ChessboardBiclustering::afterProbesClusterInserted(cluIx);
-    const_cast<block_counts_matrix_type&>( _crossClusterToSample ).insert2( cluIx );
-    _crossClusterLLH.insert2( cluIx, unset() );
-    _crossClusterLPP.insert2( cluIx, unset() );
-    _crossClusterIsNoiseLLHValid = false;
-    _crossClusterIsSignalLLHValid = false;
-    _crossClusterIsNoiseLLH.insert2( cluIx, unset() );
-    _crossClusterIsSignalLLH.insert2( cluIx, unset() );
+    const_cast<block_counts_matrix_type&>( _blockToSample ).insert2( cluIx );
+    _blockLLH.insert2( cluIx, unset() );
+    _blockLPP.insert2( cluIx, unset() );
+    _blockIsNoiseLLHValid = false;
+    _blockIsSignalLLHValid = false;
+    _blockIsNoiseLLH.insert2( cluIx, unset() );
+    _blockIsSignalLLH.insert2( cluIx, unset() );
     _probeCluLPP = unset();
     _probeClusterLLH.insert( _probeClusterLLH.begin() + cluIx, unset() );
     _probeClusterStructLLH.insert( _probeClusterStructLLH.begin() + cluIx, unset() );
@@ -445,21 +445,21 @@ void ChessboardBiclusteringFit::afterSignalChanged(
     probe_clundex_t     probeCluIx
 ) const {
     ChessboardBiclustering::afterSignalChanged( objCluIx, probeCluIx );
-    _crossClusterLLH( objCluIx, probeCluIx ) = unset();
-    _crossClusterLPP( objCluIx, probeCluIx ) = unset();
+    _blockLLH( objCluIx, probeCluIx ) = unset();
+    _blockLPP( objCluIx, probeCluIx ) = unset();
     _objClusterLLH[ objCluIx ] = unset();
     _probeClusterLLH[ probeCluIx ] = unset();
     _objClusterLPP[ objCluIx ] = unset();
     resetTotalLnP();
 }
 
-void ChessboardBiclusteringFit::afterCrossClusterFlipped(
+void ChessboardBiclusteringFit::afterBlockFlipped(
     object_clundex_t    objCluIx, 
     probe_clundex_t     probeCluIx
 ) const {
-    ChessboardBiclustering::afterCrossClusterFlipped(objCluIx, probeCluIx);
-    _crossClusterLLH( objCluIx, probeCluIx ) = unset();
-    _crossClusterLPP( objCluIx, probeCluIx ) = unset();
+    ChessboardBiclustering::afterBlockFlipped(objCluIx, probeCluIx);
+    _blockLLH( objCluIx, probeCluIx ) = unset();
+    _blockLPP( objCluIx, probeCluIx ) = unset();
     _objClusterLLH[ objCluIx ] = unset();
     _probeClusterLLH[ probeCluIx ] = unset();
     _objClusterLPP[ objCluIx ] = unset();

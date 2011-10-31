@@ -176,7 +176,7 @@ private:
 public:
     typedef StaticChessboardBiclustering particle_type;
 
-    BIMAPSampleCollector( ChessboardBiclusteringsIndexing& crossClusteringsIndexing,
+    BIMAPSampleCollector( ChessboardBiclusteringsIndexing& chessboardBiclusteringsIndexing,
                            const BIMAPSampleCollectorParams& params );
 
     const BIMAPWalk& walk() const { return ( _walk ); }
@@ -185,7 +185,7 @@ public:
 
 BIMAPWalk BIMAPSampler_run(
     const BIMAPSamplerHelper&  helper,
-    ChessboardBiclusteringsIndexing&   crossClusteringsIndexing,
+    ChessboardBiclusteringsIndexing&   chessboardBiclusteringsIndexing,
     const GibbsSamplerParams&   gibbsSamplerParams,
     const TurbineCascadeParams& eeCascadeParams,           /// parameters of equi-energy sample
     const BIMAPSampleCollectorParams&  collectorParams,   /// parameters of sample collector

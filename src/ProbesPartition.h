@@ -235,13 +235,13 @@ public:
     bool operator()( params_type& params, const probe_bitset_t& clusterProbes, const probe_bitset_t& sampledProbes, 
                      bool overwrite, bool posterior ) const;
 
-    FixedProbesParamsSampler( ChessboardBiclusteringGibbsHelper& clusHelper, bool sampleCrossClusterMask, bool sampleSignals )
-    : clusHelper( &clusHelper ), sampleCrossClusterMask( sampleCrossClusterMask ), sampleSignals( sampleSignals )
+    FixedProbesParamsSampler( ChessboardBiclusteringGibbsHelper& clusHelper, bool sampleBlockMask, bool sampleSignals )
+    : clusHelper( &clusHelper ), sampleBlockMask( sampleBlockMask ), sampleSignals( sampleSignals )
     {}
 
 private:
     ChessboardBiclusteringGibbsHelper* const   clusHelper;
-    bool                                sampleCrossClusterMask;
+    bool                                sampleBlockMask;
     bool                                sampleSignals;
 };
 
@@ -266,13 +266,13 @@ public:
                              const ProbesPartition& after,
                              probe_clundex_t cluIx ) const;
 
-    ProbesParamsSampler( ChessboardBiclusteringGibbsSampler& clusSampler, bool sampleCrossClusterMask, bool sampleSignals )
-    : clusSampler( &clusSampler ), sampleCrossClusterMask( sampleCrossClusterMask ), sampleSignals( sampleSignals )
+    ProbesParamsSampler( ChessboardBiclusteringGibbsSampler& clusSampler, bool sampleBlockMask, bool sampleSignals )
+    : clusSampler( &clusSampler ), sampleBlockMask( sampleBlockMask ), sampleSignals( sampleSignals )
     {}
 
 private:
     ChessboardBiclusteringGibbsSampler const*  clusSampler;
-    bool                                sampleCrossClusterMask;
+    bool                                sampleBlockMask;
     bool                                sampleSignals;
 };
 

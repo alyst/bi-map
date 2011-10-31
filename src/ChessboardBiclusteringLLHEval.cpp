@@ -83,7 +83,7 @@ log_prob_t ChessboardBiclusteringLLHEval::cellNoiseLLH(
     return ( res );
 }
 
-log_prob_t ChessboardBiclusteringLLHEval::crossClusterDataLLH(
+log_prob_t ChessboardBiclusteringLLHEval::blockDataLLH(
     const object_clundex_t      objCluIx,
     const probe_clundex_t       probeCluIx
 ) const {
@@ -161,7 +161,7 @@ log_prob_t ChessboardBiclusteringLLHEval::cellsDataLLH(
     of all measurements combinations, where each measurement is not greater than actual,
     and one at least one is strictly less = CDF(data) - PDF(data).
  */
-log_prob_t ChessboardBiclusteringEval::crossClusterDataLnCdf(
+log_prob_t ChessboardBiclusteringEval::blockDataLnCdf(
     const object_set_t&         objects,
     const probe_bitset_t&       probes,
     bool                        useNoiseParams,
@@ -224,7 +224,7 @@ log_prob_t ChessboardBiclusteringLLHEval::allCellsDataLLH(
                                       clustering().objectMultiple( objIx ) );
         for ( probe_index_t probeIx = 0; probeIx < clustering().probesCount(); probeIx++ ) {
             probe_clundex_t probeCluIx = clustering().clusterOfProbe( probeIx );
-            bool crossEnabled = clustering().isCrossClusterEnabled( objCluIx, probeCluIx );
+            bool crossEnabled = clustering().isBlockEnabled( objCluIx, probeCluIx );
             // filter cells by coverage according to filter and calculate lambda
             if ( ( crossEnabled && !sumEnabledCrosses )
               || ( !crossEnabled && !sumDisabledCrosses ) )      continue;
@@ -259,7 +259,7 @@ log_prob_t ChessboardBiclusteringLLHEval::allCellsDataLLH(
         signal_params_type objParams( _precomputed.signalParams(), data().object( objIx ),
                                       clustering().objectMultiple( objIx ) );
         for ( probe_index_t probeIx = 0; probeIx < clustering().probesCount(); probeIx++ ) {
-            bool crossEnabled = clustering().isCrossClusterEnabled( clustering().clusterOfObject( objIx ),
+            bool crossEnabled = clustering().isBlockEnabled( clustering().clusterOfObject( objIx ),
                                                                     clustering().clusterOfProbe( probeIx ) );
             // filter cells by coverage according to filter and calculate lambda
             if ( ( crossEnabled && !sumEnabledCrosses )
@@ -299,10 +299,10 @@ log_prob_t ChessboardBiclusteringLLHEval::cellsNoiseLLH(
  *  P(N<=n|noise)*P(N<=|min_signal) if enabled
  *  P(N>=n|noise)*P(N>|min_signal) if disabled
  */
-log_prob_t CrossClusterEnablementDataLLH::operator()(
+log_prob_t BlockEnablementDataLLH::operator()(
     bool isEnabled
 ) const {
-    return ( CellsLLHEval::CrossClusterBlockLLH(
+    return ( CellsLLHEval::BlockLLH(
                     objects, probes,
                     isEnabled ? cache.signalLnPdf() : cache.noiseLnPdf() ) );
 }

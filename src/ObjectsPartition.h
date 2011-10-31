@@ -268,16 +268,16 @@ public:
                      bool overwrite, bool posterior ) const;
 
     FixedObjectsParamsSampler( ChessboardBiclusteringGibbsHelper& clusHelper, 
-                                bool sampleCrossClusterMask, 
+                                bool sampleBlockMask, 
                                 bool sampleSignals, 
                                 bool sampleMultiples )
-    : clusHelper( &clusHelper ), sampleCrossClusterMask( sampleCrossClusterMask )
+    : clusHelper( &clusHelper ), sampleBlockMask( sampleBlockMask )
     , sampleSignals( sampleSignals ), sampleMultiples( sampleMultiples )
     {}
 
 private:
     ChessboardBiclusteringGibbsHelper* const clusHelper;
-    bool                            sampleCrossClusterMask;
+    bool                            sampleBlockMask;
     bool                            sampleSignals;
     bool                            sampleMultiples;
 };
@@ -303,16 +303,16 @@ public:
                              object_clundex_t cluIx ) const;
 
     ObjectsParamsSampler( ChessboardBiclusteringGibbsSampler& clusSampler, 
-                          bool sampleCrossClusterMask, 
+                          bool sampleBlockMask, 
                           bool sampleSignals, 
                           bool sampleMultiples )
-    : clusSampler( &clusSampler ), sampleCrossClusterMask( sampleCrossClusterMask )
+    : clusSampler( &clusSampler ), sampleBlockMask( sampleBlockMask )
     , sampleSignals( sampleSignals ), sampleMultiples( sampleMultiples )
     {}
 
 private:
     ChessboardBiclusteringGibbsSampler const* clusSampler;
-    bool                            sampleCrossClusterMask;
+    bool                            sampleBlockMask;
     bool                            sampleSignals;
     bool                            sampleMultiples;
 };

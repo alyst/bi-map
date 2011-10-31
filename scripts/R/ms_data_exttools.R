@@ -168,7 +168,7 @@ nestedcluster.extract <- function( clusterings, clustering_id )
            ) )
 }
 
-#' Convert NestedCluster biclustering to CrossClustering biclustering
+#' Convert NestedCluster biclustering to Chessboard Biclustering biclustering
 #' @param nested.clustering 
 #' @param proteins 
 #' @param samples 

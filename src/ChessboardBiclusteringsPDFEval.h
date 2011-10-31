@@ -66,9 +66,9 @@ public:
     typedef size_t serial_type;
     typedef serial_type object_serial_type;
     typedef serial_type probe_serial_type;
-    typedef std::pair<object_serial_type, probe_serial_type> cross_cluster_id;
-    typedef std::pair<size_t, size_t> cross_cluster_stats;
-    typedef boost::unordered_map<cross_cluster_id, cross_cluster_stats> cross_cluster_stats_map;
+    typedef std::pair<object_serial_type, probe_serial_type> block_id;
+    typedef std::pair<size_t, size_t> block_stats;
+    typedef boost::unordered_map<block_id, block_stats> block_stats_map;
     typedef boost::unordered_map<object_serial_type, PartStats> obj_clu_stats_map;
     typedef boost::unordered_map<probe_serial_type, PartStats> probe_clu_stats_map;
 
@@ -89,7 +89,7 @@ private:
     std::vector<probe_bitset_t>         _probeComponents;   /** probes independent components */
     std::vector<cells_mask_freq_map>    _cellsSubmaskFreq;  /** map of cell "on"/"off" masks frequencies
                                                                 per component pair */
-    cross_cluster_stats_map             _ccStats;           /** cross-clusters statistics */
+    block_stats_map             _ccStats;           /** cross-clusters statistics */
     obj_clu_stats_map                   _objCluStats;       /** average frequency of co-occurrence of pairs of object in a cluster */
     probe_clu_stats_map                 _probeCluStats;     /** average frequency of co-occurrence of pairs of probes in a cluster */
 
@@ -99,7 +99,7 @@ private:
                      std::string& submaskStrBuf ) const;
 
     void evalCellsMaskFreqMap( const BIMAPWalk& walk );
-    void evalCrossClustersFreqMap( const BIMAPWalk& walk );
+    void evalBlocksFreqMap( const BIMAPWalk& walk );
 
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version)
@@ -179,10 +179,10 @@ public:
     const probe_clu_stats_map& probesClustersStatsMap() const {
         return ( _probeCluStats );
     }
-    cross_cluster_stats crossClusterStats( const cross_cluster_id& ccId ) const {
+    block_stats blockStats( const block_id& ccId ) const {
         return ( _ccStats.find( ccId )->second );
     }
-    const cross_cluster_stats_map& crossClustersStatsMap() const {
+    const block_stats_map& blocksStatsMap() const {
         return ( _ccStats );
     }
 };

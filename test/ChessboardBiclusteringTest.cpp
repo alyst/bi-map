@@ -182,7 +182,7 @@ TEST_F2( GslRngTestF, ChessboardBiclusteringOld, DISABLED_edit )
 TEST( ChessboardBiclustering, generate_random )
 {
     OPAData                     data = generateTestOPAData();
-    ChessboardBiclusteringsIndexing    crossClusteringsIndexing;
+    ChessboardBiclusteringsIndexing    chessboardBiclusteringsIndexing;
     ChessboardBiclusteringPriors       priors;
     PrecomputedDataParams       precomputedDataParams;
     CellSignalParams            signalParams;
@@ -197,19 +197,19 @@ TEST( ChessboardBiclustering, generate_random )
 
     EXPECT_TRUE( clus.checkObjectsPartition() );
     EXPECT_TRUE( clus.checkProbesPartition() );
-    EXPECT_TRUE( clus.checkCrossClusters() );
+    EXPECT_TRUE( clus.checkBlocks() );
     
     TEST_CHECKPOINT( "Cross cluster enabling/disabling" );
-    clus.setCrossCluster( 0, 0, false );
-    EXPECT_EQ( clus.isCrossClusterEnabled( 0, 0 ), false );
-    clus.setCrossCluster( 0, 0, true );
-    EXPECT_EQ( clus.isCrossClusterEnabled( 0, 0 ), true );
+    clus.setBlock( 0, 0, false );
+    EXPECT_EQ( clus.isBlockEnabled( 0, 0 ), false );
+    clus.setBlock( 0, 0, true );
+    EXPECT_EQ( clus.isBlockEnabled( 0, 0 ), true );
 }
 
 TEST( ChessboardBiclustering, indexing )
 {
     OPAData                     data = generateTestOPAData();
-    ChessboardBiclusteringsIndexing    crossClusteringsIndexing;
+    ChessboardBiclusteringsIndexing    chessboardBiclusteringsIndexing;
     PrecomputedDataParams       precomputedDataParams;
     CellSignalParams            signalParams;
     ChessboardBiclusteringPriors       priors;
@@ -222,9 +222,9 @@ TEST( ChessboardBiclustering, indexing )
     ChessboardBiclustering             clus = helper.randomClustering();
     EXPECT_TRUE( clus.checkObjectsPartition() );
     EXPECT_TRUE( clus.checkProbesPartition() );
-    EXPECT_TRUE( clus.checkCrossClusters() );
+    EXPECT_TRUE( clus.checkBlocks() );
 
-    ChessboardBiclusteringIndexed clusIndexed = crossClusteringsIndexing.index( clus );
+    ChessboardBiclusteringIndexed clusIndexed = chessboardBiclusteringsIndexing.index( clus );
     EXPECT_EQ( clusIndexed.objectsClusters().size(), clus.objectsClusters().size() );
     EXPECT_EQ( clusIndexed.probesClusters().size(), clus.probesClusters().size() );
     EXPECT_EQ( clusIndexed.objectsData().size(), data.objectsCount() );
@@ -250,7 +250,7 @@ TEST( ChessboardBiclustering, csv_in )
 TEST( ChessboardBiclustering, DISABLED_serialization_out )
 {
     OPAData                     data = generateTestOPAData();
-    ChessboardBiclusteringsIndexing    crossClusteringsIndexing;
+    ChessboardBiclusteringsIndexing    chessboardBiclusteringsIndexing;
     PrecomputedDataParams       precomputedDataParams;
     CellSignalParams            signalParams;
     ChessboardBiclusteringPriors       priors;
@@ -263,7 +263,7 @@ TEST( ChessboardBiclustering, DISABLED_serialization_out )
     ChessboardBiclustering             clusOut = helper.randomClustering();
     EXPECT_TRUE( clusOut.checkObjectsPartition() );
     EXPECT_TRUE( clusOut.checkProbesPartition() );
-    EXPECT_TRUE( clusOut.checkCrossClusters() );
+    EXPECT_TRUE( clusOut.checkBlocks() );
     
     // make an archive
     {
@@ -283,13 +283,13 @@ TEST( ChessboardBiclustering, DISABLED_serialization_out )
         
         EXPECT_TRUE( clusIn.checkObjectsPartition() );
         EXPECT_TRUE( clusIn.checkProbesPartition() );
-        EXPECT_TRUE( clusIn.checkCrossClusters() );
+        EXPECT_TRUE( clusIn.checkBlocks() );
 
         EXPECT_TRUE( clusIn.objectsCount() == clusOut.objectsCount() );
         EXPECT_TRUE( clusIn.probesCount() == clusOut.probesCount() );
         EXPECT_TRUE( clusIn.objectsClusters().size() == clusOut.objectsClusters().size() );
         EXPECT_TRUE( clusIn.probesClusters().size() == clusOut.probesClusters().size() );
-        EXPECT_TRUE( clusIn.enabledCrossClustersCount() == clusOut.enabledCrossClustersCount() );
+        EXPECT_TRUE( clusIn.enabledBlocksCount() == clusOut.enabledBlocksCount() );
         EXPECT_TRUE( clusIn.objectMultiples() == clusOut.objectMultiples() );
     }
 }

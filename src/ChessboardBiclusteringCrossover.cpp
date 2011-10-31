@@ -25,7 +25,7 @@ void ChessboardBiclusteringCrossoverGenerator::push_to_result(
     const ChessboardBiclusteringFit&   ptn
 ) const {
     const_cast<ChessboardBiclusteringFit&>( ptn ).cleanupClusters();
-    //const_cast<ChessboardBiclusteringFit&>( ptn ).setAllCrossClusterSamples( 2 );
+    //const_cast<ChessboardBiclusteringFit&>( ptn ).setAllBlockSamples( 2 );
     BOOST_ASSERT( ptn.check() );
     res.push_back( StaticChessboardBiclustering( ptn ) );
 }

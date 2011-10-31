@@ -772,10 +772,10 @@ plot.bimap <- function( bimap.props, protein.info,
 
 BIMAP.plot_bimap <- function( bimap.walk, bimapId,
     protein.info, sample.info, msrun.info,
-    cross_cluster.threshold = 0.6, ... )
+    onblock.threshold = 0.6, ... )
 {
     bimap.props <- BIMAP.extract_clustering( bimap.walk, bimapId, TRUE,
-        cross_cluster.threshold = cross_cluster.threshold )
+        onblock.threshold = onblock.threshold )
     plot.bimap( bimap.props, protein.info, sample.info, msrun.info,
             title = paste( 'Chessboard biclustering #', bimapId, sep = '' ), ... )
 }

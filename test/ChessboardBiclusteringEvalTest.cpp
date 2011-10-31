@@ -58,13 +58,13 @@ TEST( ChessboardBiclusteringEval, objects_partition )
         ccActual.setObjectCluster( 1, 0 );
         ccActual.addObjectCluster( 2 );
         ObjectsClusterParams oc0Params = ccActual.objectsClusterParams( 0 );
-        oc0Params.crossClustersMask.set( 0 );
+        oc0Params.blocksMask.set( 0 );
         oc0Params.objectMultiple[ 0 ] = 1;
         oc0Params.objectMultiple[ 1 ] = 1;
         oc0Params.probeSignal[ 0 ] = 2;
         ccActual.objectsClusterParams( 0 ) = oc0Params;
         ObjectsClusterParams oc1Params = ccActual.objectsClusterParams( 1 );
-        oc1Params.crossClustersMask.set( 0 );
+        oc1Params.blocksMask.set( 0 );
         oc1Params.objectMultiple[ 2 ] = 1;
         oc1Params.probeSignal[ 0 ] = 8;
         ccActual.objectsClusterParams( 1 ) = oc1Params;
@@ -72,7 +72,7 @@ TEST( ChessboardBiclusteringEval, objects_partition )
     }
     BOOST_ASSERT( ccActual.checkObjectsPartition() );
     BOOST_ASSERT( ccActual.checkProbesPartition() );
-    BOOST_ASSERT( ccActual.checkCrossClusters() );
+    BOOST_ASSERT( ccActual.checkBlocks() );
     PrecomputedData    precomputed( data, precomputedDataParams, signalParams );
     ChessboardBiclusteringFit fitCcActual( precomputed, priors, ccActual );
     LOG_INFO( "Actual partition llh=" << fitCcActual.llh() );
@@ -117,7 +117,7 @@ TEST( ChessboardBiclusteringEval, objects_partition )
     {
         ccThreeClusters.addObjectCluster( 1 );
         ObjectsClusterParams oc2Params = ccThreeClusters.objectsClusterParams( 2 );
-        oc2Params.crossClustersMask.set( 0 );
+        oc2Params.blocksMask.set( 0 );
         oc2Params.probeSignal[ 0 ] = 2;
         ccThreeClusters.objectsClusterParams( 2 ) = oc2Params;
         ccThreeClusters.cleanupClusters();
@@ -181,13 +181,13 @@ TEST( ChessboardBiclusteringEval, objects_partition_llh_delta )
         ccActual.setObjectCluster( 1, 0 );
         ccActual.addObjectCluster( 2 );
         ObjectsClusterParams oc0Params = ccActual.objectsClusterParams( 0 );
-        oc0Params.crossClustersMask.set( 0 );
+        oc0Params.blocksMask.set( 0 );
         oc0Params.objectMultiple[ 0 ] = 1;
         oc0Params.objectMultiple[ 1 ] = 1;
         oc0Params.probeSignal[ 0 ] = 2;
         ccActual.objectsClusterParams( 0 ) = oc0Params;
         ObjectsClusterParams oc1Params = ccActual.objectsClusterParams( 1 );
-        oc1Params.crossClustersMask.set( 0 );
+        oc1Params.blocksMask.set( 0 );
         oc1Params.objectMultiple[ 2 ] = 1;
         oc1Params.probeSignal[ 0 ] = 8;
         ccActual.objectsClusterParams( 1 ) = oc1Params;
@@ -195,7 +195,7 @@ TEST( ChessboardBiclusteringEval, objects_partition_llh_delta )
     }
     BOOST_ASSERT( ccActual.checkObjectsPartition() );
     BOOST_ASSERT( ccActual.checkProbesPartition() );
-    BOOST_ASSERT( ccActual.checkCrossClusters() );
+    BOOST_ASSERT( ccActual.checkBlocks() );
     PrecomputedData    precomputed( data, precomputedDataParams, signalParams );
     ChessboardBiclusteringFit fitCcActual( precomputed, priors, ccActual );
     LOG_INFO( "Actual partition llh=" << fitCcActual.llh() );
@@ -215,7 +215,7 @@ TEST( ChessboardBiclusteringEval, objects_partition_llh_delta )
     {
         ccThreeClusters.addObjectCluster( 1 );
         ObjectsClusterParams oc2Params = ccThreeClusters.objectsClusterParams( 2 );
-        oc2Params.crossClustersMask.set( 0 );
+        oc2Params.blocksMask.set( 0 );
         oc2Params.probeSignal[ 0 ] = 2;
         ccThreeClusters.objectsClusterParams( 2 ) = oc2Params;
         ccThreeClusters.cleanupClusters();
@@ -293,15 +293,15 @@ protein 1-1 1-2 1-3 1-4   2-1   2-2   2-3   2-4 3-1 3-2 3-3 3-4   4-1   4-2   4-
         ccActual.addObjectCluster( 2 );
         ccActual.setObjectCluster( 3, 1 );
         ObjectsClusterParams oc0Params = ccActual.objectsClusterParams( 0 );
-        oc0Params.crossClustersMask.set( 0 );
-        oc0Params.crossClustersMask.set( 1, false );
+        oc0Params.blocksMask.set( 0 );
+        oc0Params.blocksMask.set( 1, false );
         oc0Params.objectMultiple[ 0 ] = 1;
         oc0Params.objectMultiple[ 1 ] = 1;
         oc0Params.probeSignal[ 0 ] = 2;
         ccActual.objectsClusterParams( 0 ) = oc0Params;
         ObjectsClusterParams oc1Params = ccActual.objectsClusterParams( 1 );
-        oc1Params.crossClustersMask.set( 0, false );
-        oc1Params.crossClustersMask.set( 1 );
+        oc1Params.blocksMask.set( 0, false );
+        oc1Params.blocksMask.set( 1 );
         oc1Params.objectMultiple[ 2 ] = 1;
         oc1Params.objectMultiple[ 3 ] = 1;
         oc1Params.probeSignal[ 1 ] = 2;
@@ -309,7 +309,7 @@ protein 1-1 1-2 1-3 1-4   2-1   2-2   2-3   2-4 3-1 3-2 3-3 3-4   4-1   4-2   4-
     }
     BOOST_ASSERT( ccActual.checkObjectsPartition() );
     BOOST_ASSERT( ccActual.checkProbesPartition() );
-    BOOST_ASSERT( ccActual.checkCrossClusters() );
+    BOOST_ASSERT( ccActual.checkBlocks() );
     ChessboardBiclusteringFit fitCcActual( precomputed, priors, ccActual );
     LOG_INFO( "Actual partition llh=" << fitCcActual.llh() );
 
@@ -340,8 +340,8 @@ protein 1-1 1-2 1-3 1-4   2-1   2-2   2-3   2-4 3-1 3-2 3-3 3-4   4-1   4-2   4-
     {
         ccThreeObjectClusters.addObjectCluster( 3 );
         ObjectsClusterParams oc2Params = ccThreeObjectClusters.objectsClusterParams( 2 );
-        oc2Params.crossClustersMask.set( 0, false );
-        oc2Params.crossClustersMask.set( 1, true );
+        oc2Params.blocksMask.set( 0, false );
+        oc2Params.blocksMask.set( 1, true );
         oc2Params.probeSignal[ 1 ] = 8;
         ccThreeObjectClusters.objectsClusterParams( 2 ) = oc2Params;
     }
@@ -353,8 +353,8 @@ protein 1-1 1-2 1-3 1-4   2-1   2-2   2-3   2-4 3-1 3-2 3-3 3-4   4-1   4-2   4-
     {
         ccThreeProbeClusters.addProbeCluster( 3 );
         ProbesClusterParams oc2Params = ccThreeProbeClusters.probesClusterParams( 2 );
-        oc2Params.crossClustersMask.set( 0, false );
-        oc2Params.crossClustersMask.set( 1, true );
+        oc2Params.blocksMask.set( 0, false );
+        oc2Params.blocksMask.set( 1, true );
         oc2Params.objectsSignal[ 1 ] = 8;
         ccThreeProbeClusters.probesClusterParams( 2 ) = oc2Params;
     }
@@ -365,8 +365,8 @@ protein 1-1 1-2 1-3 1-4   2-1   2-2   2-3   2-4 3-1 3-2 3-3 3-4   4-1   4-2   4-
     ChessboardBiclustering ccThreeProbeClusters2( ccThreeProbeClusters );
     {
         ProbesClusterParams oc2Params = ccThreeProbeClusters2.probesClusterParams( 2 );
-        oc2Params.crossClustersMask.set( 0, true );
-        oc2Params.crossClustersMask.set( 1, true );
+        oc2Params.blocksMask.set( 0, true );
+        oc2Params.blocksMask.set( 1, true );
         oc2Params.objectsSignal[ 0 ] = -3;
         ccThreeProbeClusters2.probesClusterParams( 2 ) = oc2Params;
     }

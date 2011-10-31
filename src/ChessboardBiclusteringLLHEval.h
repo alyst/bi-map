@@ -68,7 +68,7 @@ public:
     };
 
 public:
-    typedef ChessboardBiclustering::const_cross_cluster_iterator const_cross_cluster_iterator;
+    typedef ChessboardBiclustering::const_block_iterator const_block_iterator;
 
     ChessboardBiclusteringLLHEval( DataSignalNoiseCache& cache,
                             const ChessboardBiclustering& clustering );
@@ -91,7 +91,7 @@ public:
     log_prob_t cellsDataLLH( const object_set_t& objects, probe_index_t probe, signal_t signal, size_t objMultiple ) const;
     log_prob_t cellsDataLLH( object_index_t objectIx, const probe_bitset_t& probes, signal_t signal, size_t objMultiple ) const;
 
-    log_prob_t crossClusterDataLLH( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const;
+    log_prob_t blockDataLLH( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const;
 
     log_prob_t allCellsDataLLH( signal_t baselineSignal, prob_t zeroRate, bool sumEnabledCrosses = true, bool sumDisabledCrosses = true ) const;
     log_prob_t allCellsDataLLH( bool sumEnabledCrosses = true, bool sumDisabledCrosses = true ) const;
@@ -112,13 +112,13 @@ public:
     }
 };
 
-class CrossClusterEnablementDataLLH {
+class BlockEnablementDataLLH {
     const DataSignalNoiseCache&     cache;
     const object_set_t&             objects;
     const probe_bitset_t&           probes;
 
 public:
-    CrossClusterEnablementDataLLH( const DataSignalNoiseCache& cache, const object_set_t& objects, const probe_bitset_t& probes )
+    BlockEnablementDataLLH( const DataSignalNoiseCache& cache, const object_set_t& objects, const probe_bitset_t& probes )
     : cache( cache ), objects( objects ), probes( probes )
     {}
 

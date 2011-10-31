@@ -14,7 +14,7 @@ VectorCache<signal_t> ProbesClusterParams::SignalMapCache;
 
 ObjectsClusterParams::ObjectsClusterParams(
     const ChessboardBiclustering& clustering
-)   : crossClustersMask( clustering.probesClusters().size() )
+)   : blocksMask( clustering.probesClusters().size() )
     , probeSignal( SignalMapCache.borrow( clustering.probesClusters().size(), unset() ) )
     , objectMultiple( MultipleMapCache.borrow( clustering.objectsCount(), 0 ) )
 {
@@ -22,7 +22,7 @@ ObjectsClusterParams::ObjectsClusterParams(
 
 ObjectsClusterParams::ObjectsClusterParams(
     const ChessboardBiclustering::ObjectsClusterParamsProxy& paramsProxy
-)   : crossClustersMask( paramsProxy.clus.probesClusters().size() )
+)   : blocksMask( paramsProxy.clus.probesClusters().size() )
     , probeSignal( SignalMapCache.borrow( paramsProxy.clus.probesClusters().size(), unset() ) )
     , objectMultiple( MultipleMapCache.borrow( paramsProxy.clus.objectsCount(), 0 ) )
 {
@@ -31,7 +31,7 @@ ObjectsClusterParams::ObjectsClusterParams(
 
 ObjectsClusterParams::ObjectsClusterParams(
     const ObjectsClusterParams& params
-)  : crossClustersMask( params.crossClustersMask )
+)  : blocksMask( params.blocksMask )
    , probeSignal( SignalMapCache.borrow( params.probeSignal ) )
    , objectMultiple( MultipleMapCache.borrow( params.objectMultiple ) )
 {
@@ -39,14 +39,14 @@ ObjectsClusterParams::ObjectsClusterParams(
 
 ProbesClusterParams::ProbesClusterParams(
     const ChessboardBiclustering& clustering
-) : crossClustersMask( clustering.objectsClusters().size() )
+) : blocksMask( clustering.objectsClusters().size() )
   , objectsSignal( SignalMapCache.borrow( clustering.objectsClusters().size(), unset() ) )
 {
 }
 
 ProbesClusterParams::ProbesClusterParams(
     const ChessboardBiclustering::ProbesClusterParamsProxy& paramsProxy
-) : crossClustersMask( paramsProxy.clus.objectsClusters().size() )
+) : blocksMask( paramsProxy.clus.objectsClusters().size() )
   , objectsSignal( SignalMapCache.borrow( paramsProxy.clus.objectsClusters().size(), unset() ) )
 {
     operator=( paramsProxy );
@@ -54,7 +54,7 @@ ProbesClusterParams::ProbesClusterParams(
 
 ProbesClusterParams::ProbesClusterParams(
     const ProbesClusterParams& params
-)  : crossClustersMask( params.crossClustersMask )
+)  : blocksMask( params.blocksMask )
    , objectsSignal( SignalMapCache.borrow( params.objectsSignal ) )
 {
 }
@@ -188,8 +188,8 @@ object_clundex_t ChessboardBiclustering::exchangeObjects(
                 res = addObjectCluster( *it );
                 // copy cross-cluster probes
                 for ( probe_clundex_t i = 0; i < probesClusters().size(); i++ ) {
-                    _crossClustersMask.set( res * _probesClusters.size() + i,
-                                            _crossClustersMask.test( clu1Ix * _probesClusters.size() + i ) );
+                    _blocksMask.set( res * _probesClusters.size() + i,
+                                            _blocksMask.test( clu1Ix * _probesClusters.size() + i ) );
                 }
             }
             else {
@@ -227,7 +227,7 @@ object_clundex_t ChessboardBiclustering::exchangeObjects(
     } else {
         afterObjectsClusterChanged( clu1Ix );
     }
-    BOOST_ASSERT( checkCrossClusters() );
+    BOOST_ASSERT( checkBlocks() );
     return ( res );
 }
 
@@ -255,8 +255,8 @@ probe_clundex_t ChessboardBiclustering::exchangeProbes(
             res = addProbeCluster( probeIx );
             // copy cross-cluster probes
             for ( object_clundex_t i = 0; i < objectsClusters().size(); i++ ) {
-                _crossClustersMask.set( i * _probesClusters.size() + res,
-                                        _crossClustersMask.test( i * _probesClusters.size() + clu1Ix ) );
+                _blocksMask.set( i * _probesClusters.size() + res,
+                                        _blocksMask.test( i * _probesClusters.size() + clu1Ix ) );
             }
         }
         else {
@@ -289,7 +289,7 @@ probe_clundex_t ChessboardBiclustering::exchangeProbes(
     } else {
         afterProbesClusterChanged( clu1Ix );
     }
-    BOOST_ASSERT( checkCrossClusters() );
+    BOOST_ASSERT( checkBlocks() );
     return ( res );
 }
 
@@ -348,21 +348,21 @@ ChessboardBiclustering::probes_cluster_index_remap ChessboardBiclustering::clean
 /**
  *  Resizes mask to new dimensions, preserving data.
  *  @note
- *  Any existing CrossClusterProxy instances after resizing would be invalid.
+ *  Any existing BlockProxy instances after resizing would be invalid.
  */
-void ChessboardBiclustering::resizeCrossClusterMask(
+void ChessboardBiclustering::resizeBlockMask(
     size_t objectClustersCount, 
     size_t probeClustersCount
 ){
-    cross_clusters_mask_t maskReindexed( objectClustersCount * probeClustersCount );
-    for ( const_cross_cluster_iterator cluIt = begin(); cluIt != end(); ++cluIt ) {
+    blocks_mask_t maskReindexed( objectClustersCount * probeClustersCount );
+    for ( const_block_iterator cluIt = begin(); cluIt != end(); ++cluIt ) {
         object_clundex_t  objCluIx = cluIt->objectsClusterIndex();
         probe_clundex_t   probeCluIx = cluIt->probesClusterIndex();
         if ( objCluIx < objectClustersCount && probeCluIx < probeClustersCount ) {
             maskReindexed.set( objCluIx * probeClustersCount + probeCluIx );
         }
     }
-    _crossClustersMask.swap( maskReindexed );
+    _blocksMask.swap( maskReindexed );
 }
 
 void ChessboardBiclustering::cleanupClusters()
@@ -382,9 +382,9 @@ void ChessboardBiclustering::cleanupClusters()
         probeRemap = cleanupProbesClusters();
     }
     // now the counts of object and probe clusters are updated
-    cross_clusters_mask_t maskReindexed( objectsClusters().size() * probesClusters().size() );
-    // don't use CrossClusterIterator, since dimensions are updated, but not the map itself
-    foreach_bit( size_t, ccIndex, _crossClustersMask ) {
+    blocks_mask_t maskReindexed( objectsClusters().size() * probesClusters().size() );
+    // don't use BlockIterator, since dimensions are updated, but not the map itself
+    foreach_bit( size_t, ccIndex, _blocksMask ) {
         object_clundex_t  oldObjIx = ccIndex / oldProbeClusters;
         probe_clundex_t   oldProbeIx = ccIndex % oldProbeClusters;
         object_clundex_t  newObjIx = !objRemap.empty() ? objRemap[ oldObjIx ] : oldObjIx;
@@ -395,24 +395,24 @@ void ChessboardBiclustering::cleanupClusters()
             maskReindexed.set( newObjIx * probesClusters().size() + newProbeIx );
         }
     }
-    _crossClustersMask.swap( maskReindexed );
+    _blocksMask.swap( maskReindexed );
     BOOST_ASSERT( !_objectsClustersCleanupRequired && !_probesClustersCleanupRequired );
 }
 
 /**
  *  Get 2D bitmap (probes x objects) of cross-cluster enablement.
  */
-cross_clusters_mask_t ChessboardBiclustering::crossClustersMask(
+blocks_mask_t ChessboardBiclustering::blocksMask(
     bool objectsMajor    /** i if true (default), rows are objects, probes are columns */
 ) const {
     if ( objectsMajor ) {
-        return ( _crossClustersMask );
+        return ( _blocksMask );
     } else {
         // transpose mask
-        cross_clusters_mask_t res( objectsClusters().size() * probesClusters().size() );
+        blocks_mask_t res( objectsClusters().size() * probesClusters().size() );
         // fill signals and mask
-        for ( const_cross_cluster_iterator ccit = begin(); ccit != end(); ++ccit ) {
-            const CrossClusterProxy& cc = *ccit;
+        for ( const_block_iterator ccit = begin(); ccit != end(); ++ccit ) {
+            const BlockProxy& cc = *ccit;
             size_t  ccIx = objectsClusters().size() * cc.probesClusterIndex() + cc.objectsClusterIndex();
             res.set( ccIx );
         }
@@ -425,15 +425,15 @@ cross_clusters_mask_t ChessboardBiclustering::crossClustersMask(
  *  @note
  *  Cross-cluster signals not set.
  */
-ChessboardBiclustering::cross_cluster_iterator ChessboardBiclustering::setCrossCluster(
+ChessboardBiclustering::block_iterator ChessboardBiclustering::setBlock(
     object_clundex_t    objCluIx,
     probe_clundex_t     probeCluIx,
     bool                enable
 ){
-    cross_cluster_iterator cluIt = findCrossCluster( objCluIx, probeCluIx, false );
+    block_iterator cluIt = findBlock( objCluIx, probeCluIx, false );
     if ( cluIt->isEnabled() != enable ) {
         cluIt->setEnabled( enable );
-        afterCrossClusterFlipped( cluIt->objectsClusterIndex(), cluIt->probesClusterIndex() );
+        afterBlockFlipped( cluIt->objectsClusterIndex(), cluIt->probesClusterIndex() );
     }
     return ( cluIt );
 }
@@ -531,10 +531,10 @@ ChessboardBiclustering::ObjectsClusterParamsProxy& ChessboardBiclustering::Objec
     const ObjectsClusterParams& params
 ){
     BOOST_ASSERT( cluIx < clus.objectsClusters().size() );
-    BOOST_ASSERT( params.crossClustersMask.size() == clus.probesClusters().size() );
+    BOOST_ASSERT( params.blocksMask.size() == clus.probesClusters().size() );
     for ( probe_clundex_t probeCluIx = 0; probeCluIx < clus.probesClusters().size(); ++probeCluIx ) {
-        bool  enabled = params.crossClustersMask.test( probeCluIx );
-        cross_cluster_iterator cluIt = clus.findCrossCluster( cluIx, probeCluIx, false );
+        bool  enabled = params.blocksMask.test( probeCluIx );
+        block_iterator cluIt = clus.findBlock( cluIx, probeCluIx, false );
         cluIt->setEnabled( enabled );
         if ( enabled ) {
             signal_t signal = params.probeSignal[ probeCluIx ];
@@ -560,10 +560,10 @@ ChessboardBiclustering::ProbesClusterParamsProxy& ChessboardBiclustering::Probes
 ){
     LOG_DEBUG2( "Setting probe cluster " << cluIx << " params" );
     BOOST_ASSERT( cluIx < clus.probesClusters().size() );
-    BOOST_ASSERT( params.crossClustersMask.size() == clus.objectsClusters().size() );
+    BOOST_ASSERT( params.blocksMask.size() == clus.objectsClusters().size() );
     for ( object_clundex_t objCluIx = 0; objCluIx < clus.objectsClusters().size(); ++objCluIx ) {
-        bool  enabled = params.crossClustersMask.test( objCluIx );
-        cross_cluster_iterator cluIt = clus.findCrossCluster( objCluIx, cluIx, false );
+        bool  enabled = params.blocksMask.test( objCluIx );
+        block_iterator cluIt = clus.findBlock( objCluIx, cluIx, false );
         cluIt->setEnabled( enabled );
         if ( enabled ) {
             signal_t signal = params.objectsSignal[ objCluIx ];
@@ -584,7 +584,7 @@ ChessboardBiclustering::ProbesClusterParamsProxy& ChessboardBiclustering::Probes
 ObjectsClusterParams& ObjectsClusterParams::operator=(
     const ObjectsClusterParams& params
 ){
-    crossClustersMask = params.crossClustersMask;
+    blocksMask = params.blocksMask;
     probeSignal = params.probeSignal;
     objectMultiple = params.objectMultiple;
     return ( *this );
@@ -595,14 +595,14 @@ ObjectsClusterParams& ObjectsClusterParams::operator=(
 ){
     BOOST_ASSERT( proxy.cluIx < proxy.clus.objectsClusters().size() );
     // clear
-    crossClustersMask.resize( proxy.clus.probesClusters().size() );
+    blocksMask.resize( proxy.clus.probesClusters().size() );
     probeSignal.resize( proxy.clus.probesClusters().size(), unset() );
     objectMultiple = proxy.clus.objectMultiples(); // just copy all multiples, it should be reasonably fast
 
     // fill signals and mask
     for ( probe_clundex_t cluIx = 0; cluIx < proxy.clus.probesClusters().size(); ++cluIx ) {
         probeSignal[ cluIx ] = proxy.clus.clusterSignal( proxy.cluIx, cluIx );
-        crossClustersMask.set( cluIx, proxy.clus.isCrossClusterEnabled( proxy.cluIx, cluIx ) );
+        blocksMask.set( cluIx, proxy.clus.isBlockEnabled( proxy.cluIx, cluIx ) );
     }
 
     return ( *this );
@@ -611,7 +611,7 @@ ObjectsClusterParams& ObjectsClusterParams::operator=(
 ProbesClusterParams& ProbesClusterParams::operator=(
     const ProbesClusterParams& params
 ){
-    crossClustersMask = params.crossClustersMask;
+    blocksMask = params.blocksMask;
     objectsSignal = params.objectsSignal;
     return ( *this );
 }
@@ -622,7 +622,7 @@ ProbesClusterParams& ProbesClusterParams::operator=(
     BOOST_ASSERT( proxy.cluIx < proxy.clus.probesClusters().size() );
 
     // clear
-    crossClustersMask.resize( proxy.clus.objectsClusters().size() );
+    blocksMask.resize( proxy.clus.objectsClusters().size() );
     objectsSignal.resize( proxy.clus.objectsClusters().size(), unset() );
 
     // fill signals and mask
@@ -635,9 +635,9 @@ ProbesClusterParams& ProbesClusterParams::operator=(
     probe_index_t probeIx = probes.find_first();
 
     for ( object_clundex_t objCluIx = 0; objCluIx < proxy.clus.objectsClusters().size(); ++objCluIx ) {
-        crossClustersMask.set( objCluIx, proxy.clus.isCrossClusterEnabled( objCluIx, proxy.cluIx ) );
+        blocksMask.set( objCluIx, proxy.clus.isBlockEnabled( objCluIx, proxy.cluIx ) );
         const object_index_t objIx = proxy.clus.objectsCluster( objCluIx ).representative(); // representative
-        if ( crossClustersMask.test( objCluIx ) ) {
+        if ( blocksMask.test( objCluIx ) ) {
             signal_t signal = proxy.clus.cellSignal( objIx, probeIx );
             objectsSignal[ objCluIx ] = signal;
         }
@@ -687,7 +687,7 @@ bool ChessboardBiclustering::checkProbesPartition() const
     return ( true );
 }
 
-bool ChessboardBiclustering::CrossClusterProxy::check() const
+bool ChessboardBiclustering::BlockProxy::check() const
 {
     if ( objectsClusterIndex() >= _clustering.objectsClusters().size() ) {
         throw std::out_of_range( "Cross cluster references incorrect objects cluster" );
@@ -720,9 +720,9 @@ bool ChessboardBiclustering::CrossClusterProxy::check() const
     return ( true );
 }
 
-bool ChessboardBiclustering::checkCrossClusters() const
+bool ChessboardBiclustering::checkBlocks() const
 {
-    for ( const_cross_cluster_iterator cluIt = begin(); cluIt != end(); ++cluIt ) {
+    for ( const_block_iterator cluIt = begin(); cluIt != end(); ++cluIt ) {
         cluIt->check();
     }
     return ( true );
@@ -732,7 +732,7 @@ bool ChessboardBiclustering::check() const
 {
     checkObjectsPartition();
     checkProbesPartition();
-    checkCrossClusters();
+    checkBlocks();
     return ( true );
 }
 
@@ -751,7 +751,7 @@ std::ostream& operator<<( std::ostream& out, const ChessboardBiclustering& cc )
 {
     out << "N_obj_clu=" << cc.objectsClusters().size()
         << " N_probe_clu=" << cc.probesClusters().size()
-        << " N_cc=" << cc.enabledCrossClustersCount()
+        << " N_cc=" << cc.enabledBlocksCount()
         << " Noise_rate=" << cc.clusteringData()._noiseParams.successRate;
     return ( out );
 }

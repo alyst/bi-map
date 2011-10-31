@@ -125,15 +125,15 @@ BIMAP.walk.eval <- function(
     sampleRate.objects.splitMerge = 0.4,
     sampleRate.state.membership = 0.3,
     sampleRate.states.splitMerge = 0.3,
-    sampleRate.crossCluster.flip = 0.05,
+    sampleRate.block.flip = 0.05,
     sampleRate.object.multiple = 0.125,
     sampleRate.signal = 0.1,
     samplePeriod.priors = 197,
-    samplePeriod.crossClustering = 23,
-    crossCluster.resamples = 12,
+    samplePeriod.chessboardBiclustering = 23,
+    block.resamples = 12,
     ini.objects.partition = NULL,
     ini.states.partition = NULL,
-    ini.crossClusters = NULL,
+    ini.blocks = NULL,
     signal.sequence.length.factor = 0.5,
     signal.shape = 0.0,
     prior.objects.clustering.concentration = 0.1,
@@ -146,7 +146,7 @@ BIMAP.walk.eval <- function(
     hyperprior.signal.variance.scale = 0.1,
     prior.true_misses = 1000,
     prior.false_hits = 1,
-    prior.crossCluster.enabled = 0.1,
+    prior.block.enabled = 0.1,
     precomp.object.freq.threshold = 0.6,
     precomp.state.freq.threshold = 0.6,
     objects.components.threshold = 0.1,
@@ -172,15 +172,15 @@ BIMAP.walk.eval <- function(
         sampleRate.objects.splitMerge = sampleRate.objects.splitMerge,
         sampleRate.state.membership = sampleRate.state.membership,
         sampleRate.states.splitMerge = sampleRate.states.splitMerge,
-        sampleRate.crossCluster.flip = sampleRate.crossCluster.flip,
+        sampleRate.block.flip = sampleRate.block.flip,
         sampleRate.object.multiple = sampleRate.object.multiple,
         sampleRate.signal = sampleRate.signal,
         samplePeriod.priors = samplePeriod.priors,
-        samplePeriod.crossClustering = samplePeriod.crossClustering,
-        crossCluster.resamples = crossCluster.resamples,
+        samplePeriod.chessboardBiclustering = samplePeriod.chessboardBiclustering,
+        block.resamples = block.resamples,
         ini.objects.partition = ini.objects.partition,
         ini.states.partition = ini.states.partition,
-        ini.crossClusters = ini.crossClusters,
+        ini.blocks = ini.blocks,
         signal.sequence.length.factor = signal.sequence.length.factor,
         signal.shape = signal.shape,
         prior.objects.clustering.concentration = prior.objects.clustering.concentration,
@@ -193,7 +193,7 @@ BIMAP.walk.eval <- function(
         hyperprior.signal.variance.scale = hyperprior.signal.variance.scale,
         prior.true_misses = prior.true_misses,
         prior.false_hits = prior.false_hits,
-        prior.crossCluster.enabled = prior.crossCluster.enabled,
+        prior.block.enabled = prior.block.enabled,
         precomp.object.freq.threshold = precomp.object.freq.threshold,
         precomp.state.freq.threshold = precomp.state.freq.threshold,
         objects.components.threshold = objects.components.threshold,
@@ -294,7 +294,7 @@ setClass( "BIMAPClustering",
         states.partition.serial = "integer",
         objects.clusters = "data.frame",
         states.clusters = "data.frame",
-        crossClusters = "data.frame",
+        blocks = "data.frame",
         states.signals = "data.frame",
         baseline.peak = "numeric", baseline.shape = "numeric",
         noise.peak = "numeric", noise.shape = "numeric"
@@ -317,8 +317,8 @@ setClass( "BIMAPWalk",
         states.partitions = "data.frame",
         states.subpartitions = "data.frame",
         states.components = "data.frame",
-        crossClusters = "data.frame",
-        crossClusters.freq = "data.frame",
+        blocks = "data.frame",
+        blocks.freq = "data.frame",
         signals = "data.frame"
     )
 )
@@ -365,8 +365,8 @@ BIMAP.walk.priors.data.frame <- function( walk )
 BIMAP.walk.crosscluster.data.frame <- function( walk )
 {
     res <- do.call( 'rbind', lapply( names( walk@clusterings ), function ( it ) {
-        do.call( 'rbind', lapply( walk@clusterings[[ it ]]@crossClusters, function ( cluster ) {
-            cluframe <- data.frame( clustering@crossClusters )
+        do.call( 'rbind', lapply( walk@clusterings[[ it ]]@blocks, function ( cluster ) {
+            cluframe <- data.frame( clustering@blocks )
             cluframe <- cbind( cluframe, iteration = as.integer(rep(as.numeric(it), nrow(cluframe))) )
             return ( cluframe )
         } ) )
@@ -516,13 +516,13 @@ BIMAP.signal_stats <- function( signals.frame )
 #' Extracts chessboard biclustering with specified ID from random walk.
 #' @param bimap.walk sampling walk
 #' @param bimapId ID of chessboard biclustering to extract
-#' @param cross_clusters.threshold enable cross clusters, whose "on" state frequency is greater than this threshold
+#' @param onblock.threshold "on" blocks, are those whose "on" state frequency is greater than this threshold
 #' @param extract.signals extract signals of individual cross-clusters
 #' @returnType 
 #' @return 
 #' @author astukalov
 BIMAP.extract_clustering <- function( bimap.walk, bimapId,
-    cross_cluster.threshold = 0.6,
+    onblock.threshold = 0.6,
     extract.signals = TRUE
 ){
     steps <- subset( bimap.walk@clusterings.walk, clustering.serial == bimapId )$step
@@ -536,14 +536,14 @@ BIMAP.extract_clustering <- function( bimap.walk, bimapId,
     ocIds <- as.character( subset( bimap.walk@objects.partitions, objects.partition.serial == opId )$objects.cluster.serial )
     scIds <- as.character( subset( bimap.walk@states.partitions, states.partition.serial == spId )$states.cluster.serial )
 
-    if ( is.numeric(cross_cluster.threshold) ) {
+    if ( is.numeric(block.threshold) ) {
         # build consensus cross-clusters
-        ccStats <- subset( bimap.walk@crossClusters.freq, objects.cluster.serial %in% ocIds & states.cluster.serial %in% scIds )
-        crossClus <- subset( ccStats, enabled >= cross_cluster.threshold * total,
+        ccStats <- subset( bimap.walk@blocks.freq, objects.cluster.serial %in% ocIds & states.cluster.serial %in% scIds )
+        crossClus <- subset( ccStats, enabled >= block.threshold * total,
                              select=c( 'objects.cluster.serial', 'states.cluster.serial' ) )
     } else {
         # get non-empty cross-clusters of the clustering
-        crossClus <- subset( bimap.walk@crossClusters, clustering.serial == bimapId,
+        crossClus <- subset( bimap.walk@blocks, clustering.serial == bimapId,
                              select = c("objects.cluster.serial", "states.cluster.serial") )
     }
 

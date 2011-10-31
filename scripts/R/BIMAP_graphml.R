@@ -230,7 +230,7 @@ bimap.graph.dataframe <- function( bimap.props,
                 #print( bimap.props$signals.mean[ ocId, cc_samples ] )
                 #print( bimap.props$signals.sd[ ocId, cc_samples ] )
                 res <- data.frame( source_id = source_node$node_id, target_id = target_node$node_id,
-                            type = 'cross_cluster',
+                            type = 'block',
                             abundance = bimap.props$signals.mean[ ocId, scId ],
                             abundance_sd = NA,
                             intensity.scaled = (bimap.props$signals.mean[ ocId, scId ] - signal.min) / (signal.max - signal.min),
@@ -282,10 +282,10 @@ bimap.graph.dataframe <- function( bimap.props,
 
 BIMAP.graph.dataframe <- function( bimap.walk, bimapId,
     protein.info, sample.info, msrun.info,
-    cross_cluster.threshold = 0.6, ...
+    onblock.threshold = 0.6, ...
 ){
     bimap.props <- BIMAP.extract_clustering( bimap.walk, bimapId, TRUE, 
-        cross_cluster.threshold = cross_cluster.threshold )
+        onblock.threshold = onblock.threshold )
     bimap.graph.dataframe( bimap.props, protein.info, sample.info, msrun.info, ... )
 }
 
@@ -301,7 +301,7 @@ bimap.graphML <- function( bimap.props,
 
 BIMAP.graphML <- function( bimap.walk, bimapId, 
     protein.info, sample.info, msrun.info,
-    cross_cluster.threshold = 0.5,
+    onblock.threshold = 0.5,
     ...
 ){
     dfs <- BIMAP.graph.dataframe( bimap.walk, bimapId, protein.info, sample.info, msrun.info, ... )

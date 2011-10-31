@@ -186,7 +186,7 @@ BIMAP.generate_proteins <- function(
 }
 
 # convert cross-cluster signals to a matrix
-BIMAP.cross_clusters.to.signals_matrix <- function( cc_df, proteinsClusters, samplesClusters )
+BIMAP.blocks.to.signals_matrix <- function( cc_df, proteinsClusters, samplesClusters )
 {
     signals.mean <- matrix( rep( NA, length( proteinsClusters ) * length( samplesClusters ) ), 
                                  nrow = length( proteinsClusters ) )
@@ -275,7 +275,7 @@ BIMAP.generate_clustering <- function(
                    samples.clusters = samples.partition,
                    samples = samples.df,
                    cross.clusters = bimap.df,
-                   signals.mean = BIMAP.cross_clusters.to.signals_matrix( bimap.df, 1:nProtClusters, 1:nSampleClusters )
+                   signals.mean = BIMAP.blocks.to.signals_matrix( bimap.df, 1:nProtClusters, 1:nSampleClusters )
     ) )
 }
 

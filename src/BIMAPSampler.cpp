@@ -66,7 +66,7 @@ GeometricDistribution BIMAPSamplerHelper::randomNoiseParams(
     for ( object_index_t objectIx = 0; objectIx < _data.objectsCount(); objectIx++ ) {
         for ( probe_index_t probeIx = 0; probeIx < _data.probesCount(); probeIx++ ) {
             const OPAProbe& probe = _data.probe( probeIx );
-            const bool cellCovered = clus.isCrossClusterEnabled( clus.clusterOfObject( objectIx ), clus.clusterOfProbe( probeIx ) );
+            const bool cellCovered = clus.isBlockEnabled( clus.clusterOfObject( objectIx ), clus.clusterOfProbe( probeIx ) );
             if ( ( cellCovered && covered ) || ( !cellCovered && !covered ) ) {
                 for ( assay_set_t::const_iterator assayIt = probe.assays().begin(); assayIt != probe.assays().end(); ++assayIt ) {
                     signalsCount++;
@@ -113,16 +113,16 @@ void BIMAPSamplerHelper::randomizeMissingData( ChessboardBiclustering& clus ) co
         }
     }
     BOOST_ASSERT( clus.checkProbesPartition() );
-    if ( clus.enabledCrossClustersCount() == 0 ) {
+    if ( clus.enabledBlocksCount() == 0 ) {
         for ( object_clundex_t objCluIx = 0; objCluIx < clus.objectsClusters().size(); objCluIx++ ){
             for ( probe_clundex_t probeCluIx = 0; probeCluIx < clus.probesClusters().size(); probeCluIx++ ){
-                clus.setCrossCluster( objCluIx, probeCluIx, gsl_ran_bernoulli( rndNumGen, priors.cellEnablementProb ) );
+                clus.setBlock( objCluIx, probeCluIx, gsl_ran_bernoulli( rndNumGen, priors.cellEnablementProb ) );
             }
         }
     }
     ChessboardBiclusteringFit clusFit( precomputed, priors, clus );
 
-    for ( ChessboardBiclustering::const_cross_cluster_iterator ccIt = clus.begin(); ccIt != clus.end(); ++ccIt ) {
+    for ( ChessboardBiclustering::const_block_iterator ccIt = clus.begin(); ccIt != clus.end(); ++ccIt ) {
         if ( ccIt->isEnabled() ) {
             generateMissingProbeSignals( clus, ccIt->objectsClusterIndex(), ccIt->probesClusterIndex() );
         }
@@ -132,7 +132,7 @@ void BIMAPSamplerHelper::randomizeMissingData( ChessboardBiclustering& clus ) co
     // update random basic signals
     clus.setSignalPrior( randomPriors().signalPrior );
     clus.setNoiseParams( randomNoiseParams( clus ) );
-    BOOST_ASSERT( clus.checkCrossClusters() );
+    BOOST_ASSERT( clus.checkBlocks() );
 }
 
 ChessboardBiclustering BIMAPSamplerHelper::randomClustering() const
@@ -166,7 +166,7 @@ ChessboardBiclustering BIMAPSamplerHelper::trivialClustering() const
                     assayIt != probe.assayIndexes().end(); ++assayIt
             ){
                 if ( data().measurement( objCluIx, *assayIt ).sc > 0 ) {
-                    res.setCrossCluster( objCluIx, probeCluIx, true );
+                    res.setBlock( objCluIx, probeCluIx, true );
                     break;
                 }
             }
@@ -188,9 +188,9 @@ void BIMAPSamplerHelper::generateMissingProbeSignals(
 }
 
 BIMAPSampleCollector::BIMAPSampleCollector(
-    ChessboardBiclusteringsIndexing&           crossClusteringsIndexing,
+    ChessboardBiclusteringsIndexing&           chessboardBiclusteringsIndexing,
     const BIMAPSampleCollectorParams&  params
-) : _walk( crossClusteringsIndexing )
+) : _walk( chessboardBiclusteringsIndexing )
   , _params( params )
   , _lastSampleReportTime( 0 )
 {
@@ -214,7 +214,7 @@ bool BIMAPSampleCollector::storeSample( double time, turbine_ix_t originIx, cons
 
 BIMAPWalk BIMAPSampler_run(
     const BIMAPSamplerHelper&  helper,
-    ChessboardBiclusteringsIndexing&   crossClusteringsIndexing,
+    ChessboardBiclusteringsIndexing&   chessboardBiclusteringsIndexing,
     const GibbsSamplerParams&   gibbsSamplerParams,
     const TurbineCascadeParams& eeCascadeParams,
     const BIMAPSampleCollectorParams&  collectorParams,
@@ -223,7 +223,7 @@ BIMAPWalk BIMAPSampler_run(
 ){
     typedef TurbineCascadeUnit<BIMAPSampleCollector, DynamicChessboardBiclusteringFactory, ChessboardBiclusteringCrossoverGenerator> equi_energy_sampler_type;
 
-    BIMAPSampleCollector   collector( crossClusteringsIndexing, collectorParams );
+    BIMAPSampleCollector   collector( chessboardBiclusteringsIndexing, collectorParams );
 
     equi_energy_sampler_type eeSampler( 0, eeCascadeParams, 
             createTurbineCascadeStructure( eeCascadeParams.levelsCount, 
