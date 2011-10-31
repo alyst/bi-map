@@ -416,7 +416,7 @@ BIMAP.signals_matrix.bihclust <- function( bimap.props, signal.na.subst = -100 )
             clusters.dgram = protein.clusters.dgram,
             decreasing = TRUE )
 
-    # hierarchical clustering of states
+    # hierarchical clustering of probes
     if ( ncol( signals.clu.matrix ) > 1 ) {
         sample.clusters.dgram <- hclust( dist( t( signals.clu.matrix ) ),
                                           members = colnames( signals.clu.matrix )  )
@@ -821,13 +821,13 @@ iteration.ranges <- function( it.subsubset, it.subset, it.set )
     return ( subset.ranges )
 }
 
-plot.cell.signal <- function( bimap.walk, cell.object, cell.state, all.steps = bimap.walk@clusterings.walk$step )
+plot.cell.signal <- function( bimap.walk, cell.object, cell.probe, all.steps = bimap.walk@clusterings.walk$step )
 {
     cell.proteins.clusters <- unique( subset( bimap.walk@proteins.clusters, as.character( object ) == cell.object )$proteins.cluster )
 
-    subframe <- subset( bimap.walk@signals, proteins.cluster %in% cell.proteins.clusters & (state == cell.state) )
+    subframe <- subset( bimap.walk@signals, proteins.cluster %in% cell.proteins.clusters & (probe == cell.probe) )
     if ( nrow( subframe ) == 0 ) {
-        warning( paste('Protein', cell.object,'not found in bait/PD',cell.state) )
+        warning( paste('Protein', cell.object,'not found in bait/PD',cell.probe) )
         return()
     }
     subframe$step <- as.numeric( as.character( subframe$step ) )
@@ -843,7 +843,7 @@ plot.cell.signal <- function( bimap.walk, cell.object, cell.state, all.steps = b
     meanSignal <- mean(subframe$signal)
     plot( c( min(subframe$step), max(subframe$step)), 
           c( meanSignal, meanSignal ), 
-        ylab = paste( 'Signal of', cell.object, cell.state ), 
+        ylab = paste( 'Signal of', cell.object, cell.probe ), 
         ylim = c( min(subframe$signal), max(subframe$signal) ), type='l', col = "red", lwd = 2 )
     sdcol <- rgb( 100, 100, 100, 70, maxColorValue = 255 )
     for ( ix.range in ix.ranges ) {

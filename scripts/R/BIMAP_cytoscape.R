@@ -14,9 +14,9 @@ setClass( "BIMAPCytoscapeFilesWriter",
         walk = "BIMAPWalk",
         clusteringId = "integer",
         objClusters = "data.frame",
-        stateToBait = "character",
+        probeToBait = "character",
         simpleNodes = "character",
-        stateClusters = "data.frame",
+        probeClusters = "data.frame",
         blocks = "data.frame"
     )
 )
@@ -46,10 +46,10 @@ setMethod( 'writeNNF', "BIMAPCytoscapeFilesWriter", function( .Object ) {
         return ( 0 )
     } ) 
     
-    # output states nodes and interactions
-    ddply( .Object@blocks, .( objects.cluster.serial, state ), function( rows ) {
+    # output probes nodes and interactions
+    ddply( .Object@blocks, .( objects.cluster.serial, probe ), function( rows ) {
             row <- rows[1,]
-            bait <- .Object@stateToBait[ as.character( row$state ) ]
+            bait <- .Object@probeToBait[ as.character( row$probe ) ]
             if ( bait %in% .Object@simpleNodes ) {
                 bait_node <- bait
             }
@@ -74,9 +74,9 @@ setMethod( 'initialize', "BIMAPCytoscapeFilesWriter",
         .Object@walk = bimap.walk
         .Object@clusteringId = as.integer( clusteringId )
         opId <- subset( bimap.walk@clusterings, clustering.serial == clusteringId )$objects.partition.serial
-        spId <- subset( bimap.walk@clusterings, clustering.serial == clusteringId )$states.partition.serial
+        spId <- subset( bimap.walk@clusterings, clustering.serial == clusteringId )$probes.partition.serial
         ocIds <- subset( bimap.walk@objects.partitions, objects.partition.serial == opId )$objects.cluster.serial
-        scIds <- subset( bimap.walk@states.partitions, states.partition.serial == spId )$states.cluster.serial
+        scIds <- subset( bimap.walk@probes.partitions, probes.partition.serial == spId )$probes.cluster.serial
         .Object@objClusters <- subset( bimap.walk@objects.clusters, objects.cluster.serial %in% ocIds, 
             select = c( 'objects.cluster.serial', 'object' ) )
         simple_nodes_frame <- subset( ddply( .Object@objClusters, .(objects.cluster.serial), function( cluster.rows ) {
@@ -86,16 +86,16 @@ setMethod( 'initialize', "BIMAPCytoscapeFilesWriter",
                 } ), select = c("objects.cluster.serial", 'object'), n == 1 )
         .Object@simpleNodes <- as.character( simple_nodes_frame$object )
         names( .Object@simpleNodes ) <- as.character( simple_nodes_frame$objects.cluster.serial )
-        .Object@stateClusters <- subset( bimap.walk@states.clusters, states.cluster.serial %in% scIds, 
-            select = c( 'states.cluster.serial', 'state' ) )
-        .Object@stateToBait = as.character( samples$bait_label )
-        names( .Object@stateToBait ) = as.character( samples$label )
-        #print( .Object@stateToBait )
+        .Object@probeClusters <- subset( bimap.walk@probes.clusters, probes.cluster.serial %in% scIds, 
+            select = c( 'probes.cluster.serial', 'probe' ) )
+        .Object@probeToBait = as.character( samples$bait_label )
+        names( .Object@probeToBait ) = as.character( samples$label )
+        #print( .Object@probeToBait )
         # not blocks, actually, since samples clusters are exploded into single samples
         .Object@blocks <- merge( subset( bimap.walk@blocks, clustering.serial == clusteringId,
-            select = c( 'objects.cluster.serial', 'states.cluster.serial' ) ),
-            subset( bimap.walk@states.clusters, states.cluster.serial %in% scIds ),
-            by.x = c('states.cluster.serial'), by.y = c('states.cluster.serial') )[,c('objects.cluster.serial','state')]
+            select = c( 'objects.cluster.serial', 'probes.cluster.serial' ) ),
+            subset( bimap.walk@probes.clusters, probes.cluster.serial %in% scIds ),
+            by.x = c('probes.cluster.serial'), by.y = c('probes.cluster.serial') )[,c('objects.cluster.serial','probe')]
         .Object@filename_prefix = filename_prefix
         .Object@description = new( 'CytoscapeViewDescription', 
             networkFile = writeNNF( .Object ),
@@ -123,8 +123,8 @@ setMethod( "cytoWrite", signature( .Object = "BIMAPCytoscapeFilesWriter",
         # start node attribute file
         fileAndName <- openCytoscapeAttributeFile( writable, .Object@filename_prefix, ext = 'noa' )
         
-        writeNodeAttrib <- function( object, isCluster, objectsClusterInfo, states ) {
-            nodeValue <- writable@nodeValueFunc( object, objectsClusterInfo, isCluster = isCluster, states )
+        writeNodeAttrib <- function( object, isCluster, objectsClusterInfo, probes ) {
+            nodeValue <- writable@nodeValueFunc( object, objectsClusterInfo, isCluster = isCluster, probes )
             if ( !is.null( nodeValue ) ) {
                 cat( object, "=", nodeValue, '\n', file = fileAndName$file, sep='' )
             }
@@ -133,13 +133,13 @@ setMethod( "cytoWrite", signature( .Object = "BIMAPCytoscapeFilesWriter",
                 objectsClusterInfo <- writable@contextFunc( rows )
                 lapply( 1:nrow(rows), function( ix ) {
                         obj <- as.character( rows$object[[ix]] )
-                        states <- names( .Object@stateToBait )[ .Object@stateToBait %in% as.character( obj ) ]
-                        writeNodeAttrib( obj, FALSE, objectsClusterInfo, states ) 
+                        probes <- names( .Object@probeToBait )[ .Object@probeToBait %in% as.character( obj ) ]
+                        writeNodeAttrib( obj, FALSE, objectsClusterInfo, probes ) 
                 } )
                 if ( nrow( rows ) > 1 ) {
                     # cluster node
-                    states <- names( .Object@stateToBait )[ .Object@stateToBait %in% as.character( rows$object ) ]
-                    writeNodeAttrib( as.character( rows$objects.cluster.serial[[1]] ), TRUE, objectsClusterInfo, states ) 
+                    probes <- names( .Object@probeToBait )[ .Object@probeToBait %in% as.character( rows$object ) ]
+                    writeNodeAttrib( as.character( rows$objects.cluster.serial[[1]] ), TRUE, objectsClusterInfo, probes ) 
                 }
                 return( 0 )
             } )
@@ -158,14 +158,14 @@ setMethod( "cytoWrite", signature( .Object = "BIMAPCytoscapeFilesWriter",
         fileAndName <- openCytoscapeAttributeFile( writable, .Object@filename_prefix, ext = 'eda' )
         
         apply( .Object@blocks, 1, function( row ) {
-            bait <- .Object@stateToBait[ row$state ]
+            bait <- .Object@probeToBait[ row$probe ]
             if ( !( bait %in% .Object@simpleNodes ) ) {
                 baitNode <- .Object@objClusters[ .Object@objClusters$object == bait, 'objects.cluster.serial' ]
             }
             else {
                 baitNode <- bait
             }
-            edgeValue <- writable@edgeValueFunc( bait, row$state, row$objects.cluster.serial )
+            edgeValue <- writable@edgeValueFunc( bait, row$probe, row$objects.cluster.serial )
             if ( !is.null( edgeValue ) ) {
                 cat( baitNode, " (pp) ", 
                      row$objects.cluster.serial, "=", edgeValue, 
@@ -183,7 +183,7 @@ setMethod( "cytoWrite", signature( .Object = "BIMAPCytoscapeFilesWriter",
 BIMAPCytoWriteProteinInfo <- function( cytoWriter, protein_info )
 {
     cytoWriter <- cytoWrite( cytoWriter, CytoscapeNodeAttributeDescriptor( "label", "Label", valueClass = "String",
-            nodeValueFunc = function( node, contextInfo = objectsClusterInfo, isCluster, states ) {
+            nodeValueFunc = function( node, contextInfo = objectsClusterInfo, isCluster, probes ) {
                 if ( isCluster ) {
                     return( NULL )
                 } else {
@@ -191,7 +191,7 @@ BIMAPCytoWriteProteinInfo <- function( cytoWriter, protein_info )
                 }
             } ) )
     cytoWriter <- cytoWrite( cytoWriter, CytoscapeNodeAttributeDescriptor( "uniprot", "UniProt Accession", valueClass = "String",
-            nodeValueFunc = function( node, contextInfo = objectsClusterInfo, isCluster, states ) {
+            nodeValueFunc = function( node, contextInfo = objectsClusterInfo, isCluster, probes ) {
                 if ( isCluster ) {
                     return( NULL )
                 } else {
@@ -199,7 +199,7 @@ BIMAPCytoWriteProteinInfo <- function( cytoWriter, protein_info )
                 }
             } ) )
     cytoWriter <- cytoWrite( cytoWriter, CytoscapeNodeAttributeDescriptor( "description", "Description", valueClass = "String",
-            nodeValueFunc = function( node, contextInfo = objectsClusterInfo, isCluster, states ) {
+            nodeValueFunc = function( node, contextInfo = objectsClusterInfo, isCluster, probes ) {
                 if ( isCluster ) {
                     return( NULL )
                 } else {
@@ -231,17 +231,17 @@ BIMAPCytoWriteBasicAttributes <- function( cytoWriter )
     #        hyperedgeFunc = function( hyperedge ) return( length( hyperedge@intersectingEdges ) ), 
     #        nodeValue = function( node, isHead, hyperedgeInfo ) return( hyperedgeInfo ) ), hypergraphOverride = hgraphPtn )
     cytoWriter <- cytoWrite( cytoWriter, CytoscapeNodeAttributeDescriptor( "type", "Node Type", valueClass = "String",
-            nodeValue = function( node, contextInfo = objectClusterInfo, isCluster, states ) {
+            nodeValue = function( node, contextInfo = objectClusterInfo, isCluster, probes ) {
                 if ( isCluster ) {
-                    return ( ifelse( length( states ) > 0, 'has_bait', 'preys' ) )
+                    return ( ifelse( length( probes ) > 0, 'has_bait', 'preys' ) )
                 }
                 else {
-                    return( ifelse( length( states ) > 0, "bait", "prey" ) )
+                    return( ifelse( length( probes ) > 0, "bait", "prey" ) )
                 }
     } ) )
     cytoWriter <- cytoWrite( cytoWriter, CytoscapeNodeAttributeDescriptor( "samples", "Samples", valueClass = "String",
-        nodeValue = function( node, contextInfo = objectClusterInfo, isCluster, states ) {
-            return ( paste( states, collapse = ', ' ) )
+        nodeValue = function( node, contextInfo = objectClusterInfo, isCluster, probes ) {
+            return ( paste( probes, collapse = ', ' ) )
         } ) )
     return ( cytoWriter )
 }

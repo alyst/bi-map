@@ -36,13 +36,13 @@ BIMAP.distances <- function(
     signal.sequence.length.factor = 0.5,
     signal.shape = 0.0,
     precomp.object.freq.threshold = 0.6,
-    precomp.state.freq.threshold = 0.6
+    precomp.probe.freq.threshold = 0.6
 ){
     params <- list(
         signal.sequence.length.factor = signal.sequence.length.factor,
         signal.shape = signal.shape,
         precomp.object.freq.threshold = precomp.object.freq.threshold,
-        precomp.state.freq.threshold = precomp.state.freq.threshold
+        precomp.probe.freq.threshold = precomp.probe.freq.threshold
     )
     return ( .Call( "CalcDistances",
             protein_info, sample_info, msrun_info, measurements,
@@ -133,8 +133,8 @@ BIMAP.walk.eval <- function(
     eesampler.detentionIterations = 29,
     sampleRate.object.membership = 0.4,
     sampleRate.objects.splitMerge = 0.4,
-    sampleRate.state.membership = 0.3,
-    sampleRate.states.splitMerge = 0.3,
+    sampleRate.probe.membership = 0.3,
+    sampleRate.probes.splitMerge = 0.3,
     sampleRate.block.flip = 0.05,
     sampleRate.object.multiple = 0.125,
     sampleRate.signal = 0.1,
@@ -142,14 +142,14 @@ BIMAP.walk.eval <- function(
     samplePeriod.chessboardBiclustering = 23,
     block.resamples = 12,
     ini.objects.partition = NULL,
-    ini.states.partition = NULL,
+    ini.probes.partition = NULL,
     ini.blocks = NULL,
     signal.sequence.length.factor = 0.5,
     signal.shape = 0.0,
     prior.objects.clustering.concentration = 0.1,
     prior.objects.clustering.discount = 0.0,
-    prior.states.clustering.concentration = 0.1,
-    prior.states.clustering.discount = 0.0,
+    prior.probes.clustering.concentration = 0.1,
+    prior.probes.clustering.discount = 0.0,
     hyperprior.baseline = 0.0,
     hyperprior.baseline.scale = 1.0,
     hyperprior.signal.variance.shape = 1.0,
@@ -158,9 +158,9 @@ BIMAP.walk.eval <- function(
     prior.false_hits = 1,
     prior.block.enabled = 0.1,
     precomp.object.freq.threshold = 0.6,
-    precomp.state.freq.threshold = 0.6,
+    precomp.probe.freq.threshold = 0.6,
     objects.components.threshold = 0.1,
-    states.components.threshold = 0.1,
+    probes.components.threshold = 0.1,
     log.particles.file = NULL,
     log.eeJumps.file = NULL
 ){
@@ -180,8 +180,8 @@ BIMAP.walk.eval <- function(
         eesampler.detentionIterations = eesampler.detentionIterations,
         sampleRate.object.membership = sampleRate.object.membership,
         sampleRate.objects.splitMerge = sampleRate.objects.splitMerge,
-        sampleRate.state.membership = sampleRate.state.membership,
-        sampleRate.states.splitMerge = sampleRate.states.splitMerge,
+        sampleRate.probe.membership = sampleRate.probe.membership,
+        sampleRate.probes.splitMerge = sampleRate.probes.splitMerge,
         sampleRate.block.flip = sampleRate.block.flip,
         sampleRate.object.multiple = sampleRate.object.multiple,
         sampleRate.signal = sampleRate.signal,
@@ -189,14 +189,14 @@ BIMAP.walk.eval <- function(
         samplePeriod.chessboardBiclustering = samplePeriod.chessboardBiclustering,
         block.resamples = block.resamples,
         ini.objects.partition = ini.objects.partition,
-        ini.states.partition = ini.states.partition,
+        ini.probes.partition = ini.probes.partition,
         ini.blocks = ini.blocks,
         signal.sequence.length.factor = signal.sequence.length.factor,
         signal.shape = signal.shape,
         prior.objects.clustering.concentration = prior.objects.clustering.concentration,
         prior.objects.clustering.discount = prior.objects.clustering.discount,
-        prior.states.clustering.concentration = prior.states.clustering.concentration,
-        prior.states.clustering.discount = prior.states.clustering.discount,
+        prior.probes.clustering.concentration = prior.probes.clustering.concentration,
+        prior.probes.clustering.discount = prior.probes.clustering.discount,
         hyperprior.baseline = hyperprior.baseline,
         hyperprior.baseline.scale = hyperprior.baseline.scale,
         hyperprior.signal.variance.shape = hyperprior.signal.variance.shape,
@@ -205,9 +205,9 @@ BIMAP.walk.eval <- function(
         prior.false_hits = prior.false_hits,
         prior.block.enabled = prior.block.enabled,
         precomp.object.freq.threshold = precomp.object.freq.threshold,
-        precomp.state.freq.threshold = precomp.state.freq.threshold,
+        precomp.probe.freq.threshold = precomp.probe.freq.threshold,
         objects.components.threshold = objects.components.threshold,
-        states.components.threshold = states.components.threshold,
+        probes.components.threshold = probes.components.threshold,
         log.particles.file = log.particles.file,
         log.eeJumps.file = log.eeJumps.file
     )
@@ -265,10 +265,10 @@ BIMAP.walk.MPI_eval <- function(
 # optionally identifying independent components with given threshold
 BIMAP.walk.load <- function ( filename, 
     objects.components.threshold = NA,
-    states.components.threshold = NA )
+    probes.components.threshold = NA )
 {
     return ( .Call( "BIMAPWalkLoad", filename, 
-                    objects.components.threshold, states.components.threshold ) )
+                    objects.components.threshold, probes.components.threshold ) )
 }
 
 setClass( "BIMAPCluster",
@@ -301,11 +301,11 @@ setClass( "BIMAPClustering",
     representation = representation( 
         serial = "integer",
         objects.partition.serial = "integer",
-        states.partition.serial = "integer",
+        probes.partition.serial = "integer",
         objects.clusters = "data.frame",
-        states.clusters = "data.frame",
+        probes.clusters = "data.frame",
         blocks = "data.frame",
-        states.signals = "data.frame",
+        probes.signals = "data.frame",
         baseline.peak = "numeric", baseline.shape = "numeric",
         noise.peak = "numeric", noise.shape = "numeric"
     )
@@ -322,11 +322,11 @@ setClass( "BIMAPWalk",
         objects.subpartitions = "data.frame",
         objects.components = "data.frame",
         objects.data = "data.frame",
-        states.clusters = "data.frame", # elements
-        states.clusters.info = "data.frame",
-        states.partitions = "data.frame",
-        states.subpartitions = "data.frame",
-        states.components = "data.frame",
+        probes.clusters = "data.frame", # elements
+        probes.clusters.info = "data.frame",
+        probes.partitions = "data.frame",
+        probes.subpartitions = "data.frame",
+        probes.components = "data.frame",
         blocks = "data.frame",
         blocks.freq = "data.frame",
         signals = "data.frame"
@@ -356,7 +356,7 @@ BIMAP.walk.data.frame <- function( walk )
         iteration = as.numeric( names( walk@clusterings ) ),
         serial = factor( as.character( lapply( walk@clusterings, function( clus ) clus@serial ) ) ),
         objects.partition.serial = factor( as.character( lapply( walk@clusterings, function( clus ) clus@objects.partition.serial ) ) ),
-        states.partition.serial = factor( as.character( lapply( walk@clusterings, function( clus ) clus@states.partition.serial ) ) ),
+        probes.partition.serial = factor( as.character( lapply( walk@clusterings, function( clus ) clus@probes.partition.serial ) ) ),
         baseline.peak = as.numeric( lapply( walk@clusterings, function( clus ) clus@baseline.peak ) ),
         noise.peak = as.numeric( lapply( walk@clusterings, function( clus ) clus@noise.peak ) )
     )
@@ -383,7 +383,7 @@ BIMAP.walk.blocks.data.frame <- function( walk )
     } ) )
     res$iteration <- as.factor( res$iteration )
     res$objects.cluster.serial <- as.factor( res$objects.cluster.serial )
-    res$states.cluster.serial <- as.factor( res$states.cluster.serial )
+    res$probes.cluster.serial <- as.factor( res$probes.cluster.serial )
     return ( res )
 }
 
@@ -392,10 +392,10 @@ BIMAP.walk.signals.data.frame <- function( walk, per.object = TRUE )
     res <- do.call( 'rbind', lapply( names( walk@clusterings ), function( it ) {
         clustering <- walk@clusterings[[ it ]]
         cluframe <- data.frame( biclustering.serial = rep( clustering@serial, 
-                                length( clustering@states.signals$objects.cluster.serial ) ),
-                                objects.cluster.serial = clustering@states.signals$objects.cluster.serial,
-                                state = clustering@states.signals$state,
-                                state.signal = clustering@states.signals$state.signal
+                                length( clustering@probes.signals$objects.cluster.serial ) ),
+                                objects.cluster.serial = clustering@probes.signals$objects.cluster.serial,
+                                probe = clustering@probes.signals$probe,
+                                probe.signal = clustering@probes.signals$probe.signal
                               )
         if ( per.object ) {
             objptnframe <- data.frame(
@@ -409,7 +409,7 @@ BIMAP.walk.signals.data.frame <- function( walk, per.object = TRUE )
         return ( cluframe )
     } ) )
     res$iteration <- as.factor( res$iteration )
-    res$state <- as.factor( res$state )
+    res$probe <- as.factor( res$probe )
     res$objects.cluster.serial <- as.factor( res$objects.cluster.serial )
     if ( per.object ) {
         res$object <- as.factor( res$object )
@@ -428,7 +428,7 @@ BIMAP.walk.lastClustering <- function( walk, serial )
     warning(paste('Clustering with serial #',serial,' not found',sep=''))
 }
 
-BIMAP.walk.clusters.counts <- function( walk, entities = c( 'objects', 'states' ) ) {
+BIMAP.walk.clusters.counts <- function( walk, entities = c( 'objects', 'probes' ) ) {
     partition.serial.colname <- paste( entities, 'partition.serial', sep = '.' )
     cluster.serial.colname <- paste( entities, 'cluster.serial', sep = '.' )
     partitions.walk <- subset( merge( walk@clusterings.walk, walk@clusterings, by = 'clustering.serial' ), select = partition.serial.colname )
@@ -436,7 +436,7 @@ BIMAP.walk.clusters.counts <- function( walk, entities = c( 'objects', 'states' 
     return ( table( clusters.walk[, cluster.serial.colname ] ) )
 }
 
-BIMAP.walk.clusters.size <- function( walk, entities = c( 'objects','states' ) ) {
+BIMAP.walk.clusters.size <- function( walk, entities = c( 'objects','probes' ) ) {
     cluster.serial.colname <- paste( entities, 'cluster.serial', sep = '.' )
     clusters.contents <- slot( walk, paste( entities, 'clusters', sep='.' ) )
     cluster.sizes.df <- ddply( clusters.contents, c( cluster.serial.colname), nrow )
@@ -445,7 +445,7 @@ BIMAP.walk.clusters.size <- function( walk, entities = c( 'objects','states' ) )
     return ( clusters.sizes )
 }
 
-BIMAP.walk.greedy.partition <- function( walk, entities = c( 'objects','states' ), score = function( size, counts ) return ( counts ) ) {
+BIMAP.walk.greedy.partition <- function( walk, entities = c( 'objects','probes' ), score = function( size, counts ) return ( counts ) ) {
     clusters.sizes <- BIMAP.walk.clusters.size( walk, entities )
     clusters.counts <- BIMAP.walk.clusters.counts( walk, entities )
     clusters.info = data.frame(
@@ -458,7 +458,7 @@ BIMAP.walk.greedy.partition <- function( walk, entities = c( 'objects','states' 
     rownames( clusters.info ) <- clusters.info$serial 
     cluster.serial.colname <- paste( entities, 'cluster.serial', sep = '.' )
     clusters.contents <- slot( walk, paste( entities, 'clusters', sep='.' ) )
-    entity.colname <- ifelse(entities=='objects','object','state')
+    entity.colname <- ifelse(entities=='objects','object','probe')
     clusters.info$score <- as.numeric( apply( clusters.info, 1, function (row ) score( as.integer(row[['size']]), as.integer(row[['counts']]) ) ) )
 
     entities.info <- ddply( clusters.contents, c( entity.colname ), function( shared.clusters ) {
@@ -526,7 +526,7 @@ BIMAP.signal_stats <- function( signals.frame )
 #' Extracts chessboard biclustering with specified ID from random walk.
 #' @param bimap.walk sampling walk
 #' @param bimapId ID of chessboard biclustering to extract
-#' @param onblock.threshold "on" blocks, are those whose "on" state frequency is greater than this threshold
+#' @param onblock.threshold "on" blocks, are those whose "on" probe frequency is greater than this threshold
 #' @param extract.signals extract signals of individual blocks
 #' @returnType 
 #' @return 
@@ -540,21 +540,21 @@ BIMAP.extract_clustering <- function( bimap.walk, bimapId,
         stop( paste("No chessboard biclustering with ID=", bimapId, "found") )
     }
 
-    # get object and state clusters of chessboard biclustering
+    # get object and probe clusters of chessboard biclustering
     opId <- subset( bimap.walk@clusterings, clustering.serial == bimapId )$objects.partition.serial
-    spId <- subset( bimap.walk@clusterings, clustering.serial == bimapId )$states.partition.serial
+    spId <- subset( bimap.walk@clusterings, clustering.serial == bimapId )$probes.partition.serial
     ocIds <- as.character( subset( bimap.walk@objects.partitions, objects.partition.serial == opId )$objects.cluster.serial )
-    scIds <- as.character( subset( bimap.walk@states.partitions, states.partition.serial == spId )$states.cluster.serial )
+    scIds <- as.character( subset( bimap.walk@probes.partitions, probes.partition.serial == spId )$probes.cluster.serial )
 
     if ( is.numeric(onblock.threshold) ) {
         # build consensus blocks
-        blockStats <- subset( bimap.walk@blocks.freq, objects.cluster.serial %in% ocIds & states.cluster.serial %in% scIds )
+        blockStats <- subset( bimap.walk@blocks.freq, objects.cluster.serial %in% ocIds & probes.cluster.serial %in% scIds )
         blocks <- subset( blockStats, enabled >= onblock.threshold * total,
-                             select=c( 'objects.cluster.serial', 'states.cluster.serial' ) )
+                             select=c( 'objects.cluster.serial', 'probes.cluster.serial' ) )
     } else {
         # get non-empty blocks of the clustering
         blocks <- subset( bimap.walk@blocks, clustering.serial == bimapId,
-                          select = c("objects.cluster.serial", "states.cluster.serial") )
+                          select = c("objects.cluster.serial", "probes.cluster.serial") )
     }
 
     nBlocks <- nrow( blocks )
@@ -571,8 +571,8 @@ BIMAP.extract_clustering <- function( bimap.walk, bimapId,
     proteins.clusters$proteins.cluster <- as.character( proteins.clusters$proteins.cluster )
     proteins.clusters$protein_ac <- as.character( proteins.clusters$protein_ac )
     rownames( proteins.clusters ) <- proteins.clusters$protein_ac
-    samples.clusters <- subset( bimap.walk@states.clusters, states.cluster.serial %in% scIds,
-        select = c( 'states.cluster.serial', 'state' ) )
+    samples.clusters <- subset( bimap.walk@probes.clusters, probes.cluster.serial %in% scIds,
+        select = c( 'probes.cluster.serial', 'probe' ) )
     colnames( samples.clusters ) <- c( 'samples.cluster', 'sample' )
     samples.clusters$sample <- as.character( samples.clusters$sample )
     samples.clusters$samples.cluster <- as.character( samples.clusters$samples.cluster )
@@ -586,8 +586,8 @@ BIMAP.extract_clustering <- function( bimap.walk, bimapId,
                                                                     c( 'objects.cluster.serial', 'size',
                                                                        'nsteps', 'nsteps.included', 'avg.pairs.cooccur') ],
             samples.clusters = samples.clusters,
-            samples.clusters.info = bimap.walk@states.clusters.info[ unique( samples.clusters$samples.cluster ),
-                                                                 c( 'states.cluster.serial', 'size',
+            samples.clusters.info = bimap.walk@probes.clusters.info[ unique( samples.clusters$samples.cluster ),
+                                                                 c( 'probes.cluster.serial', 'size',
                                                                     'nsteps', 'nsteps.included', 'avg.pairs.cooccur') ]
     )
     colnames( res$proteins.clusters.info ) <- c( 'proteins.cluster', 'size', 'nsteps', 'nsteps_included', 'avg_pairs_cooccur' )
@@ -600,7 +600,7 @@ BIMAP.extract_clustering <- function( bimap.walk, bimapId,
         # (but samples might be from other bimaps, which contain the same clusters)
         cc_str <- paste( blocks$proteins.cluster, blocks$samples.cluster )
         signals.subframe <- subset( bimap.walk@signals,
-                paste( objects.cluster.serial, states.cluster.serial ) %in% cc_str )[c('step', 'objects.cluster.serial', 'states.cluster.serial', 'signal')]
+                paste( objects.cluster.serial, probes.cluster.serial ) %in% cc_str )[c('step', 'objects.cluster.serial', 'probes.cluster.serial', 'signal')]
         colnames( signals.subframe ) <- c( 'step', 'proteins.cluster', 'samples.cluster', 'signal' )
         signals.subframe$proteins.cluster <- as.character( signals.subframe$proteins.cluster )
         signals.subframe$samples.cluster <- as.character( signals.subframe$samples.cluster )
@@ -681,16 +681,16 @@ BIMAP.objects.partition.labels <- function( walk )
     return ( res )
 }
 
-BIMAP.states.cluster.labels <- function( walk )
+BIMAP.probes.cluster.labels <- function( walk )
 {
     df <- data.frame( serial = c(), label = c() )
     for ( clustering in walk@clusterings ) {
-        if ( length( clustering@samples.clusters$states.cluster.serial ) == 0 ) next;
+        if ( length( clustering@samples.clusters$probes.cluster.serial ) == 0 ) next;
         ocs <- as.data.frame( clustering@samples.clusters )
-        df <- unique( rbind( df, ddply( ocs, .(states.cluster.serial), function( statesclu ) {
-                states <- statesclu[,'state']
-                states <- states[ order(states ) ]
-                data.frame( serial = statesclu[[1,'states.cluster.serial']], label = paste( states, collapse = ',' ) )
+        df <- unique( rbind( df, ddply( ocs, .(probes.cluster.serial), function( probesclu ) {
+                probes <- probesclu[,'probe']
+                probes <- probes[ order(probes ) ]
+                data.frame( serial = probesclu[[1,'probes.cluster.serial']], label = paste( probes, collapse = ',' ) )
             } ) ) )
     }
     res <- as.character( df$label )
@@ -698,19 +698,19 @@ BIMAP.states.cluster.labels <- function( walk )
     return ( res )
 }
 
-BIMAP.states.partition.labels <- function( walk )
+BIMAP.probes.partition.labels <- function( walk )
 {
     res <- list()
     for ( clustering in walk@clusterings ) {
-        if ( length( clustering@samples.clusters$states.cluster.serial ) == 0 ) next;
+        if ( length( clustering@samples.clusters$probes.cluster.serial ) == 0 ) next;
         ocs <- as.data.frame( clustering@samples.clusters )
-        clunames <- as.character( ddply( ocs, .(states.cluster.serial), function( stateclu ) {
-                    states <- stateclu[,'state']
-                    states <- states[ order(states) ]
-                    data.frame( serial = stateclu[[1,'states.cluster.serial']], label = paste( states, collapse = '' ) )
+        clunames <- as.character( ddply( ocs, .(probes.cluster.serial), function( probeclu ) {
+                    probes <- probeclu[,'probe']
+                    probes <- probes[ order(probes) ]
+                    data.frame( serial = probeclu[[1,'probes.cluster.serial']], label = paste( probes, collapse = '' ) )
                 } )$label )
         clunames <- clunames[ order( clunames ) ]
-        res[[ as.character(clustering@states.partition.serial) ]] = paste( clunames, collapse = ' ' )
+        res[[ as.character(clustering@probes.partition.serial) ]] = paste( clunames, collapse = ' ' )
     }
     return ( res )
 }
