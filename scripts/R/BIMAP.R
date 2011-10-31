@@ -7,7 +7,6 @@ require( 'plyr' )
 require( 'Rcpp' )
 
 # load RBIMAP library
-RBIMAP.libpath <- file.path( projects_path, "pcp/BIMAP/build/release/src/R" )
 #dyn.unload( file.path( RBIMAP.libpath, paste("libRBIMAP", .Platform$dynlib.ext, sep="")) ) 
 dyn.load( file.path( RBIMAP.libpath, paste("libRBIMAP", .Platform$dynlib.ext, sep="")), type = "Call" ) 
 
