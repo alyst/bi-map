@@ -118,11 +118,11 @@ public:
 
     typedef CellSignalLLHMaximizer::multiple_map_t multiple_map_t;
 
-    signal_t clusterSignal( const object_set_t& objects,
+    signal_t blockSignal( const object_set_t& objects,
                             const probe_bitset_t& probes,
                             const multiple_map_t& multiples ) const
     {
-        return ( _llhMaximizer.clusterSignalS( objects, probes, multiples ) );
+        return ( _llhMaximizer.blockSignalS( objects, probes, multiples ) );
     }
 
     log_prob_t maximizeSignalLLH( const object_set_t& objects,

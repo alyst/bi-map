@@ -6,7 +6,7 @@
 /**
     Likelihood evaluations for chessboard biclustering.
     Evaluates likelihoods of given signals for
-    cell of objects-x-probes matrix or cross-clusters.
+    cell of objects-x-probes matrix or blocks.
  */
 class ChessboardBiclusteringLLHEval: public CellsLLHEval {
 protected:

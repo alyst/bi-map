@@ -283,14 +283,14 @@ struct FixedProbesPartitionStats {
     /**
      *  Likelihood of objects cluster in the partition,
      *  not concerning its relation to other clusters
-     *  (co-occurence, cross-cluster probes and abundances, object multipliers).
+     *  (co-occurence, block probes and abundances, object multipliers).
      */
     log_prob_t probesLLH( const probe_bitset_t& probes, const params_type& params ) const;
 
     /**
      *  Likelihood of modified projections clusters,
      *  (co-occurence of projections, relation to other clusters,
-     *   cross-cluster probes and abundances).
+     *   block probes and abundances).
      */
     log_prob_t llhDelta( const std::vector<ProbesPartition::elements_set_proxy_type>& newClusters,
                 const std::vector<params_type>& newParams,

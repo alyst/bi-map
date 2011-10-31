@@ -391,7 +391,7 @@ struct ChessboardBiclusteringScaffoldSerializer
 
         entity.pObjectsPartition = *indexing.objectPartitionIndexing().iterator_to( objPtnSerial );
         entity.pProbesPartition = *indexing.probePartitionIndexing().iterator_to( probePtnSerial );
-        LOG_DEBUG3("Loading cross-cluster mask");
+        LOG_DEBUG3("Loading block mask");
         ar >> boost::serialization::make_nvp( "blockMask", entity.blockMask );
         return ( entity );
     }

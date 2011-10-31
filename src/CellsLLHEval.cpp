@@ -54,11 +54,11 @@ log_prob_t CellsLLHEval::cellSignalLnPdf(
 }
 
 /**
- *  Likelihood of cross-cluster being enabled/disabled.
+ *  Likelihood of block being in on or off state.
  */
 log_prob_t CellsLLHEval::BlockLLH(
-    const object_set_t&         objects,    /** objects of cross-cluster */
-    const probe_bitset_t&       probes,     /** probes of cross-cluster */
+    const object_set_t&         objects,    /** objects of block */
+    const probe_bitset_t&       probes,     /** probes of block */
     const lnprob_matrix_type&   lnPdf       /** matrix of log probabilities
                                                 for data cells (either noise or min signal) */
 ){

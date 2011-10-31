@@ -173,8 +173,8 @@ nestedcluster.extract <- function( clusterings, clustering_id )
 #' @param proteins 
 #' @param samples 
 #' @param min.intensity signal/noise cutoff threshold
-#' @returnType list of data.frames compatible with cross.clustering representation
-#' @return corresponding cross.clustering
+#' @returnType list of data.frames compatible with chessboard biclustering representation
+#' @return corresponding chessboard biclustering
 #' @author astukalov
 #' @see import.nestedcluster()
 #' @export
@@ -196,7 +196,7 @@ nestedcluster.to.bimap <- function(
     colnames( samples.clusters ) <- c('sample','samples.cluster' )
     samples.clusters$samples.cluster <- as.character( samples.clusters$samples.cluster )
 
-    # merge nested clusters with intersected prey clusters to get cross-clusters
+    # merge nested clusters with intersected prey clusters to get chessboard biclustering blocks
     # FIXME: non-unique intensity seems to be internal nestedcluster error
     preys2isect <- ddply( unique( merge( nested.clustering$proteins.clusters, preys.isect.clusters, by = 'protein_ac' )[
         , c('baits.cluster','proteins.cluster','proteins.cluster.isect','intensity')] ),
@@ -207,18 +207,18 @@ nestedcluster.to.bimap <- function(
         } )
     # remove off-blocks by intensity threshold
     preys2isect <- subset( preys2isect, intensity >= min.intensity )
-    cross.clusters <- preys2isect[,c('baits.cluster','proteins.cluster.isect','intensity','proteins.cluster')]
-    colnames(cross.clusters) <- c('samples.cluster','proteins.cluster','signal','nested.preys.cluster')
+    blocks <- preys2isect[,c('baits.cluster','proteins.cluster.isect','intensity','proteins.cluster')]
+    colnames(blocks) <- c('samples.cluster','proteins.cluster','signal','nested.preys.cluster')
     return ( list(
             samples = samples,
             proteins = proteins,
             samples.clusters = samples.clusters,
             proteins.clusters = proteins.clusters,
-            cross.clusters = cross.clusters,
-            signals.mean = daply( cross.clusters, .( proteins.cluster, samples.cluster ), function( data ) {
+            blocks = blocks,
+            signals.mean = daply( blocks, .( proteins.cluster, samples.cluster ), function( data ) {
                         return ( mean(data$signal) )
                     } ),
-            signals.sd= daply( cross.clusters, .( proteins.cluster, samples.cluster ), function( data ) {
+            signals.sd= daply( blocks, .( proteins.cluster, samples.cluster ), function( data ) {
                         return ( mean( data$sigma ) )
                     } )
         )

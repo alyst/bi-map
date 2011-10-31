@@ -29,7 +29,7 @@ public:
     /** cached distributions */
     GeometricDistribution         multipleSingletonPrior;    /** prior for single object in cluster */
     GeometricDistribution         multipleInClusterPrior;    /** prior for clusters with >1 objects */
-    BernoulliDistribution         blockEnablementPrior;    /** cross-cluster enabled prior */
+    BernoulliDistribution         blockEnablementPrior;    /** block "on" state probability prior */
 
     ChessboardBiclusteringPriors( 
                     const PitmanYorProcess& objectClustering = PitmanYorProcess( 0.1, 0.0 ),

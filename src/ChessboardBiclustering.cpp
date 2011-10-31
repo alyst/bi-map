@@ -186,7 +186,7 @@ object_clundex_t ChessboardBiclustering::exchangeObjects(
         if ( clusterOfObject( *it ) == clu1Ix ) {
             if ( res == OBJECT_NA ) {
                 res = addObjectCluster( *it );
-                // copy cross-cluster probes
+                // copy block probes
                 for ( probe_clundex_t i = 0; i < probesClusters().size(); i++ ) {
                     _blocksMask.set( res * _probesClusters.size() + i,
                                             _blocksMask.test( clu1Ix * _probesClusters.size() + i ) );
@@ -253,7 +253,7 @@ probe_clundex_t ChessboardBiclustering::exchangeProbes(
         if ( res == PROBE_NA ) {
             // create new cluster
             res = addProbeCluster( probeIx );
-            // copy cross-cluster probes
+            // copy block probes
             for ( object_clundex_t i = 0; i < objectsClusters().size(); i++ ) {
                 _blocksMask.set( i * _probesClusters.size() + res,
                                         _blocksMask.test( i * _probesClusters.size() + clu1Ix ) );
@@ -390,7 +390,7 @@ void ChessboardBiclustering::cleanupClusters()
         object_clundex_t  newObjIx = !objRemap.empty() ? objRemap[ oldObjIx ] : oldObjIx;
         probe_clundex_t   newProbeIx = !probeRemap.empty() ? probeRemap[ oldProbeIx ] : oldProbeIx;
         if ( newObjIx != CLUSTER_NA && newProbeIx != CLUSTER_NA ) {
-            LOG_DEBUG2( "Reindexing cross cluster (" << oldObjIx << "," << oldProbeIx 
+            LOG_DEBUG2( "Reindexing block (" << oldObjIx << "," << oldProbeIx 
                         << ") to (" << newObjIx << "," << newProbeIx << ")" );
             maskReindexed.set( newObjIx * probesClusters().size() + newProbeIx );
         }
@@ -400,7 +400,7 @@ void ChessboardBiclustering::cleanupClusters()
 }
 
 /**
- *  Get 2D bitmap (probes x objects) of cross-cluster enablement.
+ *  Get 2D bitmap (probes x objects) of block enablement.
  */
 blocks_mask_t ChessboardBiclustering::blocksMask(
     bool objectsMajor    /** i if true (default), rows are objects, probes are columns */
@@ -413,17 +413,17 @@ blocks_mask_t ChessboardBiclustering::blocksMask(
         // fill signals and mask
         for ( const_block_iterator ccit = begin(); ccit != end(); ++ccit ) {
             const BlockProxy& cc = *ccit;
-            size_t  ccIx = objectsClusters().size() * cc.probesClusterIndex() + cc.objectsClusterIndex();
-            res.set( ccIx );
+            size_t  blockIx = objectsClusters().size() * cc.probesClusterIndex() + cc.objectsClusterIndex();
+            res.set( blockIx );
         }
         return ( res );
     }
 }
 
 /**
- *  Sets cross-cluster on or off.
+ *  Sets block on or off.
  *  @note
- *  Cross-cluster signals not set.
+ *  Block signal not set.
  */
 ChessboardBiclustering::block_iterator ChessboardBiclustering::setBlock(
     object_clundex_t    objCluIx,
@@ -438,7 +438,7 @@ ChessboardBiclustering::block_iterator ChessboardBiclustering::setBlock(
     return ( cluIt );
 }
 
-void ChessboardBiclustering::setClusterSignal(
+void ChessboardBiclustering::setBlockSignal(
     object_clundex_t    objCluIx,
     probe_clundex_t     probeCluIx,
     signal_t            signal
@@ -574,7 +574,7 @@ ChessboardBiclustering::ProbesClusterParamsProxy& ChessboardBiclustering::Probes
                 LOG_WARN( "Signal[" << objCluIx << "," << cluIx << "] not found" );
             }
         }
-        // @kludge: object clusters in new enabled cross-cluster could have no signals defined
+        // @kludge: object clusters in new enabled block could have no signals defined
         // so no checking them at this moment, but the calling code should fill the missing params
         //BOOST_ASSERT( cluIt->check() );
     }
@@ -601,7 +601,7 @@ ObjectsClusterParams& ObjectsClusterParams::operator=(
 
     // fill signals and mask
     for ( probe_clundex_t cluIx = 0; cluIx < proxy.clus.probesClusters().size(); ++cluIx ) {
-        probeSignal[ cluIx ] = proxy.clus.clusterSignal( proxy.cluIx, cluIx );
+        probeSignal[ cluIx ] = proxy.clus.blockSignal( proxy.cluIx, cluIx );
         blocksMask.set( cluIx, proxy.clus.isBlockEnabled( proxy.cluIx, cluIx ) );
     }
 
@@ -690,10 +690,10 @@ bool ChessboardBiclustering::checkProbesPartition() const
 bool ChessboardBiclustering::BlockProxy::check() const
 {
     if ( objectsClusterIndex() >= _clustering.objectsClusters().size() ) {
-        throw std::out_of_range( "Cross cluster references incorrect objects cluster" );
+        throw std::out_of_range( "Biclustering block references incorrect objects cluster" );
     }
     if ( probesClusterIndex() >= _clustering.probesClusters().size() ) {
-        throw std::out_of_range( "Cross cluster references incorrect probes cluster" );
+        throw std::out_of_range( "Biclustering block references incorrect probes cluster" );
     }
     if ( isEnabled() ) {
         const probe_bitset_t& probes = _clustering.probesCluster( probesClusterIndex() ).items();

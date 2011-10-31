@@ -198,8 +198,8 @@ TEST( ChessboardBiclustering, generate_random )
     EXPECT_TRUE( clus.checkObjectsPartition() );
     EXPECT_TRUE( clus.checkProbesPartition() );
     EXPECT_TRUE( clus.checkBlocks() );
-    
-    TEST_CHECKPOINT( "Cross cluster enabling/disabling" );
+
+    TEST_CHECKPOINT( "Biclustering block enabling/disabling" );
     clus.setBlock( 0, 0, false );
     EXPECT_EQ( clus.isBlockEnabled( 0, 0 ), false );
     clus.setBlock( 0, 0, true );

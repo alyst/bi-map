@@ -98,7 +98,7 @@ CellSignalLLHMaximizer::signals_matrix_type CellSignalLLHMaximizer::PreliminaryA
 /**
  *  Calculate preliminary signal by taking into account all objects and probes.
  */
-signal_t CellSignalLLHMaximizer::clusterSignalA(
+signal_t CellSignalLLHMaximizer::blockSignalA(
     const object_set_t&     objects,
     const assay_bitset_t&   assays,
     const multiple_map_t&   multiples

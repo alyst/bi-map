@@ -14,7 +14,7 @@
 struct GibbsSamplerParams {
     size_t    priorsUpdatePeriod;           /** period (# of iterations) at which sampling step is made for prior parameters */
 
-    size_t    blockResamples;        /** # of sampling steps to make after cross-cluster elements where modified */
+    size_t    blockResamples;        /** # of sampling steps to make after block elements where modified */
 
     SplitMergeStepParams    objectsSplitMergeParams;
     ClusterOfElementStepParams  objectClusterParams;
@@ -26,10 +26,10 @@ struct GibbsSamplerParams {
     prob_t    probesSplitMergeRate;         /** rate of applying split-merge sampling step to probes partition */
     prob_t    probeMembershipRate;          /** rate of sampling single probe membership */
 
-    prob_t    blockFlipRate;         /** rate of sampling on/off flag of cross-cluster */
+    prob_t    blockFlipRate;         /** rate of sampling on/off flag of block */
 
     prob_t    objectMultipleRate;           /** rate of sampling object's multiple */
-    prob_t    signalRate;                   /** rate of sampling signal of enabled cross-cluster */
+    prob_t    signalRate;                   /** rate of sampling signal of enabled block */
 
     size_t    meanObjectRank;
     size_t    meanProbeRank;

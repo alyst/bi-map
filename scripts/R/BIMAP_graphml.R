@@ -210,12 +210,12 @@ bimap.graph.dataframe <- function( bimap.props,
         } )
     #print( nodes.df )
 
-    # add edges for each cross-cluster
+    # add edges for each biclustering block
     print( 'Generating edges' )
     signal.max <- max( bimap.props$signals.mean, na.rm = TRUE )
     signal.min <- min( bimap.props$signals.mean, na.rm = TRUE )
 
-    edges.df <- ddply( bimap.props$cross.clusters, c( 'proteins.cluster', 'samples.cluster' ), function( cc ) {
+    edges.df <- ddply( bimap.props$blocks, c( 'proteins.cluster', 'samples.cluster' ), function( cc ) {
             # TODO: if directed, there could be a link from inner to outer node
             source_node <- subset( nodes.df, cc$samples.cluster == samples_clusters
                                             & ( proteins_cluster != cc$proteins.cluster | is.na( proteins_cluster ) )

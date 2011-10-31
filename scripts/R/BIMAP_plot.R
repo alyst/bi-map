@@ -531,8 +531,8 @@ plot.bimap <- function( bimap.props, protein.info,
                             ncol = nrow( samples.clusters ) )
     rownames( bimap.matrix ) <- rownames( proteins.clusters )
     colnames( bimap.matrix ) <- rownames( samples.clusters )
-    for ( ccIx in 1:nrow(bimap.props$cross.clusters) ) {
-        cc <- bimap.props$cross.clusters[ccIx,]
+    for ( blockIx in 1:nrow(bimap.props$blocks) ) {
+        cc <- bimap.props$blocks[blockIx,]
         bimap.matrix[ as.character( cc[['proteins.cluster']] ),
                    as.character( cc[['samples.cluster']] ) ] <- 1
     }
@@ -680,11 +680,11 @@ plot.bimap <- function( bimap.props, protein.info,
 #                   }
 #               }
 #           }
-           if ( nrow( bimap.props$cross.clusters ) > 0 ) {
+           if ( nrow( bimap.props$blocks ) > 0 ) {
                #print('cross-clu')
-               cross.clusters <- bimap.props$cross.clusters
+               blocks <- bimap.props$blocks
                if ( show.borders ) {
-                   cross.clusters <- ddply( cross.clusters, .( samples.cluster ), function( preys.clusters ) {
+                   blocks <- ddply( blocks, .( samples.cluster ), function( preys.clusters ) {
                        nested.clusters <- unique( preys.clusters$nested.preys.cluster )
                        colors <- rainbow( length( nested.clusters ) )
                        names( colors ) <- as.character( nested.clusters )
@@ -708,8 +708,8 @@ plot.bimap <- function( bimap.props, protein.info,
                }
                if ( plot.samples ) signals.subframe <- bimap.props$signals.subframe
                else signals.subframe <- NULL
-               for ( ccIx in 1:nrow(cross.clusters) ) {
-                  cc <- cross.clusters[ccIx, ]
+               for ( blockIx in 1:nrow(blocks) ) {
+                  cc <- blocks[blockIx, ]
                   protClu <- cc$proteins.cluster
                   sampleClu <- cc$samples.cluster
                   cluster.proteins <- subset( proteins, protein_ac %in% subset( bimap.props$proteins.clusters, proteins.cluster == protClu )$protein_ac )

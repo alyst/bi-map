@@ -78,7 +78,7 @@ log_prob_t ChessboardBiclusteringFit::evalLPP() const
                 log_prob_t& ccLnP = _blockLPP( objCluIx, probeCluIx );
                 if ( is_unset( ccLnP ) ) {
                     ccLnP = eval.blockLPP( objCluIx, probeCluIx );
-                    if ( is_unset( ccLnP ) ) THROW_RUNTIME_ERROR( "Cross-cluster (" << objCluIx << ", " << probeCluIx << ") lpp eval error" );
+                    if ( is_unset( ccLnP ) ) THROW_RUNTIME_ERROR( "Block (" << objCluIx << ", " << probeCluIx << ") lpp eval error" );
                 }
                 ccLnPSum += ccLnP;
             }
@@ -123,12 +123,13 @@ void ChessboardBiclusteringFit::updateClustersLLH() const
                     ccLLH = isBlockEnabled( objCluIx, probeCluIx )
                           ? eval.blockDataLLH( objCluIx, probeCluIx )
                           : snCache.noiseLLH( objects, probesCluster( probeCluIx ).items() );
-                    if ( is_unset( ccLLH ) ) THROW_RUNTIME_ERROR( "Cross-cluster[" << isBlockEnabled( objCluIx, probeCluIx ) << "](" << objCluIx << ", " << probeCluIx << ") LLH eval error" );
+                    if ( is_unset( ccLLH ) ) THROW_RUNTIME_ERROR( "Block[" << isBlockEnabled( objCluIx, probeCluIx ) << "](" 
+                                                                  << objCluIx << ", " << probeCluIx << ") LLH eval error" );
                 }
                 ccLLHSum += ccLLH;
             }
             objcLLH = ccLLHSum + structEval.objectsClusterMismatchLLH( objects );
-            if ( is_unset( objcLLH ) ) THROW_RUNTIME_ERROR( "Object's cluster #" << objCluIx << " llh eval error" );
+            if ( is_unset( objcLLH ) ) THROW_RUNTIME_ERROR( "Object's cluster #" << objCluIx << " LLH eval error" );
         }
     }
     // update probes clusters LLH
@@ -184,7 +185,7 @@ std::set<probe_clundex_t> ChessboardBiclusteringFit::boundProbesClusters(
 
 void ChessboardBiclusteringFit::updateBlocksProbesLLH() const
 {
-    // object cross-cluster probe LLH
+    // object block probe LLH
     for ( probe_clundex_t probeCluIx = 0; probeCluIx < probesClusters().size(); probeCluIx++ ) {
         for ( object_clundex_t objCluIx = 0; objCluIx < objectsClusters().size(); objCluIx++ ) {
             log_prob_t& noiseLLH = _blockIsNoiseLLH( objCluIx, probeCluIx );
@@ -192,7 +193,7 @@ void ChessboardBiclusteringFit::updateBlocksProbesLLH() const
                 noiseLLH = BlockEnablementDataLLH( signalNoiseCache(),
                                                           objectsCluster( objCluIx ).items(),
                                                           probesCluster( probeCluIx ).items() )( false );
-                if ( is_unset( noiseLLH ) ) THROW_RUNTIME_ERROR( "Cross-cluster (" << objCluIx << ", " << probeCluIx << ") noise llh eval error" );
+                if ( is_unset( noiseLLH ) ) THROW_RUNTIME_ERROR( "Block (" << objCluIx << ", " << probeCluIx << ") noise llh eval error" );
             }
             log_prob_t& signalLLH = _blockIsSignalLLH( objCluIx, probeCluIx );
             if ( is_unset( signalLLH ) ) {
@@ -200,7 +201,7 @@ void ChessboardBiclusteringFit::updateBlocksProbesLLH() const
                 signalLLH = BlockEnablementDataLLH( signalNoiseCache(), 
                                                            objectsCluster( objCluIx ).items(), 
                                                            probesCluster( probeCluIx ).items() )( true );
-                if ( is_unset( signalLLH ) ) THROW_RUNTIME_ERROR( "Cross-cluster (" << objCluIx << ", " << probeCluIx << ") signal llh eval error" );
+                if ( is_unset( signalLLH ) ) THROW_RUNTIME_ERROR( "Block (" << objCluIx << ", " << probeCluIx << ") signal llh eval error" );
             }
         }
     }

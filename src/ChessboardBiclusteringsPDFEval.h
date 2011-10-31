@@ -89,7 +89,7 @@ private:
     std::vector<probe_bitset_t>         _probeComponents;   /** probes independent components */
     std::vector<cells_mask_freq_map>    _cellsSubmaskFreq;  /** map of cell "on"/"off" masks frequencies
                                                                 per component pair */
-    block_stats_map             _ccStats;           /** cross-clusters statistics */
+    block_stats_map                     _blockStats;        /** biclustering blocks statistics */
     obj_clu_stats_map                   _objCluStats;       /** average frequency of co-occurrence of pairs of object in a cluster */
     probe_clu_stats_map                 _probeCluStats;     /** average frequency of co-occurrence of pairs of probes in a cluster */
 
@@ -179,10 +179,10 @@ public:
     const probe_clu_stats_map& probesClustersStatsMap() const {
         return ( _probeCluStats );
     }
-    block_stats blockStats( const block_id& ccId ) const {
-        return ( _ccStats.find( ccId )->second );
+    block_stats blockStats( const block_id& blockId ) const {
+        return ( _blockStats.find( blockId )->second );
     }
     const block_stats_map& blocksStatsMap() const {
-        return ( _ccStats );
+        return ( _blockStats );
     }
 };

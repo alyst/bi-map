@@ -91,7 +91,7 @@ log_prob_t FixedProbesPartitionStats::llhDelta(
     for ( ProbesPartition::cluster_index_set_type::const_iterator oldCluIt = oldIndexes.begin();
           oldCluIt != oldIndexes.end(); ++oldCluIt
     ){
-        // subtract cross-cluster fitting LLH of old clusters
+        // subtract block fitting LLH of old clusters
         cluster_index_t oldCluIx = *oldCluIt;
         llh -= clusFit.probesClusterLLH( oldCluIx );
         objclu_set_t objClus = clusFit.boundObjectsClusters( oldCluIx );
@@ -218,7 +218,7 @@ log_prob_t ProbesParamsSampler::transitionLP(
         bool enabledBefore = cluBefore.isEnabled();
         bool enabledAfter = cluAfter.isEnabled();
         if ( enabledBefore != enabledAfter ) {
-            // cross cluster probe transition probability
+            // block probe transition probability
             ChessboardBiclusteringGibbsHelper::BlockEnablementDataLLHCached llhBefore( helperBefore.clusteringFit(), objCluIx, cluIx );
             ChessboardBiclusteringGibbsHelper::BlockEnablementDataLLHCached llhAfter( helperAfter.clusteringFit(), objCluIx, cluIx );
             BernoulliDistribution prior = priorEval.blockEnablementPrior();

@@ -83,8 +83,8 @@ public:
     };
 
     /**
-     *  Calculation of LLH for cross-cluster type,
-     *  when cross cluster is part of current clustering.
+     *  Calculation of LLH for biclustering block,
+     *  when the block is a part of current biclustering.
      */
     class BlockEnablementDataLLHCached: public BaseLLH {
         object_clundex_t    objCluIx;

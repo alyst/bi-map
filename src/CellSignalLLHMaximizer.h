@@ -40,14 +40,14 @@ public:
     symmetric_array2d<log_prob_t> evalObjectCoSignalDistances() const;
     symmetric_array2d<log_prob_t> evalProbeCoSignalDistances() const;
 
-    signal_t clusterSignalA( const object_set_t& objects,
+    signal_t blockSignalA( const object_set_t& objects,
                              const assay_bitset_t& assays,
                              const multiple_map_t& multiples ) const;
-    signal_t clusterSignalS( const object_set_t& objects,
+    signal_t blockSignalS( const object_set_t& objects,
                              const probe_bitset_t& probes,
                              const multiple_map_t& multiples ) const
     {
-        return ( clusterSignalA( objects, _data.probesToAssays( probes ),  multiples ) );
+        return ( blockSignalA( objects, _data.probesToAssays( probes ),  multiples ) );
     }
     log_prob_t maximizeSignalLLHA( const object_set_t& objects,
                                    const assay_bitset_t& assays,

@@ -578,7 +578,7 @@ BIMAP.extract_clustering <- function( bimap.walk, bimapId,
 
     res <- list(
             steps = steps,
-            cross.clusters = blocks,
+            blocks = blocks,
             proteins.clusters = proteins.clusters,
             proteins.clusters.info = bimap.walk@objects.clusters.info[ unique( proteins.clusters$proteins.cluster ),
                                                                     c( 'objects.cluster.serial', 'size',
@@ -603,9 +603,9 @@ BIMAP.extract_clustering <- function( bimap.walk, bimapId,
         signals.subframe$proteins.cluster <- as.character( signals.subframe$proteins.cluster )
         signals.subframe$samples.cluster <- as.character( signals.subframe$samples.cluster )
         signal_stats <- BIMAP.signal_stats( signals.subframe )
-        res$cross.clusters$signal.mean <- apply( res$cross.clusters, 1,
+        res$blocks$signal.mean <- apply( res$blocks, 1,
                 function( cc ) signal_stats$signals.mean[ cc[['proteins.cluster']], cc[['samples.cluster']] ] )
-        res$cross.clusters$signal.sd = apply( res$cross.clusters, 1,
+        res$blocks$signal.sd = apply( res$blocks, 1,
                 function( cc ) signal_stats$signals.sd[ cc[['proteins.cluster']], cc[['samples.cluster']] ] )
         res <- c( res, signal_stats )
         res$signals.subframe = signals.subframe
@@ -623,19 +623,19 @@ BIMAP.filter_clustering <- function( bimap.props, protein_acs, sample_acs )
                  samples.clusters = subset( bimap.props$samples.clusters, sample %in% sample_acs ) )
     samples.cluster_acs <- unique( res$samples.clusters$samples.cluster )
     proteins.cluster_acs <- unique( res$proteins.clusters$proteins.cluster )
-    # remove cross clusters corresponding to removed clusters
-    res$cross.clusters <- subset( bimap.props$cross.clusters,
+    # remove blocks corresponding to removed clusters
+    res$blocks <- subset( bimap.props$blocks,
                                   proteins.cluster %in% proteins.cluster_acs &
                                   samples.cluster %in% samples.cluster_acs )
     res$signals.subframe <- subset( bimap.props$signals.subframe,
                                   proteins.cluster %in% proteins.cluster_acs &
                                   samples.cluster %in% samples.cluster_acs )
     signal_stats <- BIMAP.signal_stats( res$signals.subframe )
-    for ( i in 1:nrow(res$cross.clusters) ) {
-        ccrow <- res$cross.clusters[ i, ] 
-        res$cross.clusters$signal.mean = signal_stats$signals.mean[ ccrow$proteins.cluster,
+    for ( i in 1:nrow(res$blocks) ) {
+        ccrow <- res$blocks[ i, ] 
+        res$blocks$signal.mean = signal_stats$signals.mean[ ccrow$proteins.cluster,
                                                                    ccrow$samples.cluster ] 
-        res$cross.clusters$signal.sd = signal_stats$signals.sd[ ccrow$proteins.cluster,
+        res$blocks$signal.sd = signal_stats$signals.sd[ ccrow$proteins.cluster,
                                                                ccrow$samples.cluster ]
     }
     res$signals.mean <- signal_stats$signals.mean

@@ -394,12 +394,12 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
 
     typedef std::pair<object_clundex_t, probe_clundex_t> cc_id;
 
-#define MAX_CROSS_CLUSTER_SAMPLES ((size_t)10)
+#define MAX_BLOCK_SAMPLES ((size_t)10)
 #if 1
     {
-        LOG_DEBUG2( "Sampling cross-clusters probes" );
+        LOG_DEBUG2( "Sampling blocks probes" );
         std::vector<cc_id> ccQueue;
-        // sample cross clusters
+        // sample blocks
         for ( object_clundex_t objCluIx = 0; objCluIx < clus.objectsClusters().size(); objCluIx++ ) {
             for ( probe_clundex_t probeCluIx = 0; probeCluIx < clus.probesClusters().size(); probeCluIx++ ) {
                 if ( clus.blockToSample( objCluIx, probeCluIx ) > 0 
@@ -410,21 +410,21 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
             }
         }
         // limit number of samples -- pick N random, so the iteration doesn't take much time
-        std::vector<cc_id> ccToProcess( std::min( MAX_CROSS_CLUSTER_SAMPLES, ccQueue.size() ) );
+        std::vector<cc_id> ccToProcess( std::min( MAX_BLOCK_SAMPLES, ccQueue.size() ) );
         gsl_ran_choose( rndNumGen(), ccToProcess.data(), ccToProcess.size(), ccQueue.data(), ccQueue.size(), sizeof( cc_id ) );
         ChessboardBiclusteringGibbsHelper helper = createGibbsHelper( clus );
         for ( size_t i = 0; i < ccToProcess.size(); i++ ) {
-            const cc_id& ccId = ccToProcess[ i ];
-            LOG_DEBUG2( "Sampling cross-cluster (" << ccId.first << ", " << ccId.second << ")" );
-            bool enableCluster = helper.sampleBlockEnablement( ccId.first, ccId.second ).value;
-            bool wasEnabled = clus.isBlockEnabled( ccId.first, ccId.second );
-            if ( enableCluster == wasEnabled ) continue;
-            ChessboardBiclustering::block_iterator cluIt = clus.setBlock( ccId.first, ccId.second, enableCluster );
-            if ( enableCluster ) {
+            const cc_id& blockId = ccToProcess[ i ];
+            LOG_DEBUG2( "Sampling block (" << blockId.first << ", " << blockId.second << ")" );
+            bool enableBlock = helper.sampleBlockEnablement( blockId.first, blockId.second ).value;
+            bool wasEnabled = clus.isBlockEnabled( blockId.first, blockId.second );
+            if ( enableBlock == wasEnabled ) continue;
+            ChessboardBiclustering::block_iterator cluIt = clus.setBlock( blockId.first, blockId.second, enableBlock );
+            if ( enableBlock ) {
                 BOOST_ASSERT( cluIt != clus.blockNotFound() );
                 GibbsSample<signal_t> newSignalSample = helper.sampleSignal( *cluIt );
                 cluIt->setSignal( newSignalSample.value );
-                if ( !wasEnabled ) clus.setBlockSamples( ccId.first, ccId.second, _params.blockResamples );
+                if ( !wasEnabled ) clus.setBlockSamples( blockId.first, blockId.second, _params.blockResamples );
             }
         }
         BOOST_ASSERT( clus.checkBlocks() );
@@ -451,7 +451,7 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
             }
         }
         // limit number of samples -- pick N random, so the iteration doesn't take much time
-        std::vector<cc_id> ccToProcess( std::min( MAX_CROSS_CLUSTER_SAMPLES, ccQueue.size() ) );
+        std::vector<cc_id> ccToProcess( std::min( MAX_BLOCK_SAMPLES, ccQueue.size() ) );
         gsl_ran_choose( rndNumGen(), ccToProcess.data(), ccToProcess.size(), ccQueue.data(), ccQueue.size(), sizeof( cc_id ) );
         for ( size_t i = 0; i < ccToProcess.size(); i++ ) {
             ChessboardBiclustering::block_iterator cluIt = clus.findBlock( ccToProcess[ i ].first, ccToProcess[ i ].second );

@@ -89,7 +89,7 @@ log_prob_t ChessboardBiclusteringLLHEval::blockDataLLH(
 ) const {
     return ( cellsDataLLH( clustering().objectsCluster( objCluIx ).items(),
                            clustering().probesCluster( probeCluIx ).items(),
-                           clustering().clusterSignal( objCluIx, probeCluIx ) ) );
+                           clustering().blockSignal( objCluIx, probeCluIx ) ) );
 }
 
 log_prob_t ChessboardBiclusteringLLHEval::cellsDataLLH(
@@ -156,7 +156,7 @@ log_prob_t ChessboardBiclusteringLLHEval::cellsDataLLH(
 
 #if 0
 /**
-    Evaluates p-value for hypothesis that cross-cluster's signal is stronger
+    Evaluates p-value for hypothesis that block's signal is stronger
     that proposed one -- that is, the sum of probability 
     of all measurements combinations, where each measurement is not greater than actual,
     and one at least one is strictly less = CDF(data) - PDF(data).

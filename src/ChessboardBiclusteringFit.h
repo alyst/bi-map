@@ -65,7 +65,7 @@ protected:
     mutable bool _blockIsNoiseLLHValid;
     mutable block_lnprob_matrix_type _blockIsNoiseLLH;
 
-    block_counts_matrix_type _blockToSample; /** how many each cross-cluster have to be sampled */
+    block_counts_matrix_type _blockToSample; /** how many each block have to be sampled */
 
     log_prob_t evalLPP() const;
     log_prob_t evalLLH() const;
@@ -339,7 +339,7 @@ struct StaticChessboardBiclustering {
     typedef ChessboardBiclusteringFit::block_counts_matrix_type block_counts_matrix_type;
 
     boost::shared_ptr<ChessboardBiclustering>      clustering;
-    boost::shared_ptr<block_counts_matrix_type> blocksToSample; /** how many each cross-cluster have to be sampled */
+    boost::shared_ptr<block_counts_matrix_type> blocksToSample; /** how many each block have to be sampled */
     energy_type                             llh;    /** log of likelihood */
     energy_type                             lpp;    /** log of prior probability */
 

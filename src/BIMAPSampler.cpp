@@ -158,7 +158,7 @@ ChessboardBiclustering BIMAPSamplerHelper::trivialClustering() const
         res.addObjectCluster( objIx );
     }
     res.cleanupClusters();
-    LOG_DEBUG2( "Setting initial cross-clusters..." );
+    LOG_DEBUG2( "Setting initial blocks..." );
     for ( probe_clundex_t probeCluIx = 0; probeCluIx < res.probesCount(); probeCluIx++ ) {
         const OPAProbe& probe = data().probe( probeCluIx );
         for ( object_clundex_t objCluIx = 0; objCluIx < res.objectsCount(); objCluIx++ ) {
@@ -183,7 +183,7 @@ void BIMAPSamplerHelper::generateMissingProbeSignals(
 ) const {
     ChessboardBiclusteringFit fit( precomputed, priors, clus );
     ChessboardBiclusteringGibbsHelper helper( rndNumGen, fit, SamplingTransform(), 0 );
-    clus.setClusterSignal( objCluIx, probeCluIx,
+    clus.setBlockSignal( objCluIx, probeCluIx,
                            helper.initialSignal( objCluIx, probeCluIx, NULL ).value ); 
 }
 

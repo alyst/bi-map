@@ -54,10 +54,10 @@ void ChessboardBiclusteringScaffold::getCellsMask(
     mask.resize( nProbes * nObjects );
     mask.reset();
 
-    foreach_bit( size_t, ccIx, blockMask ) {
-        // enable cells of each enabled cross-cluster
-        object_clundex_t objCluIx = ccIx / nProbeClus;
-        probe_clundex_t  probeCluIx = ccIx % nProbeClus;
+    foreach_bit( size_t, blockIx, blockMask ) {
+        // enable cells of each on-block
+        object_clundex_t objCluIx = blockIx / nProbeClus;
+        probe_clundex_t  probeCluIx = blockIx % nProbeClus;
 
         const_object_cluster_iterator oCluIt = objectClusterBegin();
         std::advance( oCluIt, objCluIx );
@@ -85,7 +85,7 @@ bool ChessboardBiclusteringScaffold::check() const
     }
     size_t expCCMaskSize = pProbesPartition->value().size() * pObjectsPartition->value().size();
     if ( blockMask.size() != expCCMaskSize ) {
-        THROW_RUNTIME_ERROR( "Incorrect cross clusters mask: size " << blockMask.size() << ", should be " << expCCMaskSize );
+        THROW_RUNTIME_ERROR( "Incorrect blocks mask: size " << blockMask.size() << ", should be " << expCCMaskSize );
     }
     return ( true );
 }
@@ -117,7 +117,7 @@ bool ChessboardBiclusteringIndexed::check() const
                                                 << ", probe cluster #" << probeCluIx );
                 }
             } else if ( ccDataIt != blocksData().end() ) {
-                THROW_RUNTIME_ERROR( "Signal exists for disabled cross cluster (" << objCluIx
+                THROW_RUNTIME_ERROR( "Signal exists for off-block (" << objCluIx
                                         << ", " << probeCluIx << ")" );
             }
         }
@@ -144,7 +144,7 @@ ChessboardBiclusteringIndexed ChessboardBiclusteringsIndexing::index(
     ChessboardBiclusteringIndexed::block_data_map_type     blockData;
     scaffold.pObjectsPartition = _objectPartitionIndexing.index( clustering.objectsClusters().begin(), clustering.objectsClusters().end() );
     scaffold.pProbesPartition = _probePartitionIndexing.index( clustering.probesClusters().begin(), clustering.probesClusters().end() );
-    // create a new cross clusters map, where object clusters and probe clusters would be reindexed with respect to their order in indexed partition
+    // create a new blocks map, where object clusters and probe clusters would be reindexed with respect to their order in indexed partition
     scaffold.blockMask = ChessboardBiclusteringScaffold::block_mask_t( clustering.objectsClusters().size() * clustering.probesClusters().size() );
 
     for ( ChessboardBiclustering::const_block_iterator ccIt = clustering.begin(); ccIt != clustering.end(); ++ccIt ) {

@@ -91,7 +91,7 @@ setMethod( 'initialize', "BIMAPCytoscapeFilesWriter",
         .Object@stateToBait = as.character( samples$bait_label )
         names( .Object@stateToBait ) = as.character( samples$label )
         #print( .Object@stateToBait )
-        # not cross-clusters, actually, since state clusters are exploded into states
+        # not blocks, actually, since samples clusters are exploded into single samples
         .Object@blocks <- merge( subset( bimap.walk@blocks, clustering.serial == clusteringId,
             select = c( 'objects.cluster.serial', 'states.cluster.serial' ) ),
             subset( bimap.walk@states.clusters, states.cluster.serial %in% scIds ),

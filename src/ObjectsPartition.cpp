@@ -95,7 +95,7 @@ log_prob_t FixedObjectsPartitionStats::llhDelta(
     // subtract llh of old clusters
     probeclu_set_t boundProbeClus;
     for ( ObjectsPartition::cluster_index_set_type::const_iterator oldCluIt = oldIndexes.begin(); oldCluIt != oldIndexes.end(); ++oldCluIt ) {
-        // subtract cross-cluster fitting LLH of old clusters
+        // subtract block fitting LLH of old clusters
         cluster_index_t oldCluIx = *oldCluIt;
         llh -= clusFit.objectsClusterLLH( oldCluIx );
         probeclu_set_t probeClus = clusFit.boundProbesClusters( oldCluIx );
@@ -178,7 +178,7 @@ bool FixedObjectsParamsSampler::operator()(
         THROW_EXCEPTION( std::invalid_argument, "Objects set for sampling is empty" );
     }
 
-    // sample crosscluster enablement if told so, or new cluster
+    // sample block enablement if told so, or new cluster
     LOG_DEBUG2( "Sampling probes-clusters enablement" );
     for ( probe_clundex_t probeCluIx = 0; probeCluIx < clusHelper->clustering().probesClusters().size(); ++probeCluIx ) {
         const ProbesCluster&    probeClu = clusHelper->clustering().probesCluster( probeCluIx );
@@ -197,13 +197,13 @@ bool FixedObjectsParamsSampler::operator()(
 
         if ( isEnabled && sampleSignals ) {
             LOG_DEBUG2( "Cross-Cluster is enabled" );
-            // if cross-cluster wasn't enabled before, make sure all its probes would have signals
+            // if block wasn't enabled before, make sure all its probes would have signals
             // randomize signals for all cluster's probes
             randomized = true;
             object_clundex_t objCluIx = clusterObjs.empty() 
                                       ? CLUSTER_NA 
                                       : clusHelper->clustering().clusterOfObject( *clusterObjs.begin() ); /// @fixme non-perfect way to get cluster index
-            LOG_DEBUG2( "Generating random signal for cross-cluster (" << objCluIx << ", " << probeCluIx << ")" );
+            LOG_DEBUG2( "Generating random signal for block (" << objCluIx << ", " << probeCluIx << ")" );
             signal_t signal = params.probeSignal[ probeCluIx ];
             if ( !is_unset( signal ) && !overwrite ) continue;
             const probe_bitset_t& probes = clusHelper->clustering().probesCluster( probeCluIx ).items();
@@ -268,7 +268,7 @@ log_prob_t ObjectsParamsSampler::transitionLP(
         bool enabledBefore = cluBefore.isEnabled();
         bool enabledAfter = cluAfter.isEnabled();
         if ( enabledBefore != enabledAfter ) {
-            // cross cluster probe transition probability
+            // block probe transition probability
             ChessboardBiclusteringGibbsHelper::BlockEnablementDataLLHCached llhBefore( helperBefore.clusteringFit(), cluIx, probeCluIx );
             ChessboardBiclusteringGibbsHelper::BlockEnablementDataLLHCached llhAfter( helperAfter.clusteringFit(), cluIx, probeCluIx );
             BernoulliDistribution prior = priorEval.blockEnablementPrior();

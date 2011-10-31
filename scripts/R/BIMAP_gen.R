@@ -6,12 +6,12 @@
 source( paste( bimap_scripts_path, "BIMAP.R", sep = .Platform$file.sep ) )
 source( paste( bimap_scripts_path, "BIMAPMath.R", sep = .Platform$file.sep ) )
 
-#' Loads cross-clusters matrix from file
+#' Loads biclustering blocks matrix from file
 #' @param matrix_file 
 #' @param replicate_msruns 
 #' @param multiplier.sd 
 #' @returnType list of dataframes
-#' @return proteins, samples, cross-clusters, signals dataframe
+#' @return proteins, samples, biclusteing blocks, signals dataframe
 #' @author Alexey Stukalov
 #' @export
 BIMAP.read_cc_matrix <- function(
@@ -76,8 +76,8 @@ BIMAP.read_cc_matrix <- function(
     proteins.clusters.df <- make.partition( proteins.df$protein_ac, first.proteins,
         'protein_ac', 'proteins.cluster' )
 
-    # read cross clusters
-    cross.clusters.df <- do.call( 'rbind', lapply( 2:nrow(bimap.matrix), function ( row.ix ) {
+    # read blocks
+    blocks.df <- do.call( 'rbind', lapply( 2:nrow(bimap.matrix), function ( row.ix ) {
         if ( first.proteins[ row.ix - 1 ] ) {
             protein.row <- proteins.clusters.df[ row.ix - 1, ]
             return ( do.call( 'rbind', lapply( 2:ncol(bimap.matrix), function ( col.ix ) {
@@ -105,7 +105,7 @@ BIMAP.read_cc_matrix <- function(
             proteins.clusters = proteins.clusters.df,
             samples = samples.df,
             samples.clusters = samples.clusters.df,
-            cross.clusters = cross.clusters.df
+            blocks = blocks.df
     ) )
 }
 
@@ -185,7 +185,7 @@ BIMAP.generate_proteins <- function(
     ) )
 }
 
-# convert cross-cluster signals to a matrix
+# convert block signals to a matrix
 BIMAP.blocks.to.signals_matrix <- function( cc_df, proteinsClusters, samplesClusters )
 {
     signals.mean <- matrix( rep( NA, length( proteinsClusters ) * length( samplesClusters ) ), 
@@ -216,7 +216,7 @@ BIMAP.generate_clustering <- function(
     colnames( samples.partition ) <- c( 'sample', 'samples.cluster' )
     nSampleClusters <- length( unique( samples.partition$samples.cluster ) )
 
-    # generate cross-clusters
+    # generate blocks
     # at least one cc per sample cluster
     bimap.df <- data.frame(
         proteins.cluster = sample( nProtClusters, nSampleClusters, replace = TRUE ),
@@ -274,7 +274,7 @@ BIMAP.generate_clustering <- function(
                    proteins.clusters = proteins.partition,
                    samples.clusters = samples.partition,
                    samples = samples.df,
-                   cross.clusters = bimap.df,
+                   blocks = bimap.df,
                    signals.mean = BIMAP.blocks.to.signals_matrix( bimap.df, 1:nProtClusters, 1:nSampleClusters )
     ) )
 }
@@ -294,7 +294,7 @@ BIMAP.generate.msruns <- function(
 }
 
 BIMAP.generate.ms_data <- function(
-    proteins.clusters, samples.clusters, cross.clusters,
+    proteins.clusters, samples.clusters, blocks,
     proteins, msruns, samples = NULL,
     seq.length.factor = 0.5,
     signal.shape = 0.1, noise.rate = 1E-3,
@@ -308,7 +308,7 @@ BIMAP.generate.ms_data <- function(
         do.call('rbind', lapply( unique( samples.clusters$samples.cluster ), function( samplesClu ) {
             cluSamples <- subset( samples.clusters, samples.cluster == samplesClu )$sample # samples of cluster
             cluMsRuns <- subset( msruns, sample %in% cluSamples ) # msruns of cluster
-            crossClu <- subset( cross.clusters, proteins.cluster == protsClu & samples.cluster == samplesClu )
+            crossClu <- subset( blocks, proteins.cluster == protsClu & samples.cluster == samplesClu )
             if ( nrow( crossClu ) == 0 ) {
                 # no signal, generate noise
                 counts <- rgeom( nrow(cluMsRuns), 1-noise.rate )

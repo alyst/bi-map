@@ -43,7 +43,7 @@ GibbsSample<bool> ChessboardBiclusteringGibbsHelper::sampleBlockEnablement(
         BlockEnablementDataLLHCached( _fit, objCluIx, probeCluIx ),
         PriorEval( _fit ).blockEnablementPrior( 
                 ccIt->isEnabled() ? ccIt->signal()
-                : _fit.precomputed().clusterSignal( ccIt->objectsCluster().items(), 
+                : _fit.precomputed().blockSignal( ccIt->objectsCluster().items(), 
                                                     ccIt->probesCluster().items(),
                                                     _fit.objectMultiples()
                                                   ) ),
@@ -59,7 +59,7 @@ GibbsSample<bool> ChessboardBiclusteringGibbsHelper::sampleBlockEnablement(
         rndNumGen(), 
         BinaryTransition(),
         BlockEnablementDataLLH( _fit.signalNoiseCache(), objects, probes ),
-        PriorEval( _fit ).blockEnablementPrior( _fit.precomputed().clusterSignal( objects, probes, _fit.objectMultiples() ) ),
+        PriorEval( _fit ).blockEnablementPrior( _fit.precomputed().blockSignal( objects, probes, _fit.objectMultiples() ) ),
         curEnabled, _totalLnP, _samplingTransform ) );
 }
 
@@ -133,7 +133,7 @@ GibbsSample<signal_t> ChessboardBiclusteringGibbsHelper::sampleSignal(
     const object_clundex_t  objCluIx,
     const probe_clundex_t   probeCluIx
 ) const {
-    signal_t curSignal = clustering().clusterSignal( objCluIx, probeCluIx );
+    signal_t curSignal = clustering().blockSignal( objCluIx, probeCluIx );
     return ( !is_unset( curSignal )
              ? sampleSignal( clustering().objectsCluster( objCluIx ).items(),
                              clustering().probesCluster( probeCluIx ).items(),
@@ -165,7 +165,7 @@ GibbsSample<signal_t> ChessboardBiclusteringGibbsHelper::initialSignal(
         samplesCnt = FAKE_SAMPLES;
     }
     else if ( !objects.empty() ) {
-        signal_t signal = _fit.precomputed().clusterSignal( objects, probes, _fit.objectMultiples() );
+        signal_t signal = _fit.precomputed().blockSignal( objects, probes, _fit.objectMultiples() );
         _fit.precomputed().maximizeSignalLLH( objects, probes, _fit.objectMultiples(), signal );
         //LOG_INFO( "Generated signal for (" << *objects.begin() << ", " << probeIx << ")=" << signal );
         return ( GibbsSample<signal_t>( signal, 0, _fit.derivedPriors().signalPrior( signal ) ) );
@@ -199,7 +199,7 @@ std::vector<signal_t> ChessboardBiclusteringGibbsHelper::Signals(
         for ( object_clundex_t objCluIx = 0; objCluIx < clustering.objectsClusters().size(); objCluIx++ ) {
             const ChessboardBiclustering::const_block_iterator cluIt = clustering.findBlock( objCluIx, probeCluIx );
             if ( cluIt != clustering.blockNotFound() ) {
-                signal_t signal = clustering.clusterSignal( objCluIx, probeCluIx );
+                signal_t signal = clustering.blockSignal( objCluIx, probeCluIx );
                 if ( !is_unset( signal ) ) {
                     LOG_DEBUG2( "Signal " << signal );
                     signals.push_back( signal );

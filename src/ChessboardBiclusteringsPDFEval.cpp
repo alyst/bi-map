@@ -166,14 +166,14 @@ void ChessboardBiclusteringsPDFEval::evalCellsMaskFreqMap(
 }
 
 /**
- *  Calculate frequency of cross-clusters in the samples, and frequency of their on/off probes.
+ *  Calculate frequency of blocks in the samples, and frequency of their on/off probes.
  */
 void ChessboardBiclusteringsPDFEval::evalBlocksFreqMap(
     const BIMAPWalk& walk
 ){
     // collection of maps from submask id to its counts,
     // per independent component pair
-    _ccStats.clear();
+    _blockStats.clear();
 
     for ( BIMAPWalk::const_step_iterator stepIt = walk.stepsBegin(); stepIt != walk.stepsEnd(); ++stepIt )
     {
@@ -186,9 +186,9 @@ void ChessboardBiclusteringsPDFEval::evalBlocksFreqMap(
             ){
                 block_id id( (*ocluIt)->serial(), (*scluIt)->serial() );
                 bool isEnabled = clustering.isBlockEnabled( id.first, id.second );
-                block_stats_map::iterator ccIt = _ccStats.find( id );
-                if ( ccIt == _ccStats.end() ) {
-                    _ccStats.insert( ccIt, std::pair<block_id, block_stats>( id, block_stats( 1, isEnabled ? 1 : 0 ) ) );
+                block_stats_map::iterator ccIt = _blockStats.find( id );
+                if ( ccIt == _blockStats.end() ) {
+                    _blockStats.insert( ccIt, std::pair<block_id, block_stats>( id, block_stats( 1, isEnabled ? 1 : 0 ) ) );
                 } else {
                     ccIt->second.first++;
                     if ( isEnabled ) ccIt->second.second++;

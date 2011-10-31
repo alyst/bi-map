@@ -146,7 +146,7 @@ private:
     array2d<signal_t>                   _signals;   /** signals for object-probe pair, in clustering, 
                                                         all objects of the cluster should have the same signal */
 
-    blocks_mask_t               _blocksMask; /** 2D array mask of enabled cross clusters */
+    blocks_mask_t               _blocksMask; /** 2D array mask of enabled blocks */
 
     objects_cluster_index_remap cleanupObjectsClusters();
     probes_cluster_index_remap cleanupProbesClusters();
@@ -165,7 +165,7 @@ private:
         friend class ChessboardBiclusteringIterator;
 
         ChessboardBiclustering&    _clustering;
-        size_t              _ccIndex;       /** index of cross-cluster in cross-clusters mask */
+        size_t              _ccIndex;       /** index of block in blocks mask */
         probe_clundex_t     _probesClusterIndex;
 
         BlockProxy( ChessboardBiclustering& clustering,
@@ -196,12 +196,12 @@ private:
         }
 
         signal_t signal() const {
-            return ( _clustering.clusterSignal( objectsClusterIndex(),
+            return ( _clustering.blockSignal( objectsClusterIndex(),
                                                 probesClusterIndex() ) );
         }
 
         void setSignal( signal_t signal ) {
-            _clustering.setClusterSignal( objectsClusterIndex(), 
+            _clustering.setBlockSignal( objectsClusterIndex(), 
                                           probesClusterIndex(), signal );
         }
 
@@ -243,14 +243,14 @@ private:
         void check_clustering( const BlockIterator<ThatReference>& that ) const
         {
             if ( &that._ccProxy._clustering != &_ccProxy._clustering ) {
-                throw std::invalid_argument( "Cross-cluster iterator references another clustering" );
+                throw std::invalid_argument( "Blocks iterator references another biclustering" );
             }
         }
 
         void check_position() const
         {
             if ( _ccProxy._ccIndex == blocks_mask_t::npos ) {
-                throw std::runtime_error( "Cannot advance cross-cluster iterator: position not specified" );
+                throw std::runtime_error( "Cannot advance blocks iterator: position not specified" );
             }
         }
 
@@ -471,11 +471,11 @@ public:
     signal_t cellSignal( object_index_t objIx, probe_index_t probeIx ) const {
         return ( _signals( objIx, probeIx ) );
     }
-    double clusterSignal( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const {
+    double blockSignal( object_clundex_t objCluIx, probe_clundex_t probeCluIx ) const {
         return ( _signals( objectsCluster( objCluIx ).representative(), 
                            probesCluster( probeCluIx ).representative() ) );
     }
-    void setClusterSignal( object_clundex_t objCluIx, probe_clundex_t probeCluIx, signal_t signal ) ;
+    void setBlockSignal( object_clundex_t objCluIx, probe_clundex_t probeCluIx, signal_t signal ) ;
 
     size_t objectMultiple( object_index_t objIx ) const {
         return ( _objectMultiples[ objIx ] );
@@ -605,7 +605,7 @@ protected:
     Parameters of the stripe of cells of object cluster.
  */
 struct ObjectsClusterParams {
-    blocks_mask_t   blocksMask;  /** enablement of cross clusters in object stripe */
+    blocks_mask_t   blocksMask;  /** enablement of blocks in object stripe */
     signal_map_t&           probeSignal;        /** signals of object for each probe cluster (defined only for enabled cells) */
     multiple_map_t&         objectMultiple;     /** objects' multiplicity */
 
@@ -663,7 +663,7 @@ public:
     Parameters of the stripe of cells of object cluster.
  */
 struct ProbesClusterParams {
-    blocks_mask_t   blocksMask;  /** enablement of cross clusters in probe stripe */
+    blocks_mask_t   blocksMask;  /** enablement of blocks in probe stripe */
     signal_map_t&           objectsSignal;      /** signals of probe for each objects cluster (defined only for enabled cells) */
 
     ProbesClusterParams( const ChessboardBiclustering& clustering );

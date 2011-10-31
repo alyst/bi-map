@@ -135,7 +135,7 @@ log_prob_t ChessboardBiclusteringPriorEval::lpp() const
                 res += signalPrior( signal );
             }
         }
-        // cross-cluster probe prior
+        // block probe prior
         res += blockEnablementPrior()( true ) * enabledCnt
             + blockEnablementPrior()( false ) * ( clustering().objectsClusters().size() * clustering().probesClusters().size() - enabledCnt );
     }
