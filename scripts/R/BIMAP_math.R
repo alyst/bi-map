@@ -6,9 +6,10 @@
 require( 'Rcpp' )
 
 # load RBIMAP library
-RBIMAPMath.libpath <- "~/projects/pcp/BIMAP/build/release/src/rcpp"
-#dyn.unload( file.path( RBIMAPMath.libpath, paste("libRBIMAPMath", .Platform$dynlib.ext, sep="")) ) 
-dyn.load( file.path( RBIMAPMath.libpath, paste("libRBIMAPMath", .Platform$dynlib.ext, sep="")), 
+# Note: RBIMAP.libpath should be set before executing this script, e.g.:
+#       RBIMAP.libpath <- file.path( bimap_scripts_path, "build/release/src/R" )
+#dyn.unload( file.path( RBIMAP.libpath, paste("libRBIMAPMath", .Platform$dynlib.ext, sep="")) ) 
+dyn.load( file.path( RBIMAP.libpath, paste("libRBIMAPMath", .Platform$dynlib.ext, sep="")), 
           type = "Call" ) 
 
 dlagpois <- function( x, lnRate, shape, log = FALSE )
