@@ -370,7 +370,7 @@ BIMAP.walk.priors.data.frame <- function( walk )
     )
 }
 
-BIMAP.walk.crosscluster.data.frame <- function( walk )
+BIMAP.walk.blocks.data.frame <- function( walk )
 {
     res <- do.call( 'rbind', lapply( names( walk@clusterings ), function ( it ) {
         do.call( 'rbind', lapply( walk@clusterings[[ it ]]@blocks, function ( cluster ) {
@@ -389,7 +389,7 @@ BIMAP.walk.signals.data.frame <- function( walk, per.object = TRUE )
 {
     res <- do.call( 'rbind', lapply( names( walk@clusterings ), function( it ) {
         clustering <- walk@clusterings[[ it ]]
-        cluframe <- data.frame( cross.clustering.serial = rep( clustering@serial, 
+        cluframe <- data.frame( biclustering.serial = rep( clustering@serial, 
                                 length( clustering@states.signals$objects.cluster.serial ) ),
                                 objects.cluster.serial = clustering@states.signals$objects.cluster.serial,
                                 state = clustering@states.signals$state,
@@ -525,7 +525,7 @@ BIMAP.signal_stats <- function( signals.frame )
 #' @param bimap.walk sampling walk
 #' @param bimapId ID of chessboard biclustering to extract
 #' @param onblock.threshold "on" blocks, are those whose "on" state frequency is greater than this threshold
-#' @param extract.signals extract signals of individual cross-clusters
+#' @param extract.signals extract signals of individual blocks
 #' @returnType 
 #' @return 
 #' @author astukalov
@@ -537,31 +537,31 @@ BIMAP.extract_clustering <- function( bimap.walk, bimapId,
     if ( length(steps) == 0 ) {
         stop( paste("No chessboard biclustering with ID=", bimapId, "found") )
     }
-    
+
     # get object and state clusters of chessboard biclustering
     opId <- subset( bimap.walk@clusterings, clustering.serial == bimapId )$objects.partition.serial
     spId <- subset( bimap.walk@clusterings, clustering.serial == bimapId )$states.partition.serial
     ocIds <- as.character( subset( bimap.walk@objects.partitions, objects.partition.serial == opId )$objects.cluster.serial )
     scIds <- as.character( subset( bimap.walk@states.partitions, states.partition.serial == spId )$states.cluster.serial )
 
-    if ( is.numeric(block.threshold) ) {
-        # build consensus cross-clusters
-        ccStats <- subset( bimap.walk@blocks.freq, objects.cluster.serial %in% ocIds & states.cluster.serial %in% scIds )
-        crossClus <- subset( ccStats, enabled >= block.threshold * total,
+    if ( is.numeric(onblock.threshold) ) {
+        # build consensus blocks
+        blockStats <- subset( bimap.walk@blocks.freq, objects.cluster.serial %in% ocIds & states.cluster.serial %in% scIds )
+        blocks <- subset( blockStats, enabled >= onblock.threshold * total,
                              select=c( 'objects.cluster.serial', 'states.cluster.serial' ) )
     } else {
-        # get non-empty cross-clusters of the clustering
-        crossClus <- subset( bimap.walk@blocks, clustering.serial == bimapId,
-                             select = c("objects.cluster.serial", "states.cluster.serial") )
+        # get non-empty blocks of the clustering
+        blocks <- subset( bimap.walk@blocks, clustering.serial == bimapId,
+                          select = c("objects.cluster.serial", "states.cluster.serial") )
     }
 
-    cluCounts <- nrow( crossClus )
-    if ( cluCounts == 0 ) {
-        stop( paste("No cross-clusters found in clustering ID=", bimapId ) )
+    nBlocks <- nrow( blocks )
+    if ( nBlocks == 0 ) {
+        stop( paste("No blocks found in clustering ID=", bimapId ) )
     }
-    colnames( crossClus ) <- c( 'proteins.cluster', 'samples.cluster' )
-    crossClus$proteins.cluster <- as.character( crossClus$proteins.cluster )
-    crossClus$samples.cluster <- as.character( crossClus$samples.cluster )
+    colnames( blocks ) <- c( 'proteins.cluster', 'samples.cluster' )
+    blocks$proteins.cluster <- as.character( blocks$proteins.cluster )
+    blocks$samples.cluster <- as.character( blocks$samples.cluster )
 
     proteins.clusters <- subset( bimap.walk@objects.clusters, objects.cluster.serial %in% ocIds,
         select = c( 'objects.cluster.serial', 'object' ) )
@@ -578,7 +578,7 @@ BIMAP.extract_clustering <- function( bimap.walk, bimapId,
 
     res <- list(
             steps = steps,
-            cross.clusters = crossClus,
+            cross.clusters = blocks,
             proteins.clusters = proteins.clusters,
             proteins.clusters.info = bimap.walk@objects.clusters.info[ unique( proteins.clusters$proteins.cluster ),
                                                                     c( 'objects.cluster.serial', 'size',
@@ -596,7 +596,7 @@ BIMAP.extract_clustering <- function( bimap.walk, bimapId,
         print( paste( 'Extracting signals for clustering #', bimapId, '...', sep='') )
         # get subframe with all samples for signals of given bimap
         # (but samples might be from other bimaps, which contain the same clusters)
-        cc_str <- paste( crossClus$proteins.cluster, crossClus$samples.cluster )
+        cc_str <- paste( blocks$proteins.cluster, blocks$samples.cluster )
         signals.subframe <- subset( bimap.walk@signals,
                 paste( objects.cluster.serial, states.cluster.serial ) %in% cc_str )[c('step', 'objects.cluster.serial', 'states.cluster.serial', 'signal')]
         colnames( signals.subframe ) <- c( 'step', 'proteins.cluster', 'samples.cluster', 'signal' )

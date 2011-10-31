@@ -89,7 +89,7 @@ ranges <- function( int_list ) {
     return ( res )
 }
 
-plot.crosscluster <- function( proteins, samples, 
+plot.block <- function( proteins, samples, 
                                proteins.cluster, samples.cluster,
                                signals.matrix, signals.matrix.sd,
                                signals.frame = NULL,
@@ -184,7 +184,7 @@ plot.crosscluster <- function( proteins, samples,
     }
 }
 
-plot.crosscluster.measurements <- function(
+plot.block.measurements <- function(
     proteins, sample, samples,
     msrun.info,
     signals.matrix, measurements )
@@ -672,7 +672,7 @@ plot.bimap <- function( bimap.props, protein.info,
 #                       pushViewport( viewport( layout.pos.col = colIx, layout.pos.row = rowIx,
 #                                     layout = grid.layout( nrow = 1, ncol = length( cluster.samples ) ) ) )
 #                       for ( sample in cluster.samples ) {
-#                           plot.crosscluster.measurements(
+#                           plot.block.measurements(
 #                               cluster.proteins, sample, cluster.samples,
 #                               msrun.info, signals.matrix, measurements )
 #                       }
@@ -717,7 +717,7 @@ plot.bimap <- function( bimap.props, protein.info,
                   pushViewport( viewport( layout.pos.row = which( rev( rownames( signals.matrix ) ) == protClu ), 
                                           layout.pos.col = which( colnames( signals.matrix ) == sampleClu ) ) )
                   #print(cc)
-                  plot.crosscluster( cluster.proteins, cluster.samples,
+                  plot.block( cluster.proteins, cluster.samples,
                       protClu, sampleClu,
                       show.abundance = show.abundance,
                       signals.matrix, signals.matrix.sd,
