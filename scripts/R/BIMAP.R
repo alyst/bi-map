@@ -10,11 +10,20 @@ require( 'Rcpp' )
 #dyn.unload( file.path( RBIMAP.libpath, paste("libRBIMAP", .Platform$dynlib.ext, sep="")) ) 
 dyn.load( file.path( RBIMAP.libpath, paste("libRBIMAP", .Platform$dynlib.ext, sep="")), type = "Call" ) 
 
-OSAData.save <- function( filename,
-                          protein_info, sample_info,
-                          msrun_info, measurements = NULL )
+#' Saves AP-MS data into single .xml file that could be read by BIMAP-sampler --input_file
+#' @param filename name of output file
+#' @param protein_info protein information dataframe (AC, Sequence Length)
+#' @param sample_info  sample information dataframe
+#' @param msrun_info MS runs information dataframe
+#' @param measurements MS measurements dataframe
+#' @return result of call to external OPADataSave()
+#' @author Alexey Stukalov
+BIMAP.save_apms_data <- function(
+    filename,
+    protein_info, sample_info,
+    msrun_info, measurements = NULL )
 {
-    return ( .Call( "OSADataSave", filename,
+    return ( .Call( "OPADataSave", filename,
                     protein_info, sample_info, msrun_info,
                     measurements ) )
 }
