@@ -196,8 +196,8 @@ struct ParticleMessage {
     }
 };
 
-BOOST_MPI_SERIALIZATION_TRAITS_TEMPLATE( ParticleMessage, Particle )
-BOOST_IS_MPI_DATATYPE_TEMPLATE( ParticleMessage, Particle )
+//BOOST_MPI_SERIALIZATION_TRAITS_TEMPLATE( ParticleMessage, Particle )
+//BOOST_IS_MPI_DATATYPE_TEMPLATE( ParticleMessage, Particle )
 
 template<class Particle>
 typename boost::enable_if< boost::mpi::is_mpi_datatype<ParticleMessage<Particle> >, std::vector< ParticleMessage<Particle> > >::type
