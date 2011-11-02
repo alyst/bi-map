@@ -455,6 +455,10 @@ BIMAP.plot <- function( bimap.props, protein.info,
                                   grid.col = 'grey', grid.lty = 2, grid.lwd = 2,
                                   protein.label.width = 1.5, sample.label.width = protein.label.width )
 {
+    if ( !is.null( measurements ) && !show.msruns ) {
+        warning( "Measurements display only supported when show.msruns = TRUE, turning it on" )
+        show.msruns <- TRUE
+    }
     proteins.clusters <- ddply( bimap.props$proteins.clusters, c( 'proteins.cluster' ), function( cluster ) {
             data.frame( size = nrow( cluster ),
                         stringsAsFactors = FALSE ) }
@@ -588,7 +592,7 @@ BIMAP.plot <- function( bimap.props, protein.info,
         cells.on.matrix <- cells.on.matrix[ proteins$protein_ac, samples$sample ]
         cells.off.matrix <- block.matrix
     }
-    #print(signals.matrix)
+    # distribute values between cells.on/off.matrix according to block on/off state
     for( protsClu in proteins.clusters$serial ) {
         clu.prots <- subset( bimap.props$proteins.clusters, proteins.cluster == protsClu )$protein_ac
         for( samplesClu in samples.clusters$serial ) {
@@ -604,7 +608,6 @@ BIMAP.plot <- function( bimap.props, protein.info,
             }
         }
     }
-    #print( block.matrix )
 
     layout.widths = trellis.par.get('layout.widths')
     layout.widths$left.padding = 0
@@ -617,6 +620,7 @@ BIMAP.plot <- function( bimap.props, protein.info,
     layout.heights$axis.top = sample.label.width
     layout.heights$axis.bottom = 0.5
 
+    print( 'Creating Plot Object...' )
     res <- levelplot( t(block.matrix),
        col.regions = col,
        colorkey = list( space='bottom' ),
@@ -702,7 +706,7 @@ BIMAP.plot <- function( bimap.props, protein.info,
                        preys.clusters$border.below <- preys.clusters$nested.preys.cluster != preys.clusters$nested.cluster.below
                        preys.clusters$border.above <- ifelse( is.na(preys.clusters$border.above ), TRUE, preys.clusters$border.above )
                        preys.clusters$border.below <- ifelse( is.na(preys.clusters$border.below ), TRUE, preys.clusters$border.below )
-                       print(preys.clusters)
+                       #print(preys.clusters)
                        return ( preys.clusters )
                    } )
                }
@@ -766,6 +770,7 @@ BIMAP.plot <- function( bimap.props, protein.info,
     if ( extended.result ) {
         return ( c( list( plot = res ), signals.matrix.bihclust ) )
     } else {
+        print( 'Plotting...')
         print( res )
     }
 }

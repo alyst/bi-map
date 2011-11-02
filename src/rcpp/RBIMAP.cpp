@@ -1205,7 +1205,7 @@ RcppExport SEXP BIMAPWalkLoad(
                                                    probesComponentThreshold );
     }
 
-    Rprintf( "Exporting walk to R...\n" );
+    //Rprintf( "Exporting walk to R...\n" );
     SEXP res = ConvertBIMAPWalkToRObject( objects, probes, *walk, pdfAdjust );
     delete walk;
     if ( pdfAdjust ) delete pdfAdjust;

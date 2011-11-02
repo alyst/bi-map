@@ -161,6 +161,7 @@ BIMAP.graphML.dataframe <- function( bimap.props,
 
     # add information
     # add protein information
+    print( "Adding protein information...")
     protein_node_mask <- nodes.df$node_type %in% c( 'bait', 'prey' ) &
                          nodes.df$node_id %in% rownames( protein.info )
     nodes.df$short_id <- NA
@@ -210,7 +211,7 @@ BIMAP.graphML.dataframe <- function( bimap.props,
         } )
     #print( nodes.df )
 
-    # add edges for each biclustering block
+    # add edges for each BIMAP block
     print( 'Generating edges' )
     signal.max <- max( bimap.props$signals.mean, na.rm = TRUE )
     signal.min <- min( bimap.props$signals.mean, na.rm = TRUE )

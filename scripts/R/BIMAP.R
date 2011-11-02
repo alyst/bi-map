@@ -559,9 +559,11 @@ BIMAP.extract_clustering <- function( bimap.walk, bimapId,
         cc_str <- paste( blocks$proteins.cluster, blocks$samples.cluster )
         signals.subframe <- subset( bimap.walk@signals,
                 paste( objects.cluster.serial, probes.cluster.serial ) %in% cc_str )[c('step', 'objects.cluster.serial', 'probes.cluster.serial', 'signal')]
+        print( paste( nrow(signals.subframe), "signals extracted" ) )
         colnames( signals.subframe ) <- c( 'step', 'proteins.cluster', 'samples.cluster', 'signal' )
         signals.subframe$proteins.cluster <- as.character( signals.subframe$proteins.cluster )
         signals.subframe$samples.cluster <- as.character( signals.subframe$samples.cluster )
+        print( "Calculating signals statistics..." )
         signal_stats <- BIMAP.signal_stats( signals.subframe )
         res$blocks$signal.mean <- apply( res$blocks, 1,
                 function( cc ) signal_stats$signals.mean[ cc[['proteins.cluster']], cc[['samples.cluster']] ] )
