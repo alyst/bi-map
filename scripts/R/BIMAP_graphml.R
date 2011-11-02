@@ -170,8 +170,11 @@ BIMAP.graphML.dataframe <- function( bimap.props,
             as.character( protein.info[ nodes.df[ protein_node_mask, 'node_id' ], protein_label_col ] )
     }
     # export protein columns
-    for ( exported_col in names( protein_export_cols ) ) {
-        internal_col = protein_export_cols[[ exported_col ]]
+    exported_cols <- names( protein_export_cols )
+    if ( is.null( exported_cols ) ) exported_cols <- protein_export_cols
+    for ( col_ix in 1:length( protein_export_cols ) ) {
+        exported_col <- exported_cols[[ col_ix ]]
+        internal_col <- protein_export_cols[[ col_ix ]]
         nodes.df[,exported_col] <- NA
         nodes.df[ protein_node_mask, exported_col ] <-
             protein.info[ nodes.df[ protein_node_mask, 'node_id' ], internal_col ]
