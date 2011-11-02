@@ -693,9 +693,9 @@ BIMAP.plot <- function( bimap.props, protein.info,
 #               for ( ocId in rownames( signals.matrix ) ) {
 #                   cluster.proteins <- subset( proteins, protein_ac %in% subset( bimap.props$proteins.clusters, proteins.cluster == ocId )$protein_ac )$protein_ac
 #                   rowIx <- which( rev( rownames( signals.matrix ) ) == ocId )
-#                   for ( scId in colnames( signals.matrix ) ) {
-#                       cluster.samples <- subset( samples, sample %in% subset( bimap.props$samples.clusters, samples.cluster == scId )$sample )$sample
-#                       colIx <- which( colnames( signals.matrix ) == scId )
+#                   for ( pcId in colnames( signals.matrix ) ) {
+#                       cluster.samples <- subset( samples, sample %in% subset( bimap.props$samples.clusters, samples.cluster == pcId )$msrun )$sample
+#                       colIx <- which( colnames( signals.matrix ) == pcId )
 #                       pushViewport( viewport( layout.pos.col = colIx, layout.pos.row = rowIx,
 #                                     layout = grid.layout( nrow = 1, ncol = length( cluster.samples ) ) ) )
 #                       for ( sample in cluster.samples ) {
@@ -736,22 +736,22 @@ BIMAP.plot <- function( bimap.props, protein.info,
                if ( plot.samples ) signals.subframe <- bimap.props$signals.subframe
                else signals.subframe <- NULL
                for ( blockIx in 1:nrow(blocks) ) {
-                  cc <- blocks[blockIx, ]
-                  protClu <- cc$proteins.cluster
-                  sampleClu <- cc$samples.cluster
+                  blk <- blocks[blockIx, ]
+                  protClu <- blk$proteins.cluster
+                  sampleClu <- blk$samples.cluster
                   cluster.proteins <- subset( proteins, protein_ac %in% subset( bimap.props$proteins.clusters, proteins.cluster == protClu )$protein_ac )
                   cluster.samples <- subset( samples, samples.cluster == sampleClu )
                   pushViewport( viewport( layout.pos.row = which( rev( rownames( signals.matrix ) ) == protClu ), 
                                           layout.pos.col = which( colnames( signals.matrix ) == sampleClu ) ) )
-                  #print(cc)
+                  #print(blk)
                   plot.block( cluster.proteins, cluster.samples,
                       protClu, sampleClu,
                       show.abundance = show.abundance,
                       signals.matrix, signals.matrix.sd,
                       signals.subframe, bait.col = bait.col,
-                      border.col = cc$nested.color,
-                      border.above = is.logical(cc$border.above) & cc$border.above,
-                      border.below = is.logical(cc$border.below) & cc$border.below
+                      border.col = blk$nested.color,
+                      border.above = is.logical(blk$border.above) & blk$border.above,
+                      border.below = is.logical(blk$border.below) & blk$border.below
                   )
                   popViewport()
               }
