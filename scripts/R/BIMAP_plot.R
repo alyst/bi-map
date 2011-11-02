@@ -433,7 +433,7 @@ BIMAP.signals_matrix.bihclust <- function( bimap.props, signal.na.subst = -100 )
                    proteins.ordering = proteins.ordering, samples.ordering = samples.ordering ) )
 }
 
-plot.bimap <- function( bimap.props, protein.info,
+BIMAP.plot <- function( bimap.props, protein.info,
                                   sample.info, msrun.info,
                                   protein.info.ex = NULL, measurements = NULL,
                                   plot.samples = FALSE,
@@ -776,7 +776,7 @@ BIMAP.plot_bimap <- function( bimap.walk, bimapId,
 {
     bimap.props <- BIMAP.extract_clustering( bimap.walk, bimapId, TRUE,
         onblock.threshold = onblock.threshold )
-    plot.bimap( bimap.props, protein.info, sample.info, msrun.info,
+    BIMAP.plot( bimap.props, protein.info, sample.info, msrun.info,
             title = paste( 'Chessboard biclustering #', bimapId, sep = '' ), ... )
 }
 

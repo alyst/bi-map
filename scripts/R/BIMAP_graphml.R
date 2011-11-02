@@ -7,7 +7,7 @@ require( plyr )
 
 source( file.path( bimap_scripts_path, "graphml_support.R" ) )
 
-bimap.graph.dataframe <- function( bimap.props,
+BIMAP.graphML.dataframe <- function( bimap.props,
     protein.info, sample.info, msrun.info,
     protein_label_col = 'short_label',
     protein_export_cols = c(),
@@ -280,31 +280,31 @@ bimap.graph.dataframe <- function( bimap.props,
     return ( list( nodes = nodes.df, edges = edges.df ) )
 }
 
-BIMAP.graph.dataframe <- function( bimap.walk, bimapId,
+BIMAP.extract_graphML.dataframe <- function( bimap.walk, bimapId,
     protein.info, sample.info, msrun.info,
     onblock.threshold = 0.6, ...
 ){
     bimap.props <- BIMAP.extract_clustering( bimap.walk, bimapId, TRUE, 
         onblock.threshold = onblock.threshold )
-    bimap.graph.dataframe( bimap.props, protein.info, sample.info, msrun.info, ... )
+    BIMAP.graphML.dataframe( bimap.props, protein.info, sample.info, msrun.info, ... )
 }
 
-bimap.graphML <- function( bimap.props,
+BIMAP.graphML <- function( bimap.props,
     protein.info, sample.info, msrun.info, ...
 ){
-    dfs <- bimap.graph.dataframe( bimap.props, protein.info, sample.info, msrun.info, ... )
+    dfs <- BIMAP.graphML.dataframe( bimap.props, protein.info, sample.info, msrun.info, ... )
     return ( generateGraphML( dfs$nodes, dfs$edges,
             node_col = 'node_id', parent_col = 'parent_node_id',
             source_col = 'source_id', target_col = 'target_id',
             directed = FALSE ) )
 }
 
-BIMAP.graphML <- function( bimap.walk, bimapId, 
+BIMAP.extract_graphML <- function( bimap.walk, bimapId, 
     protein.info, sample.info, msrun.info,
     onblock.threshold = 0.5,
     ...
 ){
-    dfs <- BIMAP.graph.dataframe( bimap.walk, bimapId, protein.info, sample.info, msrun.info, ... )
+    dfs <- BIMAP.extract_graphML.dataframe( bimap.walk, bimapId, protein.info, sample.info, msrun.info, ... )
     return ( generateGraphML( dfs$nodes, dfs$edges,
                     node_col = 'node_id', parent_col = 'parent_node_id',
                     source_col = 'source_id', target_col = 'target_id',
