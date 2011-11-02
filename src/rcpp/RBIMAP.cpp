@@ -539,20 +539,22 @@ SEXP ConvertBIMAPWalkToRObject(
     }
     {
         Rprintf( "Exporting objects partitions...\n" );
-        std::vector<int> clusSerial;
+        std::vector<int> ptnSerial;
         std::vector<int> cluSerial;
+        // iterate partitions
         for ( ChessboardBiclusteringsIndexing::object_partition_indexing::const_value_iterator it = walk.indexing().objectPartitionIndexing().valueMap().begin(); 
               it != walk.indexing().objectPartitionIndexing().valueMap().end(); ++it ) {
-            typedef ChessboardBiclusteringsIndexing::object_partition_indexing::collection_type clus_type;
-            const clus_type& clus = (*it)->value();
-            for ( clus_type::const_iterator elit = clus.begin(); elit != clus.end(); ++elit ) {
-                clusSerial.push_back( (*it)->serial() );
+            typedef ChessboardBiclusteringsIndexing::object_partition_indexing::collection_type ptn_type;
+            const ptn_type& ptn = (*it)->value();
+            // iterate clusters of partitions
+            for ( ptn_type::const_iterator elit = ptn.begin(); elit != ptn.end(); ++elit ) {
+                ptnSerial.push_back( (*it)->serial() );
                 cluSerial.push_back( (*elit)->serial() );
             }
         }
         Rprintf( "Creating objects.partitions dataframe, nrow=%d\n", cluSerial.size() );
         rWalk.slot( R_SLOT_OBJECTS_PARTITIONS ) = Rcpp::DataFrame::create(
-                Rcpp::Named( R_COLUMN_OBJECTS_PARTITION_SERIAL, clusSerial ),
+                Rcpp::Named( R_COLUMN_OBJECTS_PARTITION_SERIAL, ptnSerial ),
                 Rcpp::Named( R_COLUMN_OBJECTS_CLUSTER_SERIAL, cluSerial ),
                 Rcpp::Named( R_STRINGS_AS_FACTORS, false )
             );
@@ -632,20 +634,22 @@ SEXP ConvertBIMAPWalkToRObject(
     }
     {
         Rprintf( "Exporting probes partitions...\n" );
-        std::vector<int> clusSerial;
+        std::vector<int> ptnSerial;
         std::vector<int> cluSerial;
+        // iterate partitions
         for ( ChessboardBiclusteringsIndexing::probe_partition_indexing::const_value_iterator it = walk.indexing().probePartitionIndexing().valueMap().begin(); 
               it != walk.indexing().probePartitionIndexing().valueMap().end(); ++it ) {
-            typedef ChessboardBiclusteringsIndexing::probe_partition_indexing::collection_type clus_type;
-            const clus_type& clus = (*it)->value();
-            for ( clus_type::const_iterator elit = clus.begin(); elit != clus.end(); ++elit ) {
-                clusSerial.push_back( (*it)->serial() );
+            typedef ChessboardBiclusteringsIndexing::probe_partition_indexing::collection_type ptn_type;
+            const ptn_type& ptn = (*it)->value();
+            // iterate clusters of partition
+            for ( ptn_type::const_iterator elit = ptn.begin(); elit != ptn.end(); ++elit ) {
+                ptnSerial.push_back( (*it)->serial() );
                 cluSerial.push_back( (*elit)->serial() );
             }
         }
         Rprintf( "Creating probes.partitions dataframe, nrow=%d\n", cluSerial.size() );
         rWalk.slot( R_SLOT_PROBES_PARTITIONS ) = Rcpp::DataFrame::create(
-                Rcpp::Named( R_COLUMN_PROBES_PARTITION_SERIAL, clusSerial ),
+                Rcpp::Named( R_COLUMN_PROBES_PARTITION_SERIAL, ptnSerial ),
                 Rcpp::Named( R_COLUMN_PROBES_CLUSTER_SERIAL, cluSerial ),
                 Rcpp::Named( R_STRINGS_AS_FACTORS, false )
             );

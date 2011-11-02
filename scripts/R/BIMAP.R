@@ -428,6 +428,28 @@ BIMAP.walk.lastClustering <- function( walk, serial )
     warning(paste('Clustering with serial #',serial,' not found',sep=''))
 }
 
+#' Order clusterings according to their posterior probability.
+#' @param walk 
+#' @param n number of top probable clusterings to return
+#' @returnType 
+#' @return data.frame with clusters information
+#' @author astukalov
+#' @export
+BIMAP.order_clusterings <- function( walk, n = 30 ) {
+    clus.df <- walk@clusterings
+    rownames( clus.df ) <- clus.df$clustering_id
+    clus.df <- clus.df[ order(
+            #clus.df$objects.parts.lnpdf + clus.df$probes.parts.lnpdf,
+            clus.df$objects.lnpdf + clus.df$probes.lnpdf,
+            #clus.df$probes.lnpdf,
+            clus.df$total.lnpdf,
+            decreasing = TRUE ), ]
+    if ( is.numeric( n ) ) {
+        clus.df <- clus.df[ 1:min(n, nrow(clus.df)), ]
+    }
+    return ( clus.df )
+}
+
 BIMAP.walk.clusters.counts <- function( walk, entities = c( 'objects', 'probes' ) ) {
     partition.serial.colname <- paste( entities, 'partition.serial', sep = '.' )
     cluster.serial.colname <- paste( entities, 'cluster.serial', sep = '.' )
@@ -443,70 +465,6 @@ BIMAP.walk.clusters.size <- function( walk, entities = c( 'objects','probes' ) )
     clusters.sizes <- cluster.sizes.df[,2]
     names(clusters.sizes) <- cluster.sizes.df[,1]
     return ( clusters.sizes )
-}
-
-BIMAP.walk.greedy.partition <- function( walk, entities = c( 'objects','probes' ), score = function( size, counts ) return ( counts ) ) {
-    clusters.sizes <- BIMAP.walk.clusters.size( walk, entities )
-    clusters.counts <- BIMAP.walk.clusters.counts( walk, entities )
-    clusters.info = data.frame(
-            serial = as.integer( names( clusters.sizes ) ),
-            size = clusters.sizes,
-            counts = clusters.counts[ names( clusters.sizes ) ],
-            available = TRUE,
-            stringsAsFactors = FALSE
-        )
-    rownames( clusters.info ) <- clusters.info$serial 
-    cluster.serial.colname <- paste( entities, 'cluster.serial', sep = '.' )
-    clusters.contents <- slot( walk, paste( entities, 'clusters', sep='.' ) )
-    entity.colname <- ifelse(entities=='objects','object','probe')
-    clusters.info$score <- as.numeric( apply( clusters.info, 1, function (row ) score( as.integer(row[['size']]), as.integer(row[['counts']]) ) ) )
-
-    entities.info <- ddply( clusters.contents, c( entity.colname ), function( shared.clusters ) {
-        data.frame( nclusters = nrow( shared.clusters ), available = TRUE, stringsAsFactors = FALSE )
-    } )
-    rownames( entities.info ) <- entities.info[,entity.colname]
-    #print(entities.info)
-
-    res <- list()
-
-    while ( any(entities.info$available ) ) {
-        avail.clusters.info <- subset( clusters.info, available )
-        if ( nrow( avail.clusters.info ) == 0 ) {
-            warning( 'No valid clusters left, partition incomplete' )
-            break
-        }
-        priority.entities <- as.character( subset( entities.info, available & nclusters == 1 )[,entity.colname] )
-        if ( length(priority.entities) > 0 ) {
-            priority.clusters <- unique( clusters.contents[ clusters.contents[,entity.colname] %in% priority.entities, cluster.serial.colname ] )
-            #print( 'Priority entries:' )
-            #print( priority.entities )
-            #print( priority.clusters )
-            avail.clusters.info <- subset( avail.clusters.info, serial %in% priority.clusters )
-            if ( nrow( avail.clusters.info ) == 0 ) {
-                warning( 'internal error, no available clusters' )
-                break
-            }
-        }
-        best.cluster.serial <- avail.clusters.info$serial[[ order( avail.clusters.info$score, decreasing = TRUE )[[1]] ]]
-        #print( best.cluster.serial )
-        res <- unlist( append( res, c( best.cluster.serial ) ) )
-        cluster.elems <- as.character( clusters.contents[ clusters.contents[, cluster.serial.colname] == best.cluster.serial, entity.colname ] )
-        #print( cluster.elems )
-        sharing.clusters <- unique( clusters.contents[ clusters.contents[, entity.colname] %in% cluster.elems, cluster.serial.colname ] )
-        sharing.clusters.elems <- unique( as.character( clusters.contents[ clusters.contents[, cluster.serial.colname] %in% sharing.clusters, entity.colname ] ) )
-        cluster.elems.mask <- entities.info[,entity.colname] %in% cluster.elems
-        sharing.clusters.elems.mask <- entities.info[,entity.colname] %in% sharing.clusters.elems
-        sharing.clusters.mask <- clusters.info$serial %in% sharing.clusters
-        if ( !all( entities.info[ cluster.elems.mask, 'available' ]) ) {
-            warning('internal error, entities available flags')
-            break
-        }
-        entities.info[ sharing.clusters.elems.mask, 'nclusters' ] <- entities.info[ sharing.clusters.elems.mask, 'nclusters' ] - 1
-        entities.info[ cluster.elems.mask, 'available' ] <- FALSE
-        clusters.info[ sharing.clusters.mask, 'available' ] <- FALSE
-    }
-    if ( length( res ) > 0 ) res <- sort( res )
-    return ( res )
 }
 
 # prepare pivot table of signal means and SDs
@@ -559,7 +517,7 @@ BIMAP.extract_clustering <- function( bimap.walk, bimapId,
 
     nBlocks <- nrow( blocks )
     if ( nBlocks == 0 ) {
-        stop( paste("No blocks found in clustering ID=", bimapId ) )
+        stop( paste("No on-blocks found in clustering ID=", bimapId ) )
     }
     colnames( blocks ) <- c( 'proteins.cluster', 'samples.cluster' )
     blocks$proteins.cluster <- as.character( blocks$proteins.cluster )
@@ -627,18 +585,18 @@ BIMAP.filter_clustering <- function( bimap.props, protein_acs, sample_acs )
     proteins.cluster_acs <- unique( res$proteins.clusters$proteins.cluster )
     # remove blocks corresponding to removed clusters
     res$blocks <- subset( bimap.props$blocks,
-                                  proteins.cluster %in% proteins.cluster_acs &
-                                  samples.cluster %in% samples.cluster_acs )
+                           proteins.cluster %in% proteins.cluster_acs &
+                           samples.cluster %in% samples.cluster_acs )
     res$signals.subframe <- subset( bimap.props$signals.subframe,
                                   proteins.cluster %in% proteins.cluster_acs &
                                   samples.cluster %in% samples.cluster_acs )
     signal_stats <- BIMAP.signal_stats( res$signals.subframe )
     for ( i in 1:nrow(res$blocks) ) {
-        ccrow <- res$blocks[ i, ] 
-        res$blocks$signal.mean = signal_stats$signals.mean[ ccrow$proteins.cluster,
-                                                                   ccrow$samples.cluster ] 
-        res$blocks$signal.sd = signal_stats$signals.sd[ ccrow$proteins.cluster,
-                                                               ccrow$samples.cluster ]
+        blockRow <- res$blocks[ i, ] 
+        res$blocks$signal.mean = signal_stats$signals.mean[ blockRow$proteins.cluster,
+                                                             blockRow$samples.cluster ] 
+        res$blocks$signal.sd = signal_stats$signals.sd[ blockRow$proteins.cluster,
+                                                        blockRow$samples.cluster ]
     }
     res$signals.mean <- signal_stats$signals.mean
     res$signals.sd <- signal_stats$signals.sd
