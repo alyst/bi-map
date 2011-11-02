@@ -268,6 +268,25 @@ edgeLocation <-
         })
 }
 
+levelplot.axis.components <- function(
+    elements, clusters = NULL,
+    label_col = NA, big.ticks = 5, small.ticks = 0.5
+){
+    nelems <- nrow( elements )
+    tcks <- rep( small.ticks, nelems + 1 )
+    if ( !is.null( clusters ) ) {
+        cluster.ticks <- cumsum( unlist( list( 0, clusters$size ) ) )
+        tcks[ cluster.ticks + 1 ] <- big.ticks
+    }
+    res <- list( ticks = list( at = 0:nelems, tck = tcks ) )
+    res$labels = list( check.overlap = FALSE )
+    if ( !is.na(label_col)  ) {
+        res$labels$at = 1:(nelems) - 0.5
+        res$labels$labels = elements[,label_col]
+    }
+    return ( res )
+}
+
 dendrogramGrob.fixed <- function (x, ord = order.dendrogram(x),
     side = c("right", "top"),
     add = list(), size = 5, size.add = 1,
