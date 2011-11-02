@@ -785,12 +785,6 @@ BIMAP.plot_bimap <- function( bimap.walk, bimapId,
             title = paste( 'Chessboard biclustering #', bimapId, sep = '' ), ... )
 }
 
-plot_ms_data <- function( matrix )
-{
-    
-    plot( matrix )
-}
-
 plot_cluster_samples <- function( clusters.sample.frame, cluster.serial )
 {
     cluster.sample.frame <- subset( clusters.sample.frame, cluster == cluster.serial )
