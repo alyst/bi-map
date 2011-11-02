@@ -90,14 +90,14 @@ ranges <- function( int_list ) {
 }
 
 plot.block <- function( proteins, samples, 
-                               proteins.cluster, samples.cluster,
-                               signals.matrix, signals.matrix.sd,
-                               signals.frame = NULL,
-                               show.abundance = TRUE,
-                               bait.col = 'red',
-                               border.col = NULL,
-                               border.above = TRUE,
-                               border.below = TRUE )
+                        proteins.cluster, samples.cluster,
+                        signals.matrix, signals.matrix.sd,
+                        signals.frame = NULL,
+                        show.abundance = TRUE,
+                        bait.col = 'red',
+                        border.col = NULL,
+                        border.above = TRUE,
+                        border.below = TRUE )
 {
     #usr <- par("usr") # remember current clip
     bait_acs  <- intersect( samples$bait_ac, proteins$protein_ac )
@@ -453,26 +453,26 @@ BIMAP.signals_matrix.bihclust <- function( bimap.props, signal.na.subst = -100 )
 }
 
 BIMAP.plot <- function( bimap.props, protein.info,
-                                  sample.info, msrun.info,
-                                  protein.info.ex = NULL, measurements = NULL,
-                                  plot.samples = FALSE,
-                                  show.abundance = TRUE, 
-                                  show.protein.id = TRUE,
-                                  show.sample.id = TRUE, show.msruns = FALSE,
-                                  show.borders = FALSE,
-                                  extended.result = FALSE,
-                                  protein_name_col = 'short_id',
-                                  protein_description_col = NULL,
-                                  title = NULL,
-                                  cell.func = function( sc, pc, seqcov, seqlen ) {
-                                      return ( log( sc / seqlen ) ) },
-                                  col = heat.colors,
-                                  cells.col = heat.colors,
-                                  cells.off.alpha = 0.5,
-                                  aspect = 0.5,
-                                  bait.col = 'green',
-                                  grid.col = 'grey', grid.lty = 2, grid.lwd = 2,
-                                  protein.label.width = 1.5, sample.label.width = protein.label.width )
+                         sample.info, msrun.info,
+                         protein.info.ex = NULL, measurements = NULL,
+                         plot.samples = FALSE,
+                         show.abundance = TRUE, 
+                         show.protein.id = TRUE,
+                         show.sample.id = TRUE, show.msruns = FALSE,
+                         show.borders = FALSE,
+                         extended.result = FALSE,
+                         protein_name_col = 'short_id',
+                         protein_description_col = NULL,
+                         title = NULL,
+                         cell.func = function( sc, pc, seqcov, seqlen ) {
+                              return ( log( sc / seqlen ) ) },
+                         col = heat.colors,
+                         cells.col = heat.colors,
+                         cells.off.alpha = 0.5,
+                         aspect = 0.5,
+                         bait.col = 'green',
+                         grid.col = 'grey', grid.lty = 2, grid.lwd = 2,
+                         protein.label.width = 1.5, sample.label.width = protein.label.width )
 {
     if ( !is.null( measurements ) && !show.msruns ) {
         warning( "Measurements display only supported when show.msruns = TRUE, turning it on" )
@@ -651,7 +651,7 @@ BIMAP.plot <- function( bimap.props, protein.info,
        row.values = 1:ncol(block.matrix)-0.5,
        xlab = 'baits/samples', ylab = 'proteins',
        panel = function(x,y,z) {
-           #print('levelplot')
+           print('Plotting levelplot...')
            panel.levelplot( x,y,z, subscripts=1:length(x), 
                    col.regions = col, alpha.regions = ifelse( !is.null(cells.on.matrix), 0.3, 1.0 ),
                    as.table = TRUE,
@@ -689,7 +689,7 @@ BIMAP.plot <- function( bimap.props, protein.info,
                          widths = samples.clusters$size, 
                          heights = rev( proteins.clusters$size ) ) ) )
 #           if ( !is.null( measurements ) ) {
-#               #print('measurements')
+#               print('Plotting AP-MS measurements...')
 #               for ( ocId in rownames( signals.matrix ) ) {
 #                   cluster.proteins <- subset( proteins, protein_ac %in% subset( bimap.props$proteins.clusters, proteins.cluster == ocId )$protein_ac )$protein_ac
 #                   rowIx <- which( rev( rownames( signals.matrix ) ) == ocId )
@@ -708,7 +708,7 @@ BIMAP.plot <- function( bimap.props, protein.info,
 #               }
 #           }
            if ( nrow( bimap.props$blocks ) > 0 ) {
-               #print('cross-clu')
+               print('Plotting BI-MAP blocks...')
                blocks <- bimap.props$blocks
                if ( show.borders ) {
                    blocks <- ddply( blocks, .( samples.cluster ), function( preys.clusters ) {
@@ -769,7 +769,7 @@ BIMAP.plot <- function( bimap.props, protein.info,
        par.settings = list( layout.widths = layout.widths, layout.heights = layout.heights ),
        xscale.components = function( lim, ... )
        {
-           #print('xaxis')
+           print('Plotting X-axis...')
            res <- xscale.components.default( lim, ...)
            res$num.limit = c(0, nrow(samples) )
            res$top <- levelplot.axis.components( samples, samples.clusters,
@@ -780,7 +780,7 @@ BIMAP.plot <- function( bimap.props, protein.info,
        },
        yscale.components = function( lim, ... )
        {
-           #print('yaxis')
+           print('Plotting Y-axis...')
            res <- yscale.components.default( lim, ...)
            res$num.limit = c(0, nrow(proteins) )
            res$left <- levelplot.axis.components( proteins, proteins.clusters,
