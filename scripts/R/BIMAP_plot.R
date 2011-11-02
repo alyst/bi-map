@@ -586,10 +586,14 @@ BIMAP.plot <- function( bimap.props, protein.info,
         cells.on.matrix <- NULL
         cells.off.matrix <- NULL
     } else {
-        cells.on.matrix <- ms_data.matrix( measurements, protein.info,
+        tmp.matrix <- ms_data.matrix( measurements, protein.info,
                 cellfunc = cell.func,
                 msrun_column = 'msrun', bait_column = 'bait_ac', prey_column = 'prey_ac' )
-        cells.on.matrix <- cells.on.matrix[ proteins$protein_ac, samples$sample ]
+        cells.on.matrix <- block.matrix
+        common.prots <- intersect( rownames( cells.on.matrix ), rownames( tmp.matrix ) )
+        common.samples <- intersect( colnames( cells.on.matrix ), colnames( tmp.matrix ) )
+        cells.on.matrix[ common.prots, common.samples ] <-
+            tmp.matrix[ common.prots, common.samples ]
         cells.off.matrix <- block.matrix
     }
     # distribute values between cells.on/off.matrix according to block on/off state
