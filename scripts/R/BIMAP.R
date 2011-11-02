@@ -500,13 +500,13 @@ BIMAP.extract_clustering <- function( bimap.walk, bimapId,
 
     # get object and probe clusters of chessboard biclustering
     opId <- subset( bimap.walk@clusterings, clustering.serial == bimapId )$objects.partition.serial
-    spId <- subset( bimap.walk@clusterings, clustering.serial == bimapId )$probes.partition.serial
+    ppId <- subset( bimap.walk@clusterings, clustering.serial == bimapId )$probes.partition.serial
     ocIds <- as.character( subset( bimap.walk@objects.partitions, objects.partition.serial == opId )$objects.cluster.serial )
-    scIds <- as.character( subset( bimap.walk@probes.partitions, probes.partition.serial == spId )$probes.cluster.serial )
+    pcIds <- as.character( subset( bimap.walk@probes.partitions, probes.partition.serial == ppId )$probes.cluster.serial )
 
     if ( is.numeric(onblock.threshold) ) {
         # build consensus blocks
-        blockStats <- subset( bimap.walk@blocks.freq, objects.cluster.serial %in% ocIds & probes.cluster.serial %in% scIds )
+        blockStats <- subset( bimap.walk@blocks.freq, objects.cluster.serial %in% ocIds & probes.cluster.serial %in% pcIds )
         blocks <- subset( blockStats, enabled >= onblock.threshold * total,
                              select=c( 'objects.cluster.serial', 'probes.cluster.serial' ) )
     } else {
@@ -529,7 +529,7 @@ BIMAP.extract_clustering <- function( bimap.walk, bimapId,
     proteins.clusters$proteins.cluster <- as.character( proteins.clusters$proteins.cluster )
     proteins.clusters$protein_ac <- as.character( proteins.clusters$protein_ac )
     rownames( proteins.clusters ) <- proteins.clusters$protein_ac
-    samples.clusters <- subset( bimap.walk@probes.clusters, probes.cluster.serial %in% scIds,
+    samples.clusters <- subset( bimap.walk@probes.clusters, probes.cluster.serial %in% pcIds,
         select = c( 'probes.cluster.serial', 'probe' ) )
     colnames( samples.clusters ) <- c( 'samples.cluster', 'sample' )
     samples.clusters$sample <- as.character( samples.clusters$sample )
@@ -556,9 +556,9 @@ BIMAP.extract_clustering <- function( bimap.walk, bimapId,
         print( paste( 'Extracting signals for clustering #', bimapId, '...', sep='') )
         # get subframe with all samples for signals of given bimap
         # (but samples might be from other bimaps, which contain the same clusters)
-        cc_str <- paste( blocks$proteins.cluster, blocks$samples.cluster )
+        block_ids <- paste( blocks$proteins.cluster, blocks$samples.cluster )
         signals.subframe <- subset( bimap.walk@signals,
-                paste( objects.cluster.serial, probes.cluster.serial ) %in% cc_str )[c('step', 'objects.cluster.serial', 'probes.cluster.serial', 'signal')]
+                paste( objects.cluster.serial, probes.cluster.serial ) %in% block_ids )[c('step', 'objects.cluster.serial', 'probes.cluster.serial', 'signal')]
         print( paste( nrow(signals.subframe), "signals extracted" ) )
         colnames( signals.subframe ) <- c( 'step', 'proteins.cluster', 'samples.cluster', 'signal' )
         signals.subframe$proteins.cluster <- as.character( signals.subframe$proteins.cluster )
@@ -566,9 +566,9 @@ BIMAP.extract_clustering <- function( bimap.walk, bimapId,
         print( "Calculating signals statistics..." )
         signal_stats <- BIMAP.signal_stats( signals.subframe )
         res$blocks$signal.mean <- apply( res$blocks, 1,
-                function( cc ) signal_stats$signals.mean[ cc[['proteins.cluster']], cc[['samples.cluster']] ] )
+                function( block ) signal_stats$signals.mean[ block[['proteins.cluster']], block[['samples.cluster']] ] )
         res$blocks$signal.sd = apply( res$blocks, 1,
-                function( cc ) signal_stats$signals.sd[ cc[['proteins.cluster']], cc[['samples.cluster']] ] )
+                function( block ) signal_stats$signals.sd[ block[['proteins.cluster']], block[['samples.cluster']] ] )
         res <- c( res, signal_stats )
         res$signals.subframe = signals.subframe
         print( 'Signals extracted' )

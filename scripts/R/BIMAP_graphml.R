@@ -216,20 +216,20 @@ BIMAP.graphML.dataframe <- function( bimap.props,
     signal.max <- max( bimap.props$signals.mean, na.rm = TRUE )
     signal.min <- min( bimap.props$signals.mean, na.rm = TRUE )
 
-    edges.df <- ddply( bimap.props$blocks, c( 'proteins.cluster', 'samples.cluster' ), function( cc ) {
+    edges.df <- ddply( bimap.props$blocks, c( 'proteins.cluster', 'samples.cluster' ), function( blk ) {
             # TODO: if directed, there could be a link from inner to outer node
-            source_node <- subset( nodes.df, cc$samples.cluster == samples_clusters
-                                            & ( proteins_cluster != cc$proteins.cluster | is.na( proteins_cluster ) )
+            source_node <- subset( nodes.df, blk$samples.cluster == samples_clusters
+                                            & ( proteins_cluster != blk$proteins.cluster | is.na( proteins_cluster ) )
                                             & !is_partial )
-            target_node <- subset( nodes.df, !grepl( paste(group_union,cc$samples.cluster,group_union,sep=''),
+            target_node <- subset( nodes.df, !grepl( paste(group_union,blk$samples.cluster,group_union,sep=''),
                                                      paste( group_union, samples_clusters, group_union, sep='') )
-                    & proteins_cluster == cc$proteins.cluster & !is_embedded )
+                    & proteins_cluster == blk$proteins.cluster & !is_embedded )
             if ( nrow( source_node ) == 1 && nrow( target_node ) == 1 ) {
-                ocId <- as.character( cc$proteins.cluster )
-                scId <- as.character( cc$samples.cluster )
-                #print( paste( '[', ocId, ',', cc_samples, ']' ) )
-                #print( bimap.props$signals.mean[ ocId, cc_samples ] )
-                #print( bimap.props$signals.sd[ ocId, cc_samples ] )
+                ocId <- as.character( blk$proteins.cluster )
+                scId <- as.character( blk$samples.cluster )
+                #print( paste( '[', ocId, ',', blk_samples, ']' ) )
+                #print( bimap.props$signals.mean[ ocId, blk_samples ] )
+                #print( bimap.props$signals.sd[ ocId, blk_samples ] )
                 res <- data.frame( source_id = source_node$node_id, target_id = target_node$node_id,
                             type = 'block',
                             abundance = bimap.props$signals.mean[ ocId, scId ],
@@ -244,12 +244,12 @@ BIMAP.graphML.dataframe <- function( bimap.props,
                 return( res )
             } else {
                 if ( nrow( source_node ) > 1 ) {
-                    warning( "Samples cluster #", cc$samples.cluster, ": ", nrow( source_node ), " source nodes" )
+                    warning( "Samples cluster #", blk$samples.cluster, ": ", nrow( source_node ), " source nodes" )
                 } else if ( nrow( source_node ) == 0 ) {
-                    warning( "Samples cluster #", cc$samples.cluster, ": no source nodes. Is bait protein present in proteins clusters?" )
+                    warning( "Samples cluster #", blk$samples.cluster, ": no source nodes. Is bait protein present in proteins clusters?" )
                 }
                 if ( nrow( target_node ) != 1 ) {
-                    warning( "Proteins cluster #", cc$proteins.cluster, ": ", nrow( target_node ), " target nodes" )
+                    warning( "Proteins cluster #", blk$proteins.cluster, ": ", nrow( target_node ), " target nodes" )
                 }
                 # no edges for embedded nodes
                 data.frame( source_id = list(), target_id = list(), type = list(),

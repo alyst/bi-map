@@ -536,9 +536,9 @@ BIMAP.plot <- function( bimap.props, protein.info,
     rownames( bimap.matrix ) <- rownames( proteins.clusters )
     colnames( bimap.matrix ) <- rownames( samples.clusters )
     for ( blockIx in 1:nrow(bimap.props$blocks) ) {
-        cc <- bimap.props$blocks[blockIx,]
-        bimap.matrix[ as.character( cc[['proteins.cluster']] ),
-                   as.character( cc[['samples.cluster']] ) ] <- 1
+        block <- bimap.props$blocks[blockIx,]
+        bimap.matrix[ as.character( block[['proteins.cluster']] ),
+                      as.character( block[['samples.cluster']] ) ] <- 1
     }
 
     proteins <- proteins[ signals.matrix.bihclust$proteins.ordering$elements.order, ]
