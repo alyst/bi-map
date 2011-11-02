@@ -207,7 +207,7 @@ BIMAP.graphML.dataframe <- function( bimap.props,
             return ( paste( 'Samples', paste( intersect_samples, collapse = ', ' ) ) )
         } )
     nodes.df[ samples_clu_node_mask, 'short_id' ] <- nodes.df[ samples_clu_node_mask, 'experiment_description' ]
-    samples_bait_node_mask <- !is.na( nodes.df$node_type == 'bait' )
+    samples_bait_node_mask <- nodes.df$node_type == 'bait'
     nodes.df[ samples_bait_node_mask, 'experiment_description' ] <- sapply( nodes.df[ samples_bait_node_mask, 'node_id' ], function( cur_bait_ac ) {
             samples <- subset( sample.info, bait_ac == cur_bait_ac )$sample
             return ( paste( 'Samples', paste( samples, collapse = ', ' ) ) )
