@@ -221,28 +221,28 @@
         <xsl:variable name='LineStyle'>
             <xsl:choose>
                 <xsl:when test="$EdgeType='bait_prey'">line</xsl:when>
-                <xsl:when test="$EdgeType='cross_cluster'">line</xsl:when>
+                <xsl:when test="$EdgeType='bimap_block'">line</xsl:when>
                 <xsl:when test="$EdgeType='samples_cluster_composition'">dashed</xsl:when>
             </xsl:choose>
         </xsl:variable>
         <xsl:variable name='IsDirected'>
             <xsl:choose>
                 <xsl:when test="$EdgeType='bait_prey'">true</xsl:when>
-                <xsl:when test="$EdgeType='cross_cluster'">true</xsl:when>
+                <xsl:when test="$EdgeType='bimap_block'">true</xsl:when>
                 <xsl:when test="$EdgeType='samples_cluster_composition'">false</xsl:when>
             </xsl:choose>
         </xsl:variable>
         <xsl:variable name='Width'>
             <xsl:choose>
                 <xsl:when test="$EdgeType='bait_prey'">3.0</xsl:when>
-                <xsl:when test="$EdgeType='cross_cluster'">4.0</xsl:when>
+                <xsl:when test="$EdgeType='bimap_block'">4.0</xsl:when>
                 <xsl:when test="$EdgeType='samples_cluster_composition'">3.0</xsl:when>
             </xsl:choose>
         </xsl:variable>
         <xsl:variable name='Color'>
             <xsl:choose>
                 <xsl:when test="$EdgeType='bait_prey'">#BB8888<xsl:value-of select="$HexIntensity"/></xsl:when>
-                <xsl:when test="$EdgeType='cross_cluster'">#5588BB<xsl:value-of select="$HexIntensity"/></xsl:when>
+                <xsl:when test="$EdgeType='bimap_block'">#5588BB<xsl:value-of select="$HexIntensity"/></xsl:when>
                 <xsl:when test="$EdgeType='samples_cluster_composition'">#993300</xsl:when>
             </xsl:choose>
         </xsl:variable>
@@ -250,7 +250,7 @@
         <xsl:variable name='TargetArrow'>
             <xsl:choose>
                 <xsl:when test="$EdgeType='bait_prey'">standard</xsl:when>
-                <xsl:when test="$EdgeType='cross_cluster'">standard</xsl:when>
+                <xsl:when test="$EdgeType='bimap_block'">standard</xsl:when>
                 <xsl:otherwise>none</xsl:otherwise>
             </xsl:choose>
         </xsl:variable>

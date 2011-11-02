@@ -234,7 +234,7 @@ BIMAP.graphML.dataframe <- function( bimap.props,
                 #print( bimap.props$signals.mean[ ocId, blk_samples ] )
                 #print( bimap.props$signals.sd[ ocId, blk_samples ] )
                 res <- data.frame( source_id = source_node$node_id, target_id = target_node$node_id,
-                            type = 'block',
+                            type = 'bimap_block',
                             abundance = bimap.props$signals.mean[ ocId, scId ],
                             abundance_sd = NA,
                             intensity.scaled = (bimap.props$signals.mean[ ocId, scId ] - signal.min) / (signal.max - signal.min),
