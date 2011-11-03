@@ -541,6 +541,8 @@ BIMAP.plot <- function( bimap.props, protein.info,
 
     # compose sample labels
     samples$axis_label <- proteins[ samples$bait_ac, 'samples_axis_label' ]
+    # use bait_ac for baits not in proteins info (also if they are not protein at all)
+    samples[ is.na( samples$axis_label ), 'axis_label' ] <- samples[ is.na( samples$axis_label ), 'bait_ac' ]
     if ( show.sample.id ) {
         samples$axis_label <- paste( samples$axis_label, ':', samples$sample )
     }
