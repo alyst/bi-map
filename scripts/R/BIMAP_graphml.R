@@ -21,6 +21,29 @@ BIMAP.graphML.dataframe <- function( bimap.props,
     bimap.props$signal.max <- max( bimap.props$signals.mean, na.rm = TRUE )
     bimap.props$signal.min <- min( bimap.props$signals.mean, na.rm = TRUE )
 
+    # create fake protein clusters and protein information for baits that are not proteins
+    alien.baits <- setdiff( bimap.props$samples.clusters$bait_ac,
+                            bimap.props$proteins.clusters$protein_ac )
+    if ( length( alien.baits ) > 0 ) {
+        # protein clusters that match sample clusters for "alien" baits
+        fake_protein_clusters <- subset( bimap.props$samples.clusters, bait_ac %in% alien.baits,
+                                         select = c( 'samples.cluster', 'bait_ac' ) )
+        colnames( fake_protein_clusters ) <- c( 'proteins.cluster', 'protein_ac' )
+        fake_protein_clusters$proteins.cluster <- paste( 'bait_clu_', fake_protein_clusters$proteins.cluster, sep = '' )
+        bimap.props$proteins.clusters <- rbind( bimap.props$proteins.clusters,
+                                                fake_protein_clusters )
+		# fake protein information for baits that are not proteins
+        bait.info.template <- protein.info[ 1, , drop=FALSE ]
+        bait.protein.info <- do.call( 'rbind', lapply( alien.baits, function( bait_ac ) {
+            bait.info <- bait.info.template
+            bait.info[,intersect(colnames(protein.info),proteins_cluster_export_cols)] <- NA
+            bait.info[,protein_label_col] <- bait_ac
+            return ( bait.info )
+        } ) )
+        rownames( bait.protein.info ) <- alien.baits
+        protein.info <- rbind( protein.info, bait.protein.info )
+    }
+
     # merge samples and proteins clusters via bait-prey
     bait_prey.clusters <- merge( bimap.props$proteins.clusters, bimap.props$samples.clusters,
                                  by.x = 'protein_ac', by.y = 'bait_ac',
