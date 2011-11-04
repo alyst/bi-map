@@ -461,6 +461,7 @@ BIMAP.plot <- function( bimap.props, protein.info,
                          show.sample.id = TRUE, show.msruns = FALSE,
                          show.borders = FALSE,
                          extended.result = FALSE,
+                         sample_name_col = NULL,
                          protein_name_col = 'short_id',
                          protein_description_col = NULL,
                          title = NULL,
@@ -525,6 +526,12 @@ BIMAP.plot <- function( bimap.props, protein.info,
     }
     samples$short_label <- samples$col_id
     rownames( samples ) <- samples$col_id
+    if ( !is.null( sample_name_col ) ) {
+        samples$short_label <- sample.info[ bimap.props$samples.clusters$sample, sample_name_col ]
+        if ( show.msruns ) {
+            samples$short_label <- paste( samples$short_label, bimap.props$samples.clusters$msrun )
+        }
+    }
     #print( samples.clusters )
     
     # compose proteins labels
