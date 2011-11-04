@@ -664,6 +664,7 @@ BIMAP.plot <- function( bimap.props, protein.info,
            panel.levelplot( x,y,z, subscripts=1:length(x), 
                    col.regions = col, alpha.regions = ifelse( !is.null(cells.on.matrix), 0.3, 1.0 ),
                    as.table = TRUE,
+                   border = NA,
 #                column.values = 1:nrow(block.matrix)-0.5, 
 #                row.values = 1:ncol(block.matrix )-0.5
            )
@@ -671,6 +672,9 @@ BIMAP.plot <- function( bimap.props, protein.info,
                panel.levelplot( x,y,t(cells.on.matrix), subscripts=1:length(x), 
                    col.regions = cells.col,
                    as.table = TRUE,
+                   region = TRUE,
+                   border = NA,
+                   shrink = c( 0.2, 0.9 ),
     #               column.values = 1:nrow(block.matrix)-0.5, 
     #               row.values = 1:ncol(block.matrix )-0.5
               )
@@ -682,6 +686,9 @@ BIMAP.plot <- function( bimap.props, protein.info,
                    col.regions = cells.col,
                    alpha.regions = cells.off.alpha,
                    as.table = TRUE,
+                   region = TRUE,
+                   border = NA,
+                   shrink = c( 0.2, 0.9 ),
     #                column.values = 1:nrow(block.matrix)-0.5, 
     #                row.values = 1:ncol(block.matrix )-0.5
                )
