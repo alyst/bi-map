@@ -69,6 +69,7 @@ BIMAP.import_msdata <- function( ms_data, protein_info, msrun.multipliers = NULL
     sample_column = 'sample', msrun_column = 'msrun',
     bait_column = 'bait_ac', prey_column = 'prey_ac',
     sc_column = 'sc', pc_column = 'pc',
+    sample_extra_columns = c(),
     protein_ac_column = 'primaryac', protein_seqlength_column = 'seqlength'
 ){
     ms_data_noglob <- ms_data[ ms_data[, msrun_column ] != '#glob#', ]
@@ -81,11 +82,12 @@ BIMAP.import_msdata <- function( ms_data, protein_info, msrun.multipliers = NULL
     if ( !is.null( pc_column ) ) {
         measurements.df$pc <- as.integer( ms_data_noglob[, pc_column ] )
     }
-    samples.df <- unique( subset( ms_data_noglob, select = unique( c( sample_column, bait_column ) ) ) )
-    samples.df <- data.frame( 
-            sample = as.character( samples.df[, sample_column ] ), 
-            bait_ac = as.character( samples.df[, bait_column ] ),
-            stringsAsFactors = FALSE )
+    samples.colnames <- unique( c( sample_column, bait_column,
+                                   intersect( colnames(ms_data_noglob),
+                                              sample_extra_columns ) ) )
+    samples.df <- unique( subset( ms_data_noglob, select = samples.colnames ) )
+    samples.colnames[1:2] <- c( 'sample', 'bait_ac' )
+    colnames( samples.df ) <- samples.colnames 
     rownames( samples.df ) <- samples.df$sample 
     msruns.df <- as.data.frame( unique( subset( ms_data_noglob, select = unique( c( msrun_column, sample_column ) ) ) ),
                                 stringsAsFactors = FALSE )
@@ -98,6 +100,8 @@ BIMAP.import_msdata <- function( ms_data, protein_info, msrun.multipliers = NULL
         mean.mult <- mean( msrun.multipliers[ msruns.df$msrun ], na.rm = TRUE )
         msruns.df$multiplier <- msrun.multipliers[ msruns.df$msrun ] / mean.mult
         msruns.df[ is.na(msruns.df$multiplier), 'multiplier' ] <- 1
+    } else {
+        msruns.df$multiplier <- 1
     }
     proteins.df <- unique( protein_info[ protein_info[ , protein_ac_column ] %in% 
                 union( as.character( ms_data_noglob[ , prey_column ] ), 
