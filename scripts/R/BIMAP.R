@@ -108,9 +108,12 @@ BIMAP.import_msdata <- function( ms_data, protein_info, msrun.multipliers = NULL
     colnames( proteins.df ) <- c( 'protein_ac', 'seqlength' )
     rownames( proteins.df ) <- proteins.df$protein_ac 
 
+    exp_design.df <- merge( samples.df, msruns.df )[,c('bait_ac','sample','msrun','multiplier')]
+    rownames( exp_design.df ) <- exp_design$msrun
     return ( list(  measurements = measurements.df,
                     samples = samples.df, 
                     msruns = msruns.df, 
+                    exp_design = exp_design.df,
                     proteins = proteins.df ) )
 }
 
