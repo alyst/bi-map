@@ -519,12 +519,12 @@ BIMAP.plot <- function( bimap.props, protein.info,
         stringsAsFactors = FALSE
     )
     if ( show.msruns ) {
-        samples$sample <- bimap.props$samples.clusters$msrun
+        samples$col_id <- bimap.props$samples.clusters$msrun
     } else {
-        samples$sample <- bimap.props$samples.clusters$sample
+        samples$col_id <- bimap.props$samples.clusters$sample
     }
-    samples$short_label = samples$sample
-    rownames( samples ) <- samples$sample
+    samples$short_label <- samples$col_id
+    rownames( samples ) <- samples$col_id
     #print( samples.clusters )
     
     # compose proteins labels
@@ -544,7 +544,7 @@ BIMAP.plot <- function( bimap.props, protein.info,
     # use bait_ac for baits not in proteins info (also if they are not protein at all)
     samples[ is.na( samples$axis_label ), 'axis_label' ] <- samples[ is.na( samples$axis_label ), 'bait_ac' ]
     if ( show.sample.id ) {
-        samples$axis_label <- paste( samples$axis_label, ':', samples$sample )
+        samples$axis_label <- paste( samples$axis_label, ':', samples$short_label )
     }
 
     signals.matrix.bihclust <- BIMAP.signals_matrix.bihclust( bimap.props )
@@ -601,7 +601,7 @@ BIMAP.plot <- function( bimap.props, protein.info,
 
     # prepare cells matrix
     block.matrix <- matrix( NA, nrow = nrow( proteins ), ncol = nrow( samples ) )
-    colnames(block.matrix) <- samples$sample
+    colnames(block.matrix) <- samples$col_id
     rownames(block.matrix) <- proteins$protein_ac
     if ( is.null( measurements ) ) {
         cells.on.matrix <- NULL
@@ -621,7 +621,7 @@ BIMAP.plot <- function( bimap.props, protein.info,
     for( protsClu in proteins.clusters$serial ) {
         clu.prots <- subset( bimap.props$proteins.clusters, proteins.cluster == protsClu )$protein_ac
         for( samplesClu in samples.clusters$serial ) {
-            clu.samples <- subset( samples, samples.cluster == samplesClu )$sample
+            clu.samples <- subset( samples, samples.cluster == samplesClu )$col_id
             clu.val <- signals.matrix[ protsClu, samplesClu ]
             block.matrix[ clu.prots, clu.samples ] <- signals.matrix[ protsClu, samplesClu ]
             if ( !is.null( measurements ) ) {
