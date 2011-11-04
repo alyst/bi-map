@@ -117,6 +117,19 @@ BIMAP.import_msdata <- function( ms_data, protein_info, msrun.multipliers = NULL
                     proteins = proteins.df ) )
 }
 
+BIMAP.save_msdata <- function( bimap.data, data_path
+){
+    write.table( bimap.data$measurements,
+                 file = file.path( data_path, 'measurements.txt' ),
+                 col.names = TRUE, row.names = FALSE, quote = FALSE, sep = '\t' )
+    write.table( bimap.data$exp_design,
+                 file = file.path( data_path, 'exp_design.txt' ),
+                 col.names = TRUE, row.names = FALSE, quote = FALSE, sep = '\t' )
+    write.table( rbind( bimap.data$proteins, data.frame( protein_ac = 'nobait', seqlength = 1 ) ),
+                 file = file.path( data_path, 'proteins.txt' ),
+                 col.names = TRUE, row.names = FALSE, quote = FALSE, sep = '\t' )
+}
+
 BIMAP.walk.eval <- function(
     protein_info,
     sample_info,
