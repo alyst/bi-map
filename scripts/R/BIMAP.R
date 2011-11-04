@@ -123,13 +123,14 @@ BIMAP.import_msdata <- function( ms_data, protein_info, msrun.multipliers = NULL
 
 BIMAP.save_msdata <- function( bimap.data, data_path
 ){
-    write.table( bimap.data$measurements,
+    write.table( bimap.data$measurements[,intersect(colnames(bimap.data$measurment),
+                                                    c('msrun','prey_ac','sc','pc'))],
                  file = file.path( data_path, 'measurements.txt' ),
                  col.names = TRUE, row.names = FALSE, quote = FALSE, sep = '\t' )
-    write.table( bimap.data$exp_design,
+    write.table( bimap.data$exp_design[,c('bait_ac','sample','msrun','multiplier')],
                  file = file.path( data_path, 'exp_design.txt' ),
                  col.names = TRUE, row.names = FALSE, quote = FALSE, sep = '\t' )
-    write.table( rbind( bimap.data$proteins, data.frame( protein_ac = 'nobait', seqlength = 1 ) ),
+    write.table( rbind( bimap.data$proteins[,c('protein_ac','seqlength')], data.frame( protein_ac = 'nobait', seqlength = 1 ) ),
                  file = file.path( data_path, 'proteins.txt' ),
                  col.names = TRUE, row.names = FALSE, quote = FALSE, sep = '\t' )
 }
