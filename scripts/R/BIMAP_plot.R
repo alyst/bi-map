@@ -128,12 +128,12 @@ plot.block <- function( proteins, samples,
     mean.signal = signals.matrix[ as.character( proteins.cluster ), as.character( samples.cluster ) ]
     if ( is.na(mean.signal) ) {
         warning( "Cluster ", proteins.cluster, "x", samples.cluster, 
-                 "have no mean signal" )
+                 " has no mean signal" )
     }
     sd.signal = signals.matrix.sd[ as.character( proteins.cluster ), as.character( samples.cluster ) ]
     if ( is.na( sd.signal ) ) {
         warning( "Cluster ", proteins.cluster, "x", samples.cluster, 
-                 "have no signal sd" )
+                 " has no signal sd" )
     } 
     main.title = paste( format(mean.signal,digits=3), "\u0b1",
                         format(sd.signal,digits=3), sep="" )
