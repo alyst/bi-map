@@ -2,12 +2,41 @@
 
 #include <fstream>
 
+#include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
 typedef boost::escaped_list_separator<char> csv_listsep_t;
 typedef boost::tokenizer< boost::escaped_list_separator<char> > csvrow_tokenizer_t;
+
+BIMAPIOParams::BIMAPIOParams()
+    : minCrossClusRefCount( 1 )
+    , minObjectsPtnRefCount( 1 )
+    , minProbesPtnRefCount( 1 )
+    , csvColumnSeparator( '\t' )
+    , mapBaitsToObjects( true )
+{
+}
+
+void BIMAPIOParams::checkFilenames()
+{
+    boost::filesystem::path proteins_file_path( proteinsFilename );
+    if ( !boost::filesystem::exists( proteins_file_path ) ) {
+        THROW_RUNTIME_ERROR( "Proteins file not found: " << proteins_file_path );
+    }
+    proteinsFilename = proteins_file_path.string();
+    boost::filesystem::path exp_design_file_path( expDesignFilename );
+    if ( !boost::filesystem::exists( exp_design_file_path ) ) {
+        THROW_RUNTIME_ERROR( "Experimental design file not found: " << exp_design_file_path );
+    }
+    expDesignFilename = exp_design_file_path.string();
+    boost::filesystem::path measurements_file_path( measurementsFilename );
+    if ( !boost::filesystem::exists( measurements_file_path ) ) {
+        THROW_RUNTIME_ERROR( "Measurements file not found: " << measurements_file_path );
+    }
+    measurementsFilename = measurements_file_path.string();
+}
 
 csvrow_tokenizer_t RowTokenizer( const std::string& row, char sep = '\t' )
 {
@@ -112,15 +141,12 @@ void ImportMeasurements(
  *  @see ImportMeasurements()
  */
 OPAData OPADataImportCSV(
-    const char* proteinsFilename,
-    const char* expDesignFilename,
-    const char* measurementsFilename,
-    bool        mapBaitsToObjects,
-    char        sep
+    BIMAPIOParams&  ioParams
 ){
-    OPAData data( mapBaitsToObjects );
-    ImportProteins( data, proteinsFilename, sep );
-    ImportExpDesign( data, expDesignFilename, sep );
-    ImportMeasurements( data, measurementsFilename, sep );
+    ioParams.checkFilenames();
+    OPAData data( ioParams.mapBaitsToObjects );
+    ImportProteins( data, ioParams.proteinsFilename.c_str(), ioParams.csvColumnSeparator );
+    ImportExpDesign( data, ioParams.expDesignFilename.c_str(), ioParams.csvColumnSeparator );
+    ImportMeasurements( data, ioParams.measurementsFilename.c_str(), ioParams.csvColumnSeparator );
     return ( data );
 }

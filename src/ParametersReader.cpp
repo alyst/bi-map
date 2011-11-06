@@ -5,16 +5,6 @@
 
 namespace po = boost::program_options;
 
-
-BIMAPIOParams::BIMAPIOParams()
-    : minCrossClusRefCount( 1 )
-    , minObjectsPtnRefCount( 1 )
-    , minProbesPtnRefCount( 1 )
-    , csvColumnSeparator( '\t' )
-    , mapBaitsToObjects( true )
-{
-}
-
 bool BIMAPParamsRead(
     int argc, char* argv[],
     ChessboardBiclusteringHyperPriors&     hyperpriors,

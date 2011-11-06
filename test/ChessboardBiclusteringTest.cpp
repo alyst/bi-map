@@ -240,11 +240,12 @@ TEST( ChessboardBiclustering, csv_in )
         THROW_RUNTIME_ERROR( "OPAData test data folder not found: " << test_data_path );
     }
 
-    OPAData                     data = OPADataImportCSV(
-        ( test_data_path / "test_proteins.csv" ).string().c_str(),
-        ( test_data_path / "test_exp_design.csv" ).string().c_str(),
-        ( test_data_path / "test_measurements.csv" ).string().c_str()
-    );
+    BIMAPIOParams   params;
+    params.expDesignFilename = ( test_data_path / "test_exp_design.csv" ).string();
+    params.proteinsFilename = ( test_data_path / "test_proteins.csv" ).string();
+    params.measurementsFilename = ( test_data_path / "test_measurements.csv" ).string();
+    params.checkFilenames();
+    OPAData         data = OPADataImportCSV( params );
 }
 
 TEST( ChessboardBiclustering, DISABLED_serialization_out )

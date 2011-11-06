@@ -4,21 +4,7 @@
 #include <string>
 
 #include "BIMAPSampler.h"
-
-struct BIMAPIOParams {
-    size_t          minCrossClusRefCount;
-    size_t          minObjectsPtnRefCount;
-    size_t          minProbesPtnRefCount;
-    std::string     outputFilename;
-    std::string     dataFilename;
-    std::string     proteinsFilename;
-    std::string     expDesignFilename;
-    std::string     measurementsFilename;
-    char            csvColumnSeparator;
-    bool            mapBaitsToObjects;
-
-    BIMAPIOParams();
-};
+#include "OPADataImportCSV.h"
 
 bool BIMAPParamsRead(
     int argc, char* argv[],

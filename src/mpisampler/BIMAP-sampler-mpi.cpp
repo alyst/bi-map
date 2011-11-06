@@ -139,23 +139,7 @@ int main( int argc, char* argv[] )
             data.reset( new OPAData( OPAData::load( data_file_path.string().c_str() ) ) );
         }
         else if ( !ioParams->proteinsFilename.empty() ) {
-            boost::filesystem::path proteins_file_path( ioParams->proteinsFilename );
-            if ( !boost::filesystem::exists( proteins_file_path ) ) {
-                THROW_RUNTIME_ERROR( "Proteins file not found: " << proteins_file_path );
-            }
-            boost::filesystem::path exp_design_file_path( ioParams->expDesignFilename );
-            if ( !boost::filesystem::exists( exp_design_file_path ) ) {
-                THROW_RUNTIME_ERROR( "Experimental design file not found: " << exp_design_file_path );
-            }
-            boost::filesystem::path measurements_file_path( ioParams->measurementsFilename );
-            if ( !boost::filesystem::exists( measurements_file_path ) ) {
-                THROW_RUNTIME_ERROR( "Measurements file not found: " << measurements_file_path );
-            }
-            data.reset( new OPAData( OPADataImportCSV( proteins_file_path.string().c_str(),
-                                    exp_design_file_path.string().c_str(),
-                                    measurements_file_path.string().c_str(),
-                                    ioParams->mapBaitsToObjects,
-                                    ioParams->csvColumnSeparator ) ) );
+            data.reset( new OPAData( OPADataImportCSV( *ioParams ) ) );
         } else {
             THROW_RUNTIME_ERROR( "No input data" );
         }
