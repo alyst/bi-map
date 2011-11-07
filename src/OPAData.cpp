@@ -272,6 +272,27 @@ void OPAData::resetIndexes()
     }
 }
 
+void OPAData::resetSumMatrix() const
+{
+    _sumMatrix.reset( objectsCount(), probesCount(), 0 );
+    for ( probe_index_t probeIx = 0; probeIx < _probes.size(); ++probeIx ) {
+        const OPAProbe& probe = _probes[ probeIx ];
+        const OPAAssay* pLastAssay = &assay( probe.assayIndexes().back() );
+        const assay_index_t firstAssayIx = probe.assayIndexes().front();
+
+        for ( object_index_t objIx = 0; objIx < _objects.size(); ++objIx ) {
+            MassSpectraData sum = 0;
+            const celldata_t*  cellDataVec = &measurement( objIx, firstAssayIx );
+            for ( const OPAAssay* pAssay = &assay( firstAssayIx ); pAssay <= pLastAssay; ++pAssay ) {
+                const OPAData::celldata_t&  cellData = *(cellDataVec++);
+                sum.sc += cellData.sc;
+                sum.pc += cellData.pc;
+            }
+            _sumMatrix( objIx, probeIx ) = sum;
+        }
+    }
+}
+
 /**
  *  Map from object index to object label.
  */

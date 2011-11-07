@@ -206,6 +206,8 @@ private:
 
     data_matrix_t               _matrix;
 
+    mutable data_matrix_t       _sumMatrix;
+
     mutable bool                _matrixModified;
     /**
      *  For each object a binary vector of assays size -- 1 if this object is seen in given assay.
@@ -236,10 +238,12 @@ protected:
     void resetIndexes();
 
     void resetHits() const;
+    void resetSumMatrix() const;
 
     void updateMatrixDependent() const {
         if ( _matrixModified ) {
             resetHits();
+            resetSumMatrix();
             _matrixModified = false;
         }
     }
@@ -336,6 +340,11 @@ public:
 
     const celldata_t& measurement( object_index_t objIx, assay_index_t assayIx ) const {
         return ( _matrix( objIx, assayIx ) );
+    }
+
+    const celldata_t& measurementSum( object_index_t objIx, probe_index_t probeIx ) const {
+        updateMatrixDependent();
+        return ( _sumMatrix( objIx, probeIx ) );
     }
 
     /**
