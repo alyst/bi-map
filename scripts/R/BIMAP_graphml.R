@@ -231,14 +231,14 @@ BIMAP.graphML.dataframe <- function( bimap.props,
             if ( !is.null(sample_label_col) ) {
                 intersect_samples <- sort( unique( sample.info[intersect_samples,sample_label_col] ) )
             }
-            return ( paste( 'Samples', paste( intersect_samples, collapse = ', ' ) ) )
+            return ( paste( intersect_samples, collapse = '\n' ) )
         } )
     nodes.df[ samples_clu_node_mask, 'short_id' ] <- nodes.df[ samples_clu_node_mask, 'experiment_description' ]
     samples_bait_node_mask <- nodes.df$node_type == 'bait'
     nodes.df[ samples_bait_node_mask, 'experiment_description' ] <- sapply( nodes.df[ samples_bait_node_mask, 'node_id' ], function( cur_bait_ac ) {
             samples <- subset( sample.info, bait_ac == cur_bait_ac )
             sample_labels <- sort( unique( samples[,ifelse( is.null(sample_label_col), 'sample', sample_label_col ) ] ) )
-            return ( paste( 'Samples', paste( sample_labels, collapse = ', ' ) ) )
+            return ( paste( sample_labels, collapse = '\n' ) )
         } )
     #print( nodes.df )
 
