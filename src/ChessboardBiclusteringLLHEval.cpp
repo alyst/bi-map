@@ -302,7 +302,8 @@ log_prob_t ChessboardBiclusteringLLHEval::cellsNoiseLLH(
 log_prob_t BlockEnablementDataLLH::operator()(
     bool isEnabled
 ) const {
-    return ( CellsLLHEval::BlockLLH(
+    return ( isEnabled ? CellsLLHEval::BlockLLH(
                     objects, probes,
-                    isEnabled ? cache.signalLnPdf() : cache.noiseLnPdf() ) );
+                    cache.signalLnPdf() )
+             : cache.noiseLLH( objects, probes ) );
 }

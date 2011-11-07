@@ -96,9 +96,6 @@ public:
         if ( !_noiseLnPdfValid || !_signalLnPdfValid ) evalMatrices();
     }
 
-    const lnprob_matrix_type& noiseLnPdf() const {
-        return ( _noiseLnPdf );
-    }
     const lnprob_matrix_type& signalLnPdf() const {
         return ( _signalLnPdf );
     }
