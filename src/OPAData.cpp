@@ -31,9 +31,11 @@ std::string entity_error::compose_error_msg(
     return ( out.str() );
 }
 
-OPAData::OPAData( bool mapBaitsToObjects )
+OPAData::OPAData( bool mapBaitsToObjects,
+                  size_t objectsUniverseSize )
     : _matrixModified( true )
     , _mapBaitsToObjects( mapBaitsToObjects )
+    , _objectsUniverseSize( objectsUniverseSize )
 {
 }
 

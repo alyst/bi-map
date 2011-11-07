@@ -200,6 +200,7 @@ private:
     bool                        _mapBaitsToObjects;     /**< If baits would be mapped to objects */
     probe_vector_t              _probes;
     object_vector_t             _objects;
+    size_t                      _objectsUniverseSize;   /**< total size of all available objects */
 
     assay_vector_t              _assays;
 
@@ -250,6 +251,7 @@ protected:
     template<class Archive>
     void load(Archive & ar, const unsigned int version)
     {
+        ar >> boost::serialization::make_nvp( "objectsUniverseSize", _objectsUniverseSize );
         ar >> boost::serialization::make_nvp( "mapBaitsToObjects", _mapBaitsToObjects );
         ar >> boost::serialization::make_nvp( "probes", _probes );
         ar >> boost::serialization::make_nvp( "objects", _objects );
@@ -263,6 +265,7 @@ protected:
     template<class Archive>
     void save(Archive & ar, const unsigned int version) const
     {
+        ar << boost::serialization::make_nvp( "objectsUniverseSize", _objectsUniverseSize );
         ar << boost::serialization::make_nvp( "mapBaitsToObjects", _mapBaitsToObjects );
         ar << boost::serialization::make_nvp( "probes", _probes );
         ar << boost::serialization::make_nvp( "objects", _objects );
@@ -275,13 +278,16 @@ public:
     typedef OPAObject const*                const_object_ptr_t;
     typedef bait_to_probe_mmap_t::const_iterator const_bait_to_probe_iterator;
 
-    OPAData( bool mapBaitsToObjects = true );
+    OPAData( bool mapBaitsToObjects = true, size_t objectsUniverseSize = 25000 );
 
     bool isMapBaitsToObjects() const {
         return ( _mapBaitsToObjects );
     }
     size_type objectsCount() const {
         return ( _objects.size() );
+    }
+    size_type objectsUniverseSize() const {
+        return ( _objectsUniverseSize );
     }
 
     const OPAObject& object( object_index_t objIx ) const {

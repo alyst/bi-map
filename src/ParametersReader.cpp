@@ -40,6 +40,8 @@ bool BIMAPParamsRead(
 
         ( "map_baits_to_preys", po::value<bool>( &ioParams.mapBaitsToObjects )->default_value( ioParams.mapBaitsToObjects ),
           "if true, baits are regarded as proteins and experimental design likelihood component is calculated" )
+        ( "objects_universe_size", po::value<size_t>( &ioParams.objectsUniverseSize )->default_value( ioParams.objectsUniverseSize ),
+          "total number of objects in the universe (proteome size)" )
 
         ( "output_file", po::value< std::string >( &ioParams.outputFilename ),
           "output filename <serialized BI-MAP MCMC walk>" );

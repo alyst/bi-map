@@ -16,6 +16,7 @@ BIMAPIOParams::BIMAPIOParams()
     , minProbesPtnRefCount( 1 )
     , csvColumnSeparator( '\t' )
     , mapBaitsToObjects( true )
+    , objectsUniverseSize( 25000 )
 {
 }
 
@@ -144,7 +145,7 @@ OPAData OPADataImportCSV(
     BIMAPIOParams&  ioParams
 ){
     ioParams.checkFilenames();
-    OPAData data( ioParams.mapBaitsToObjects );
+    OPAData data( ioParams.mapBaitsToObjects, ioParams.objectsUniverseSize );
     ImportProteins( data, ioParams.proteinsFilename.c_str(), ioParams.csvColumnSeparator );
     ImportExpDesign( data, ioParams.expDesignFilename.c_str(), ioParams.csvColumnSeparator );
     ImportMeasurements( data, ioParams.measurementsFilename.c_str(), ioParams.csvColumnSeparator );

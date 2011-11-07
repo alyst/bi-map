@@ -15,6 +15,7 @@ struct BIMAPIOParams {
     std::string     measurementsFilename;
     char            csvColumnSeparator;
     bool            mapBaitsToObjects;
+    size_t          objectsUniverseSize;
 
     BIMAPIOParams();
 
