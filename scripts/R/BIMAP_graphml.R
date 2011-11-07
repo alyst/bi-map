@@ -11,6 +11,7 @@ BIMAP.graphML.dataframe <- function( bimap.props,
     protein.info, sample.info, msrun.info,
     protein_label_col = 'short_label',
     protein_export_cols = c(),
+    sample_label_col = NULL,
     proteins_cluster_label_col = 'proteins.cluster',
     proteins_cluster_export_cols = c( 'avg.pairs.freq' ),
     min.intensity = 5, hex.intensity.power = 5
@@ -227,13 +228,17 @@ BIMAP.graphML.dataframe <- function( bimap.props,
                     subset( bimap.props$samples.clusters, samples.cluster == sample_cluster )$sample
                 } ) ) )
             intersect_samples <- names( samples_stats )[samples_stats == length( samples_clusters_list )]
+            if ( !is.null(sample_label_col) ) {
+                intersect_samples <- sort( unique( sample.info[intersect_samples,sample_label_col] ) )
+            }
             return ( paste( 'Samples', paste( intersect_samples, collapse = ', ' ) ) )
         } )
     nodes.df[ samples_clu_node_mask, 'short_id' ] <- nodes.df[ samples_clu_node_mask, 'experiment_description' ]
     samples_bait_node_mask <- nodes.df$node_type == 'bait'
     nodes.df[ samples_bait_node_mask, 'experiment_description' ] <- sapply( nodes.df[ samples_bait_node_mask, 'node_id' ], function( cur_bait_ac ) {
-            samples <- subset( sample.info, bait_ac == cur_bait_ac )$sample
-            return ( paste( 'Samples', paste( samples, collapse = ', ' ) ) )
+            samples <- subset( sample.info, bait_ac == cur_bait_ac )
+            sample_labels <- sort( unique( samples[,ifelse( is.null(sample_label_col), 'sample', sample_label_col ) ] ) )
+            return ( paste( 'Samples', paste( sample_labels, collapse = ', ' ) ) )
         } )
     #print( nodes.df )
 
