@@ -32,7 +32,7 @@ std::string entity_error::compose_error_msg(
 }
 
 OPAData::OPAData( bool mapBaitsToObjects )
-    : _hitsDirty( true )
+    : _matrixModified( true )
     , _mapBaitsToObjects( mapBaitsToObjects )
 {
 }
@@ -171,7 +171,7 @@ void OPAData::addMeasurement(
     _matrix( pObj->_index, assayIx ) = measurement;
     // ensure factorial is precalculated for this measurement
     ln_factorial_cache_fill( measurement.sc );
-    _hitsDirty = true;
+    _matrixModified = true;
 }
 
 const OPAData::celldata_t& OPAData::maxMeasurement() const
@@ -191,12 +191,12 @@ void OPAData::initMatrixDataContainers()
 {
     // initialize measurements matrix (could be done only once, otherwise current data would be lost)
     _matrix.reset( _objects.size(), _assays.size() );
-    _hitsDirty = true;
+    _matrixModified = true;
 }
 
 OPAData::hit_counts_type OPAData::getObjectsHitCounts( const object_set_t& objects ) const
 {
-    if ( _hitsDirty ) resetHits();
+    updateMatrixDependent();
     hit_counts_type res( _objectHits[ 0 ].size(), 0 );
     for ( object_set_t::const_iterator objIt = objects.begin(); objIt != objects.end(); ++objIt ) {
         const hit_mask_type& assaysMask = _objectHits[ *objIt ];
@@ -209,7 +209,7 @@ OPAData::hit_counts_type OPAData::getObjectsHitCounts( const object_set_t& objec
 
 OPAData::hit_counts_type OPAData::getProbesHitCounts( const probe_bitset_t& probes ) const
 {
-    if ( _hitsDirty ) resetHits();
+    updateMatrixDependent();
     hit_counts_type res( _probeHits[ 0 ].size(), 0 );
     foreach_bit( probe_index_t, probeIx, probes ) {
         const hit_mask_type& objMask = _probeHits[ probeIx ];
@@ -243,7 +243,6 @@ void OPAData::resetHits() const
             }
         }
     }
-    _hitsDirty = false;
 }
 
 void OPAData::resetIndexes()

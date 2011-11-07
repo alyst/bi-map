@@ -205,7 +205,7 @@ private:
 
     data_matrix_t               _matrix;
 
-    mutable bool                _hitsDirty;
+    mutable bool                _matrixModified;
     /**
      *  For each object a binary vector of assays size -- 1 if this object is seen in given assay.
      */
@@ -231,8 +231,17 @@ protected:
     }
 
     void initMatrixDataContainers();
-    void resetHits() const;
+
     void resetIndexes();
+
+    void resetHits() const;
+
+    void updateMatrixDependent() const {
+        if ( _matrixModified ) {
+            resetHits();
+            _matrixModified = false;
+        }
+    }
 
     friend class boost::serialization::access;
 
@@ -247,7 +256,8 @@ protected:
         ar >> boost::serialization::make_nvp( "assays", _assays );
         ar >> boost::serialization::make_nvp( "matrix", _matrix );
         resetIndexes();
-        resetHits();
+        _matrixModified = true;
+        updateMatrixDependent();
     }
 
     template<class Archive>
