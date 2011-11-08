@@ -100,6 +100,7 @@ public:
         return ( _signalLnPdf );
     }
 
+    log_prob_t signalLLH( const object_set_t& objects, const probe_bitset_t& probes ) const;
     log_prob_t noiseLLH( const object_set_t& objects, const probe_bitset_t& probes ) const;
 };
 

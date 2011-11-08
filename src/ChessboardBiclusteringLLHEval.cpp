@@ -60,29 +60,6 @@ log_prob_t ChessboardBiclusteringLLHEval::cellLLH(
     return ( lnSignalPdf );
 }
 
-/**
-    Calculate log-likelihood for given signal level, given object and all assay of given probe.
- */
-log_prob_t ChessboardBiclusteringLLHEval::cellNoiseLLH(
-    const noise_params_type&    noiseParams,
-    object_index_t              objIx,
-    const OPAProbe&             probe
-) const {
-    double res = 0.0;
-    const OPAData::celldata_t* celldata = data().measurements( objIx, probe.index() );
-    const OPAData::celldata_t* endCelldata = celldata + probe.assayIndexes().size();
-    for ( ; celldata < endCelldata; ++celldata ) {
-        res += noiseParams( celldata->sc );
-    }
-
-    BOOST_ASSERT( !is_unset( res ) );
-    LOG_DEBUG2( "Cell (" << objIx << "," << probe.index() << 
-                "): noiseRate=" << ( 1.0 - noiseParams.successRate ) 
-                << " llh=" << res );
-    BOOST_ASSERT( res <= 0 );
-    return ( res );
-}
-
 log_prob_t ChessboardBiclusteringLLHEval::blockDataLLH(
     const object_clundex_t      objCluIx,
     const probe_clundex_t       probeCluIx
@@ -218,26 +195,28 @@ log_prob_t ChessboardBiclusteringLLHEval::allCellsDataLLH(
 ) const {
     double  lnPdf = 0.0;
 
-    for ( object_index_t objIx = 0; objIx < clustering().objectsCount(); objIx++ ) {
-        object_clundex_t objCluIx = clustering().clusterOfObject( objIx );
-        signal_params_type objParams( _precomputed.signalParams(), data().object( objIx ),
-                                      clustering().objectMultiple( objIx ) );
-        for ( probe_index_t probeIx = 0; probeIx < clustering().probesCount(); probeIx++ ) {
-            probe_clundex_t probeCluIx = clustering().clusterOfProbe( probeIx );
+    for ( object_clundex_t objCluIx = 0; objCluIx < clustering().objectsClusters().size(); objCluIx++ ) {
+        for ( probe_clundex_t probeCluIx = 0; probeCluIx < clustering().probesClusters().size(); probeCluIx++ ) {
             bool crossEnabled = clustering().isBlockEnabled( objCluIx, probeCluIx );
             // filter cells by coverage according to filter and calculate lambda
             if ( ( crossEnabled && !sumEnabledCrosses )
               || ( !crossEnabled && !sumDisabledCrosses ) )      continue;
-            // substitute current basic signal level with new one
+            // substitute current basic signal level with the new one
             if ( crossEnabled ) {
-                signal_t signal = clustering().cellSignal( objIx, probeIx );
+                signal_t signal = clustering().blockSignal( objCluIx, probeCluIx );
                 if ( is_unset( signal ) ) THROW_RUNTIME_ERROR( "allCellsDataLLH(): signal for ("
-                    << objIx << "@" << objCluIx << ", "
-                    << probeIx << "@" << probeCluIx << ") is not set" );
-                lnPdf += cellLLH( objParams, objIx, data().probe( probeIx ), signal );
+                    << objCluIx << ", "
+                    << probeCluIx << ") is not set" );
+                lnPdf += cellsDataLLH( clustering().objectsCluster( objCluIx ).items(),
+                                       clustering().probesCluster( probeCluIx ).items(),
+                                       signal,
+                                       clustering().objectMultiples()
+                                     );
             }
             else {
-                lnPdf += cellNoiseLLH( clustering().noiseParams(), objIx, data().probe( probeIx ) );
+                lnPdf += cellsNoiseLLH( clustering().noiseParams(),
+                                        clustering().objectsCluster( objCluIx ).items(),
+                                        clustering().probesCluster( probeCluIx ).items() );
             }
         }
     }
@@ -255,43 +234,83 @@ log_prob_t ChessboardBiclusteringLLHEval::allCellsDataLLH(
 
     GeometricDistribution noiseParams = GeometricDistribution::BySuccessRate( zeroRate, 0 );
 
-    for ( object_index_t objIx = 0; objIx < clustering().objectsCount(); objIx++ ) {
-        signal_params_type objParams( _precomputed.signalParams(), data().object( objIx ),
-                                      clustering().objectMultiple( objIx ) );
-        for ( probe_index_t probeIx = 0; probeIx < clustering().probesCount(); probeIx++ ) {
-            bool crossEnabled = clustering().isBlockEnabled( clustering().clusterOfObject( objIx ),
-                                                                    clustering().clusterOfProbe( probeIx ) );
+    for ( object_clundex_t objCluIx = 0; objCluIx < clustering().objectsClusters().size(); objCluIx++ ) {
+        for ( probe_clundex_t probeCluIx = 0; probeCluIx < clustering().probesClusters().size(); probeCluIx++ ) {
+            bool crossEnabled = clustering().isBlockEnabled( objCluIx, probeCluIx );
             // filter cells by coverage according to filter and calculate lambda
             if ( ( crossEnabled && !sumEnabledCrosses )
               || ( !crossEnabled && !sumDisabledCrosses ) )      continue;
+            // substitute current basic signal level with the new one
             if ( crossEnabled ) {
-                lnPdf += cellLLH( objParams, objIx, data().probe( probeIx ),
-                                  baselineSignal );
+                signal_t signal = clustering().blockSignal( objCluIx, probeCluIx );
+                if ( is_unset( signal ) ) THROW_RUNTIME_ERROR( "allCellsDataLLH(): signal for ("
+                    << objCluIx << ", "
+                    << probeCluIx << ") is not set" );
+                lnPdf += cellsDataLLH( clustering().objectsCluster( objCluIx ).items(),
+                                       clustering().probesCluster( probeCluIx ).items(),
+                                       baselineSignal,
+                                       clustering().objectMultiples()
+                                     );
             }
             else {
-                lnPdf += cellNoiseLLH( noiseParams, objIx, data().probe( probeIx ) );
+                lnPdf += cellsNoiseLLH( noiseParams,
+                                        clustering().objectsCluster( objCluIx ).items(),
+                                        clustering().probesCluster( probeCluIx ).items() );
             }
         }
     }
+    BOOST_ASSERT( lnPdf <= 0 );
     return ( lnPdf );
 }
 
+/**
+    Calculate log-likelihood for block being in off-state.
+ */
 log_prob_t ChessboardBiclusteringLLHEval::cellsNoiseLLH(
     const CellsLLHEval::noise_params_type& noiseParams, 
     const object_set_t&     objects, 
     const probe_bitset_t&   probes
 ) const {
-    double res = 0.0;
+    double res = 0;
+    size_t  i = 0;
+    std::vector<size_t> scCounts( objects.size(), 0 );
+    size_t  scSum = 0;
+    size_t  scObjsNE = 0;
 
     for ( object_set_t::const_iterator objIt = objects.begin(); objIt != objects.end(); ++objIt ) {
         const object_index_t objIx = *objIt;
         foreach_bit( probe_index_t, probeIx, probes ) {
-            res += cellNoiseLLH( noiseParams, objIx, data().probe( probeIx ) );
+            const OPAProbe& probe = data().probe( probeIx );
+            scCounts[ i ] += data().measurementSum( objIx, probeIx );
+
+            const OPAData::celldata_t* celldata = data().measurements( objIx, probeIx );
+            const OPAData::celldata_t* endCelldata = celldata + probe.assayIndexes().size();
+            for ( ; celldata < endCelldata; ++celldata ) {
+                res += noiseParams( celldata->sc );
+            }
+
+            BOOST_ASSERT( !is_unset( res ) );
+            LOG_DEBUG2( "Cell (" << objIx << "," << probeIx << 
+                        "): noiseRate=" << ( 1.0 - noiseParams.successRate ) 
+                        << " llh=" << res );
         }
+        if ( scCounts[ i ] > 0 ) scObjsNE++;
+        scSum += scCounts[ i ];
+        i++;
     }
+    // add combinatorial part to the probability:
+    // 1. possibilities to select scObjNE different objects from the universe
+    res += gsl_sf_lnchoose( data().objectsUniverseSize(), scObjsNE );
+    // 2. possibilities to distribute scSum spectral counts among scObjNE objects
+    res += ln_factorial( scSum );
+    for ( int i = 0; i < scCounts.size(); i++ ) {
+        if ( scCounts[i] > 0 ) res -= ln_factorial( scCounts[i] );
+    }
+    // 3. probability to pick a sequence of scSum objects from the universe (without replacement)
+    res -= scSum * log( data().objectsUniverseSize() );
+    BOOST_ASSERT( std::isfinite( res ) );
     return ( res );
 }
-
 
 /**
  *  Calculates the LLH that block of cells is either in enabled or disabled probe.
@@ -302,8 +321,6 @@ log_prob_t ChessboardBiclusteringLLHEval::cellsNoiseLLH(
 log_prob_t BlockEnablementDataLLH::operator()(
     bool isEnabled
 ) const {
-    return ( isEnabled ? CellsLLHEval::BlockLLH(
-                    objects, probes,
-                    cache.signalLnPdf() )
-             : cache.noiseLLH( objects, probes ) );
+    return ( isEnabled ? cache.signalLLH( objects, probes )
+                       : cache.noiseLLH( objects, probes ) );
 }

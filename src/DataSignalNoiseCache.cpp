@@ -85,9 +85,9 @@ log_prob_t DataSignalNoiseCache::noiseLLH(
             scCounts[ i ] += data().measurementSum( objIx, probeIx );
             res += _noiseLnPdf( objIx, probeIx );
         }
-        i++;
         if ( scCounts[ i ] > 0 ) scObjsNE++;
         scSum += scCounts[ i ];
+        i++;
     }
     // add combinatorial part to the probability:
     // 1. possibilities to select scObjNE different objects from the universe
@@ -101,4 +101,23 @@ log_prob_t DataSignalNoiseCache::noiseLLH(
     res -= scSum * log( data().objectsUniverseSize() );
     BOOST_ASSERT( std::isfinite( res ) );
     return ( res );
+}
+
+
+/**
+ *  Likelihood of block being in on or off state.
+ */
+log_prob_t DataSignalNoiseCache::signalLLH(
+    const object_set_t& objects,    /** objects of block */
+    const probe_bitset_t& probes    /** probes of block */
+) const {
+    double lnPdfSum = 0.0;
+
+    for ( object_set_t::const_iterator objIt = objects.begin(); objIt != objects.end(); ++objIt ) {
+        const object_index_t objIx = *objIt;
+        foreach_bit( probe_index_t, probeIx, probes ) {
+            lnPdfSum += _signalLnPdf( objIx, probeIx );
+        }
+    }
+    return ( lnPdfSum );
 }
