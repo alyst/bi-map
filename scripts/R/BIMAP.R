@@ -113,7 +113,7 @@ BIMAP.import_msdata <- function( ms_data, protein_info, msrun.multipliers = NULL
     rownames( proteins.df ) <- proteins.df$protein_ac 
 
     exp_design.df <- merge( samples.df, msruns.df )[,c('bait_ac','sample','msrun','multiplier')]
-    rownames( exp_design.df ) <- exp_design$msrun
+    rownames( exp_design.df ) <- exp_design.df$msrun
     return ( list(  measurements = measurements.df,
                     samples = samples.df, 
                     msruns = msruns.df, 
@@ -123,14 +123,16 @@ BIMAP.import_msdata <- function( ms_data, protein_info, msrun.multipliers = NULL
 
 BIMAP.save_msdata <- function( bimap.data, data_path
 ){
-    write.table( bimap.data$measurements[,intersect(colnames(bimap.data$measurment),
+    print( paste( "Writing BI-MAP data to", data_path, "..." ) )
+    write.table( bimap.data$measurements[,intersect(colnames(bimap.data$measurements),
                                                     c('msrun','prey_ac','sc','pc'))],
                  file = file.path( data_path, 'measurements.txt' ),
                  col.names = TRUE, row.names = FALSE, quote = FALSE, sep = '\t' )
     write.table( bimap.data$exp_design[,c('bait_ac','sample','msrun','multiplier')],
                  file = file.path( data_path, 'exp_design.txt' ),
                  col.names = TRUE, row.names = FALSE, quote = FALSE, sep = '\t' )
-    write.table( rbind( bimap.data$proteins[,c('protein_ac','seqlength')], data.frame( protein_ac = 'nobait', seqlength = 1 ) ),
+    write.table( rbind( bimap.data$proteins[,c('protein_ac','seqlength')],
+                        data.frame( protein_ac = 'nobait', seqlength = 1 ) ),
                  file = file.path( data_path, 'proteins.txt' ),
                  col.names = TRUE, row.names = FALSE, quote = FALSE, sep = '\t' )
 }
