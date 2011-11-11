@@ -9,7 +9,7 @@ source( file.path( bimap_scripts_path, "graphml_support.R" ) )
 
 BIMAP.graphML.dataframe <- function( bimap.props,
     protein.info, sample.info, msrun.info,
-    protein_label_col = 'short_label',
+    protein_label_col = 'protein_ac',
     protein_export_cols = c(),
     sample_label_col = NULL,
     proteins_cluster_label_col = 'proteins.cluster',
