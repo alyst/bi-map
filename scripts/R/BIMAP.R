@@ -106,6 +106,43 @@ BIMAP.msdata.import <- function( ms_data, protein_info, msrun.multipliers = NULL
 #' Saves AP-MS data into single .xml file that could be read by BIMAP-sampler --input_file
 #' @param filename name of output file
 #' @author Alexey Stukalov
+BIMAP.msdata.load <- function(
+    data_path = NULL, filename = NULL,
+    format = c( 'OPAData', 'CSV' )
+){
+    if ( format == 'OPAData'){
+        return ( .Call( "OPADataLoad", filename ) )
+    } else {
+        print( paste( "Reading BI-MAP data from", data_path, "..." ) )
+        bimap.data <- list()
+        bimap.data$measurements <- read.table(
+            file = file.path( data_path, 'measurements.txt' ),
+            header = TRUE, sep = '\t',
+            stringsAsFactors = FALSE )
+
+        bimap.data$proteins <- read.table(
+            file = file.path( data_path, 'proteins.txt' ),
+            header = TRUE, sep = '\t',
+            stringsAsFactors = FALSE )
+        rownames( bimap.data$proteins ) <- bimap.data$proteins$protein_ac
+
+        bimap.data$exp_design <- read.table(
+            file = file.path( data_path, 'exp_design.txt' ),
+            header = TRUE, sep = '\t',
+            stringsAsFactors = FALSE )
+
+        bimap.data$samples <- unique( bimap.data$exp_design[,c('bait_ac','sample')] )
+        rownames( bimap.data$samples ) <- bimap.data$samples$sample
+
+        bimap.data$msruns <- unique( bimap.data$exp_design[,c('sample','msrun', 'multiplier')] )
+        rownames( bimap.data$msruns ) <- bimap.data$msruns$msrun
+    }
+    return ( bimap.data )
+}
+
+#' Saves AP-MS data into single .xml file that could be read by BIMAP-sampler --input_file
+#' @param filename name of output file
+#' @author Alexey Stukalov
 BIMAP.msdata.save <- function( bimap.data, 
     data_path = NULL, filename = NULL,
     format = c( 'OPAData', 'CSV' )
