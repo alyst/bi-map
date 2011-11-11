@@ -12,24 +12,6 @@ require( 'Rcpp' )
 #dyn.unload( file.path( RBIMAP.libpath, paste("libRBIMAP", .Platform$dynlib.ext, sep="")) ) 
 dyn.load( file.path( RBIMAP.libpath, paste("libRBIMAP", .Platform$dynlib.ext, sep="")), type = "Call" ) 
 
-#' Saves AP-MS data into single .xml file that could be read by BIMAP-sampler --input_file
-#' @param filename name of output file
-#' @param protein_info protein information dataframe (AC, Sequence Length)
-#' @param sample_info  sample information dataframe
-#' @param msrun_info MS runs information dataframe
-#' @param measurements MS measurements dataframe
-#' @return result of call to external OPADataSave()
-#' @author Alexey Stukalov
-BIMAP.save_apms_data <- function(
-    filename,
-    protein_info, sample_info,
-    msrun_info, measurements = NULL )
-{
-    return ( .Call( "OPADataSave", filename,
-                    protein_info, sample_info, msrun_info,
-                    measurements ) )
-}
-
 BIMAP.distances <- function(
     protein_info, sample_info,
     msrun_info, measurements = NULL,
@@ -65,7 +47,7 @@ BIMAP.distances <- function(
 #' @return 
 #' @author astukalov
 #' @export
-BIMAP.import_msdata <- function( ms_data, protein_info, msrun.multipliers = NULL,
+BIMAP.msdata.import <- function( ms_data, protein_info, msrun.multipliers = NULL,
     sample_column = 'sample', msrun_column = 'msrun',
     bait_column = 'bait_ac', prey_column = 'prey_ac',
     sc_column = 'sc', pc_column = 'pc',
@@ -121,23 +103,44 @@ BIMAP.import_msdata <- function( ms_data, protein_info, msrun.multipliers = NULL
                     proteins = proteins.df ) )
 }
 
-BIMAP.save_msdata <- function( bimap.data, data_path
+#' Saves AP-MS data into single .xml file that could be read by BIMAP-sampler --input_file
+#' @param filename name of output file
+#' @author Alexey Stukalov
+BIMAP.msdata.save <- function( bimap.data, 
+    data_path = NULL, filename = NULL,
+    format = c( 'OPAData', 'CSV' )
 ){
-    print( paste( "Writing BI-MAP data to", data_path, "..." ) )
-    write.table( bimap.data$measurements[,intersect(colnames(bimap.data$measurements),
-                                                    c('msrun','prey_ac','sc','pc'))],
-                 file = file.path( data_path, 'measurements.txt' ),
-                 col.names = TRUE, row.names = FALSE, quote = FALSE, sep = '\t' )
-    write.table( bimap.data$exp_design[,c('bait_ac','sample','msrun','multiplier')],
-                 file = file.path( data_path, 'exp_design.txt' ),
-                 col.names = TRUE, row.names = FALSE, quote = FALSE, sep = '\t' )
-    write.table( rbind( bimap.data$proteins[,c('protein_ac','seqlength')],
-                        data.frame( protein_ac = 'nobait', seqlength = 1 ) ),
-                 file = file.path( data_path, 'proteins.txt' ),
-                 col.names = TRUE, row.names = FALSE, quote = FALSE, sep = '\t' )
+    if ( format == 'OPAData'){
+        return ( .Call( "OPADataSave", filename,
+                bimap.data$proteins, bimap.data$samples, bimap.data$msruns,
+                bimap.data$measurements ) )
+    } else {
+        print( paste( "Writing BI-MAP data to", data_path, "..." ) )
+        write.table( bimap.data$measurements[,intersect(colnames(bimap.data$measurements),
+                    c('msrun','prey_ac','sc','pc'))],
+            file = file.path( data_path, 'measurements.txt' ),
+            col.names = TRUE, row.names = FALSE, quote = FALSE, sep = '\t' )
+        write.table( bimap.data$exp_design[,c('bait_ac','sample','msrun','multiplier')],
+            file = file.path( data_path, 'exp_design.txt' ),
+            col.names = TRUE, row.names = FALSE, quote = FALSE, sep = '\t' )
+        write.table( rbind( bimap.data$proteins[,c('protein_ac','seqlength')],
+                data.frame( protein_ac = 'nobait', seqlength = 1 ) ),
+            file = file.path( data_path, 'proteins.txt' ),
+            col.names = TRUE, row.names = FALSE, quote = FALSE, sep = '\t' )
+    }
 }
 
-BIMAP.walk.eval <- function(
+#' Runs BIMAP method within R session
+#' @param protein_info 
+#' @param sample_info 
+#' @param msrun_info 
+#' @param measurements 
+#' @param walk.samples 
+#' @param walk.create.RObject 
+#' @param walk.file 
+#' @return 
+#' @author Alexey Stukalov
+BIMAP.mcmcwalk.eval <- function(
     protein_info,
     sample_info,
     msrun_info,
@@ -242,7 +245,7 @@ BIMAP.walk.eval <- function(
 }
 
 # MPI (parallelized) version of BIMAP sampler 
-BIMAP.walk.MPI_eval <- function(
+BIMAP.mcmcwalk.eval_MPI <- function(
     protein_info,
     sample_info,
     msrun_info,
@@ -253,9 +256,9 @@ BIMAP.walk.MPI_eval <- function(
     walk.create.RObject = TRUE,
     walk.file = NULL
 ){
-    tempOSAfilename <- paste( tempfile( "osadata_" ), ".xml.gz", sep='' )
-    OSAData.save( tempOSAfilename, protein_info, sample_info, msrun_info, measurements )
-    sampler_options <- c( '--input_file', tempOSAfilename )
+    tempOPAfilename <- paste( tempfile( "osadata_" ), ".xml.gz", sep='' )
+    OPAData.save( tempOPAfilename, protein_info, sample_info, msrun_info, measurements )
+    sampler_options <- c( '--input_file', tempOPAfilename )
     if ( !is.null(config.file) ) {
         sampler_options <- c( sampler_options, "--config_file", config.file )
     }
@@ -273,7 +276,7 @@ BIMAP.walk.MPI_eval <- function(
     system( cmdline )
     print( paste( 'Finished MPI sampling' ) )
 
-    unlink( tempOSAfilename ) # delete temporarily data file
+    unlink( tempOPAfilename ) # delete temporarily data file
 
     # load result
     res <- NULL
@@ -286,7 +289,7 @@ BIMAP.walk.MPI_eval <- function(
 
 # Loads BIMAPWalk from file,
 # optionally identifying independent components with given threshold
-BIMAP.walk.load <- function ( filename, 
+BIMAP.mcmcwalk.load <- function ( filename, 
     objects.components.threshold = NA,
     probes.components.threshold = NA )
 {
@@ -373,7 +376,7 @@ MSMatrixToFrame <- function( msmatrix )
 }
 
 
-BIMAP.walk.data.frame <- function( walk )
+BIMAP.mcmcwalk.biclusterings_dataframe <- function( walk )
 {
     data.frame(
         iteration = as.numeric( names( walk@clusterings ) ),
@@ -385,7 +388,7 @@ BIMAP.walk.data.frame <- function( walk )
     )
 }
 
-BIMAP.walk.priors.data.frame <- function( walk )
+BIMAP.mcmcwalk.priors_dataframe <- function( walk )
 {
     data.frame(
         iteration = as.numeric( names( walk@priors ) ),
@@ -395,7 +398,7 @@ BIMAP.walk.priors.data.frame <- function( walk )
     )
 }
 
-BIMAP.walk.blocks.data.frame <- function( walk )
+BIMAP.mcmcwalk.blocks_dataframe <- function( walk )
 {
     res <- do.call( 'rbind', lapply( names( walk@clusterings ), function ( it ) {
         do.call( 'rbind', lapply( walk@clusterings[[ it ]]@blocks, function ( cluster ) {
@@ -410,7 +413,7 @@ BIMAP.walk.blocks.data.frame <- function( walk )
     return ( res )
 }
 
-BIMAP.walk.signals.data.frame <- function( walk, per.object = TRUE )
+BIMAP.mcmcwalk.signals_dataframe <- function( walk, per.object = TRUE )
 {
     res <- do.call( 'rbind', lapply( names( walk@clusterings ), function( it ) {
         clustering <- walk@clusterings[[ it ]]
@@ -440,7 +443,7 @@ BIMAP.walk.signals.data.frame <- function( walk, per.object = TRUE )
     return ( res )
 }
 
-BIMAP.walk.lastClustering <- function( walk, serial )
+BIMAP.mcmcwalk.lastClustering <- function( walk, serial )
 {
     for ( it in rev(names(walk@clusterings)) ) {
         clu <- walk@clusterings[[it]] 
@@ -458,7 +461,7 @@ BIMAP.walk.lastClustering <- function( walk, serial )
 #' @return data.frame with clusters information
 #' @author astukalov
 #' @export
-BIMAP.order_clusterings <- function( walk, n = 30 ) {
+BIMAP.mcmcwalk_biclusterings_order <- function( walk, n = 30 ) {
     clus.df <- walk@clusterings
     rownames( clus.df ) <- clus.df$clustering_id
     clus.df <- clus.df[ order(
@@ -473,7 +476,7 @@ BIMAP.order_clusterings <- function( walk, n = 30 ) {
     return ( clus.df )
 }
 
-BIMAP.walk.clusters.counts <- function( walk, entities = c( 'objects', 'probes' ) ) {
+BIMAP.mcmcwalk.clusters_counts <- function( walk, entities = c( 'objects', 'probes' ) ) {
     partition.serial.colname <- paste( entities, 'partition.serial', sep = '.' )
     cluster.serial.colname <- paste( entities, 'cluster.serial', sep = '.' )
     partitions.walk <- subset( merge( walk@clusterings.walk, walk@clusterings, by = 'clustering.serial' ), select = partition.serial.colname )
@@ -481,7 +484,7 @@ BIMAP.walk.clusters.counts <- function( walk, entities = c( 'objects', 'probes' 
     return ( table( clusters.walk[, cluster.serial.colname ] ) )
 }
 
-BIMAP.walk.clusters.size <- function( walk, entities = c( 'objects','probes' ) ) {
+BIMAP.mcmcwalk.clusters_size <- function( walk, entities = c( 'objects','probes' ) ) {
     cluster.serial.colname <- paste( entities, 'cluster.serial', sep = '.' )
     clusters.contents <- slot( walk, paste( entities, 'clusters', sep='.' ) )
     cluster.sizes.df <- ddply( clusters.contents, c( cluster.serial.colname), nrow )
@@ -512,7 +515,7 @@ BIMAP.signal_stats <- function( signals.frame )
 #' @returnType 
 #' @return 
 #' @author astukalov
-BIMAP.extract_clustering <- function( bimap.walk, bimapId,
+BIMAP.mcmcwalk.extract_biclustering <- function( bimap.walk, bimapId,
     onblock.threshold = 0.6,
     extract.signals = TRUE
 ){
@@ -599,7 +602,7 @@ BIMAP.extract_clustering <- function( bimap.walk, bimapId,
     return ( res )
 }
 
-BIMAP.filter_clustering <- function( bimap.props, protein_acs, sample_acs )
+BIMAP.biclustering.filter <- function( bimap.props, protein_acs, sample_acs )
 {
     # filter elements and clusters
     res <- list( #proteins = subset( bimap.props$proteins, protein_ac %in% protein_acs ),
@@ -628,7 +631,7 @@ BIMAP.filter_clustering <- function( bimap.props, protein_acs, sample_acs )
     return ( res )
 }
 
-BIMAP.objects.cluster.labels <- function( walk )
+BIMAP.mcmcwalk.objects_cluster_labels <- function( walk )
 {
     df <- data.frame( serial = c(), label = c() )
     for ( clustering in walk@clusterings ) {
@@ -646,7 +649,7 @@ BIMAP.objects.cluster.labels <- function( walk )
     return ( res )
 }
 
-BIMAP.objects.partition.labels <- function( walk )
+BIMAP.mcmcwalk.objects_partition_labels <- function( walk )
 {
     res <- list()
     for ( clustering in walk@clusterings ) {
@@ -664,7 +667,7 @@ BIMAP.objects.partition.labels <- function( walk )
     return ( res )
 }
 
-BIMAP.probes.cluster.labels <- function( walk )
+BIMAP.mcmcwalk.probes_cluster_labels <- function( walk )
 {
     df <- data.frame( serial = c(), label = c() )
     for ( clustering in walk@clusterings ) {
@@ -681,7 +684,7 @@ BIMAP.probes.cluster.labels <- function( walk )
     return ( res )
 }
 
-BIMAP.probes.partition.labels <- function( walk )
+BIMAP.mcmcwalk.probes_partition_labels <- function( walk )
 {
     res <- list()
     for ( clustering in walk@clusterings ) {
@@ -698,7 +701,17 @@ BIMAP.probes.partition.labels <- function( walk )
     return ( res )
 }
 
-BIMAP.interactors.table <- function( bimap.walk, protein.ac, protein.info =-NULL, min.freq = 0.01 )
+
+#' Extracts table of frequencies of given protein interactions.
+#' @param bimap.walk 
+#' @param protein.ac 
+#' @param protein.info 
+#' @param min.freq 
+#' @returnType 
+#' @return 
+#' @author astukalov
+#' @export
+BIMAP.mcmcwalk.interactors_frame <- function( bimap.walk, protein.ac, protein.info =-NULL, min.freq = 0.01 )
 {
     protein.clusters <- subset( bimap.walk@proteins.clusters, object == protein.ac )$objects.cluster.serial
     proteins.clusterings.walk <- subset( merge( bimap.walk@clusterings.walk, bimap.walk@clusterings ), select = c('objects.partition.serial') ) 
@@ -726,7 +739,7 @@ BIMAP.interactors.table <- function( bimap.walk, protein.ac, protein.info =-NULL
 #' @return 
 #' @author astukalov
 #' @export
-BIMAP.extract.stable.clusters <- function( bimap.walk,
+BIMAP.mcmcwalk.extract_stable_clusters <- function( bimap.walk,
         ms_data, sample_col = 'sample', prey_col = 'prey_ac',
         min.avg.nsample = 3, min.size = 2,
         min.included.freq = 0.95, size.weight = 0.2 )

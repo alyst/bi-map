@@ -10,6 +10,26 @@ require( ggplot2 )
 require( lattice )
 require( latticeExtra )
 
+#' Converts MS data.frame into matrix (rows=proteins, cols=msruns)
+#' by applying cellfunc to each DS row
+ms_data.matrix <- function( ms_data, protein_info, cellfunc, msrun_column = 'msrun',
+    bait_column = 'bait_ac', prey_column = 'prey_ac',
+    sc_column = 'sc', pc_column = 'pc', seqcov_column = 'seqcov'
+){
+    ms_data.x <- ms_data
+    ms_data.x$cell <- cellfunc( ms_data.x[,sc_column], ms_data.x[,pc_column], ms_data.x[,seqcov_column],
+        protein_info[ as.character( ms_data.x[,prey_column] ), 'seqlength' ] )
+    ms_data.wide <- reshape( ms_data.x[,unique(c(msrun_column,prey_column,'cell'))], 
+        timevar = c( msrun_column ), idvar = c(prey_column), 
+        ids = unique( as.character( ms_data[,prey_column] ) ),
+        times = unique( as.character( ms_data[,msrun_column] ) ), 
+        v.names = c('cell'), direction = 'wide', sep = '.' )
+    ms_data.mtx <- as.matrix( ms_data.wide[ , setdiff( colnames( ms_data.wide ), c(prey_column) ) ] )
+    rownames( ms_data.mtx ) <- as.character( ms_data.wide[,prey_column] )
+    colnames( ms_data.mtx ) <- sub( 'cell.', '', colnames( ms_data.mtx ), fixed = TRUE )
+    return ( ms_data.mtx )
+}
+
 plot.signal_noise_sigma <- function( bimap.walk, densities = FALSE, clip.factor = 4 )
 {
     walk.clusterings.frame <- bimap.walk@clusterings.walk
@@ -89,11 +109,11 @@ ranges <- function( int_list ) {
     return ( res )
 }
 
-plot.block <- function( proteins, samples, 
+BIMAP.block.plot <- function( proteins, samples, 
                         proteins.cluster, samples.cluster,
                         signals.matrix, signals.matrix.sd,
                         signals.frame = NULL,
-                        show.abundance = TRUE,
+                        show.abundance.label = TRUE,
                         bait.col = 'red',
                         border.col = NULL,
                         border.above = TRUE,
@@ -160,7 +180,7 @@ plot.block <- function( proteins, samples,
             ltext( 0.5, 0.5, paste( main.title, "no samples" ), col = label.color, font = label.font )
         }
     }
-    if ( show.abundance ) {
+    if ( show.abundance.label ) {
         panel.text( 0.5, 0.5, main.title, col = label.color, font = label.font )
     }
     #do.call("clip", as.list(usr)) # restore clipping
@@ -182,30 +202,6 @@ plot.block <- function( proteins, samples,
             }
         }
     }
-}
-
-plot.block.measurements <- function(
-    proteins, sample, samples,
-    msrun.info,
-    signals.matrix, measurements )
-{
-    pushViewport( viewport( layout.pos.row = 1, 
-                            layout.pos.col = which( samples == sample ) ) )
-
-    pushViewport( viewport( x = 1.0, y = 0.0,
-                            width = 0.8, height = 0.3, 
-                            just = c( 'right', 'bottom' ) ) )
-    msruns <- msrun.info$msrun[ msrun.info$sample == sample ]
-    submeas <- subset( measurements, msrun %in% msruns & prey_ac %in% proteins,
-                       select = c('prey_ac', 'msrun', 'sc') )
-    panel.grid( h = length(proteins)-1, v = length(msruns)-1 )
-    if ( nrow( submeas ) > 0 ) {
-        colpos <- sapply( submeas$msrun, function( msrun ) which( msruns == msrun )/length(msruns) ) - 0.5/length(msruns)
-        rowpos <- sapply( submeas$prey_ac, function( prey_ac ) which( proteins == prey_ac )/length(proteins) ) - 0.5/length(proteins)
-        ltext( colpos, rowpos, labels = submeas$sc, col = 'darkgray', cex = unit( 0.7, 'npc' ) )
-    }
-    popViewport()
-    popViewport()
 }
 
 dgram.set.n_members <- function( dgram, sizes )
@@ -452,30 +448,58 @@ BIMAP.signals_matrix.bihclust <- function( bimap.props, signal.na.subst = -100 )
                    proteins.ordering = proteins.ordering, samples.ordering = samples.ordering ) )
 }
 
-BIMAP.plot <- function( bimap.props, protein.info,
-                         sample.info, msrun.info,
-                         protein.info.ex = NULL, measurements = NULL,
-                         plot.samples = FALSE,
-                         show.abundance = TRUE, 
-                         show.protein.id = TRUE,
-                         show.sample.id = TRUE, show.msruns = FALSE,
-                         show.borders = FALSE,
-                         extended.result = FALSE,
-                         sample_name_col = NULL,
-                         protein_name_col = 'short_id',
-                         protein_description_col = NULL,
-                         title = NULL,
-                         cell.func = function( sc, pc, seqcov, seqlen ) {
+#' Draws matrix representation of BI-MAP model
+#' @param bimap.props properties of BI-MAP model (extracted biclustering)
+#' @param bimap.data input data for BI-MAP method (AP-MS data)
+#' @param protein.info dataframe with extended protein information
+#' @param show.abundance.labels draw labels with estimated abundance for each on-block
+#' @param show.protein_ac show protein accession code at protein axis
+#' @param show.sample_id show sample IDs at samples/msruns axis
+#' @param show.msruns show invididual MS runs at samples axis
+#' @param show.borders draw borders around blocks (for NestedCluster results display)
+#' @param show.measurements draw individual per-protein AP/MS measurements
+#' @param sample_name_col name of sample name column
+#' @param protein_name_col name of protein name column in protein.info
+#' @param protein_description_col name of protein description in protein.info (NULL turns off description)
+#' @param title title of the plot
+#' @param cell.func function to apply to cell data
+#' @param col color palette for the blocks
+#' @param cells.col color palette for the cells
+#' @param cells.off.alpha alpha level for cell values in off-blocks
+#' @param aspect height to width ratio of matrix
+#' @param bait.col color of the bait proteins
+#' @param grid.col color of blocks grid lines
+#' @param grid.lwd width of blocks grid lines
+#' @param grid.lty line type for blocks grid lines
+#' @param protein.label.width width of labels of protein axis
+#' @param sample.label.width width of labels of samples axis 
+#' @author Alexey Stukalov
+#' @see BIMAP.mcmcwalk.extract_biclustering(), BIMAP.msdata.load()
+#' @export
+BIMAP.plot <- function( bimap.props, bimap.data,
+                        proteins.info = NULL,
+                        show.abundance.labels = TRUE, 
+                        show.protein_ac = TRUE,
+                        show.sample_id = TRUE, show.msruns = FALSE,
+                        show.borders = FALSE,
+                        show.measurements = FALSE,
+                        sample_name_col = NULL,
+                        protein_name_col = 'short_id',
+                        protein_description_col = NULL,
+                        title = NULL,
+                        cell.func = function( sc, pc, seqcov, seqlen ) {
                               return ( log( sc / seqlen ) ) },
-                         col = heat.colors,
-                         cells.col = heat.colors,
-                         cells.off.alpha = 0.5,
-                         aspect = 0.5,
-                         bait.col = 'green',
-                         grid.col = 'grey', grid.lty = 2, grid.lwd = 2,
-                         protein.label.width = 1.5, sample.label.width = protein.label.width )
+                        col = colorRampPalette( c("blue","cyan","yellow") ),
+                        cells.col = colorRampPalette( c("blue","cyan","yellow") ),
+                        cells.off.alpha = 0.5,
+                        aspect = 1.0,
+                        bait.col = 'red',
+                        grid.col = 'darkgrey', grid.lwd = 2, grid.lty = 1,
+                        protein.label.width = 1.5, sample.label.width = protein.label.width,
+                        plot.samples = FALSE,
+                        extended.result = FALSE )
 {
-    if ( !is.null( measurements ) && !show.msruns ) {
+    if ( show.measurements && !show.msruns ) {
         warning( "Measurements display only supported when show.msruns = TRUE, turning it on" )
         show.msruns <- TRUE
     }
@@ -492,11 +516,11 @@ BIMAP.plot <- function( bimap.props, protein.info,
         stringsAsFactors = FALSE
     )
     rownames( proteins ) <- proteins$protein_ac
-    if ( !is.null(protein.info.ex) & !is.null( protein_name_col ) ) {
-        proteins$short_label <- protein.info.ex[ proteins$protein_ac, protein_name_col ]
+    if ( !is.null(proteins.info) & !is.null( protein_name_col ) ) {
+        proteins$short_label <- proteins.info[ proteins$protein_ac, protein_name_col ]
     }
-    if ( !is.null(protein.info.ex) & !is.null( protein_description_col ) ) {
-        proteins$description <- protein.info.ex[ proteins$protein_ac, protein_description_col ]
+    if ( !is.null(proteins.info) & !is.null( protein_description_col ) ) {
+        proteins$description <- proteins.info[ proteins$protein_ac, protein_description_col ]
     }
     bimap.props$proteins.clusters <- within( bimap.props$proteins.clusters, {
         protein_label <- proteins[ bimap.props$proteins.clusters$protein_ac, 'short_label' ]
@@ -504,7 +528,7 @@ BIMAP.plot <- function( bimap.props, protein.info,
 
     if ( show.msruns ) {
         # join sample clustering with msruns information 
-        bimap.props$samples.clusters <- merge( bimap.props$samples.clusters, msrun.info, by = c( 'sample' ),
+        bimap.props$samples.clusters <- merge( bimap.props$samples.clusters, bimap.data$msruns, by = c( 'sample' ),
                                             all.x = TRUE, all.y = FALSE )
     }
     samples.clusters <- ddply( bimap.props$samples.clusters, c( 'samples.cluster' ), function( cluster ) {
@@ -516,7 +540,7 @@ BIMAP.plot <- function( bimap.props, protein.info,
     rownames( samples.clusters ) <- samples.clusters$serial
     samples <- data.frame(
         samples.cluster = bimap.props$samples.clusters$samples.cluster,
-        bait_ac = sample.info[ bimap.props$samples.clusters$sample, 'bait_ac' ],
+        bait_ac = bimap.data$samples[ bimap.props$samples.clusters$sample, 'bait_ac' ],
         stringsAsFactors = FALSE
     )
     if ( show.msruns ) {
@@ -527,7 +551,7 @@ BIMAP.plot <- function( bimap.props, protein.info,
     samples$short_label <- samples$col_id
     rownames( samples ) <- samples$col_id
     if ( !is.null( sample_name_col ) ) {
-        samples$short_label <- sample.info[ bimap.props$samples.clusters$sample, sample_name_col ]
+        samples$short_label <- bimap.data$samples[ bimap.props$samples.clusters$sample, sample_name_col ]
         if ( show.msruns ) {
             samples$short_label <- paste( samples$short_label, bimap.props$samples.clusters$msrun )
         }
@@ -536,7 +560,7 @@ BIMAP.plot <- function( bimap.props, protein.info,
     
     # compose proteins labels
     proteins$axis_label <- proteins$short_label
-    if ( show.protein.id ) {
+    if ( show.protein_ac ) {
         proteins$axis_label <- paste( proteins$axis_label,
                 "(", proteins$protein_ac, ")", sep='' )
     }
@@ -550,7 +574,7 @@ BIMAP.plot <- function( bimap.props, protein.info,
     samples$axis_label <- proteins[ samples$bait_ac, 'samples_axis_label' ]
     # use bait_ac for baits not in proteins info (also if they are not protein at all)
     samples[ is.na( samples$axis_label ), 'axis_label' ] <- samples[ is.na( samples$axis_label ), 'bait_ac' ]
-    if ( show.sample.id ) {
+    if ( show.sample_id ) {
         samples$axis_label <- paste( samples$axis_label, ':', samples$short_label )
     }
 
@@ -610,11 +634,8 @@ BIMAP.plot <- function( bimap.props, protein.info,
     block.matrix <- matrix( NA, nrow = nrow( proteins ), ncol = nrow( samples ) )
     colnames(block.matrix) <- samples$col_id
     rownames(block.matrix) <- proteins$protein_ac
-    if ( is.null( measurements ) ) {
-        cells.on.matrix <- NULL
-        cells.off.matrix <- NULL
-    } else {
-        tmp.matrix <- ms_data.matrix( measurements, protein.info,
+    if ( show.measurements ) {
+        tmp.matrix <- ms_data.matrix( bimap.data$measurements, bimap.data$proteins,
                 cellfunc = cell.func,
                 msrun_column = 'msrun', bait_column = 'bait_ac', prey_column = 'prey_ac' )
         cells.on.matrix <- block.matrix
@@ -623,6 +644,9 @@ BIMAP.plot <- function( bimap.props, protein.info,
         cells.on.matrix[ common.prots, common.samples ] <-
             tmp.matrix[ common.prots, common.samples ]
         cells.off.matrix <- block.matrix
+    } else {
+        cells.on.matrix <- NULL
+        cells.off.matrix <- NULL
     }
     # distribute values between cells.on/off.matrix according to block on/off state
     for( protsClu in proteins.clusters$serial ) {
@@ -631,7 +655,7 @@ BIMAP.plot <- function( bimap.props, protein.info,
             clu.samples <- subset( samples, samples.cluster == samplesClu )$col_id
             clu.val <- signals.matrix[ protsClu, samplesClu ]
             block.matrix[ clu.prots, clu.samples ] <- signals.matrix[ protsClu, samplesClu ]
-            if ( !is.null( measurements ) ) {
+            if ( show.measurements ) {
                 # move cells data to off cells
                 if ( is.na( clu.val ) ) {
                     cells.off.matrix[ clu.prots, clu.samples ] <- cells.on.matrix[ clu.prots, clu.samples ]
@@ -704,25 +728,6 @@ BIMAP.plot <- function( bimap.props, protein.info,
                          nrow = nrow( signals.matrix ), ncol = ncol( signals.matrix ),
                          widths = samples.clusters$size, 
                          heights = rev( proteins.clusters$size ) ) ) )
-#           if ( !is.null( measurements ) ) {
-#               print('Plotting AP-MS measurements...')
-#               for ( ocId in rownames( signals.matrix ) ) {
-#                   cluster.proteins <- subset( proteins, protein_ac %in% subset( bimap.props$proteins.clusters, proteins.cluster == ocId )$protein_ac )$protein_ac
-#                   rowIx <- which( rev( rownames( signals.matrix ) ) == ocId )
-#                   for ( pcId in colnames( signals.matrix ) ) {
-#                       cluster.samples <- subset( samples, sample %in% subset( bimap.props$samples.clusters, samples.cluster == pcId )$msrun )$sample
-#                       colIx <- which( colnames( signals.matrix ) == pcId )
-#                       pushViewport( viewport( layout.pos.col = colIx, layout.pos.row = rowIx,
-#                                     layout = grid.layout( nrow = 1, ncol = length( cluster.samples ) ) ) )
-#                       for ( sample in cluster.samples ) {
-#                           plot.block.measurements(
-#                               cluster.proteins, sample, cluster.samples,
-#                               msrun.info, signals.matrix, measurements )
-#                       }
-#                       popViewport()
-#                   }
-#               }
-#           }
            if ( nrow( bimap.props$blocks ) > 0 ) {
                print('Plotting BI-MAP blocks...')
                blocks <- bimap.props$blocks
@@ -760,9 +765,9 @@ BIMAP.plot <- function( bimap.props, protein.info,
                   pushViewport( viewport( layout.pos.row = which( rev( rownames( signals.matrix ) ) == protClu ), 
                                           layout.pos.col = which( colnames( signals.matrix ) == sampleClu ) ) )
                   #print(blk)
-                  plot.block( cluster.proteins, cluster.samples,
+                  BIMAP.block.plot( cluster.proteins, cluster.samples,
                       protClu, sampleClu,
-                      show.abundance = show.abundance,
+                      show.abundance.label = show.abundance.labels,
                       signals.matrix, signals.matrix.sd,
                       signals.subframe, bait.col = bait.col,
                       border.col = blk$nested.color,
@@ -814,14 +819,16 @@ BIMAP.plot <- function( bimap.props, protein.info,
     }
 }
 
-BIMAP.plot_bimap <- function( bimap.walk, bimapId,
-    protein.info, sample.info, msrun.info,
+#' Extracts BI-MAP model and plots it.
+#' @see BIMAP.plot()
+BIMAP.mcmcwalk.plot_bimap <- function( bimap.walk, bimapId,
+    bimap.data,
     onblock.threshold = 0.6, ... )
 {
     bimap.props <- BIMAP.extract_clustering( bimap.walk, bimapId, TRUE,
         onblock.threshold = onblock.threshold )
-    BIMAP.plot( bimap.props, protein.info, sample.info, msrun.info,
-            title = paste( 'Chessboard biclustering #', bimapId, sep = '' ), ... )
+    BIMAP.plot( bimap.props, bimap.data,
+            title = paste( 'BI-MAP biclustering #', bimapId, sep = '' ), ... )
 }
 
 plot_cluster_samples <- function( clusters.sample.frame, cluster.serial )
