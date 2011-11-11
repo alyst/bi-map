@@ -52,3 +52,13 @@ BIMAP.plot( bimap.best_clustering,
 )
 dev.off()
 
+# construct BI-MAP network representation in GraphML format
+bimap.graphml <- BIMAP.graphML( bimap.best_clustering,
+    bimap.data$proteins, bimap.data$samples, bimap.data$msruns )
+bimap.unstyled.graphml.filename <- file.path( results_path, 'tip49_bimap.graphml' )
+saveXML( bimap.graphml, file = bimap.unstyled.graphml.filename )
+# apply yEd-compatible visual scheme to the graph
+system( paste( "xsltproc -o", file.path( results_path, 'tip49_bimap_y.graphml' ),
+        file.path( base_path, 'scripts/xslt/yfilize.xslt' ),
+        bimap.unstyled.graphml.filename ) )
+# the file tip49_bimap_y.graphml could now be loaded into yEd 3.8+ for layouting
