@@ -72,13 +72,13 @@ void ChessboardBiclusteringFit::updateMetrics() const
         _metrics.lppBlocks = res + eval.noiseParamsLPP();
     }
 
-    if ( is_unset( _metrics.lppObjClu ) ) {
-        _metrics.lppObjClu = eval.objectsClusteringLPP();
-        if ( is_unset( _metrics.lppObjClu ) ) THROW_RUNTIME_ERROR( "Objects' clustering lpp eval error" );
+    if ( is_unset( _metrics.lppObjsPtn ) ) {
+        _metrics.lppObjsPtn = eval.objectsClusteringLPP();
+        if ( is_unset( _metrics.lppObjsPtn ) ) THROW_RUNTIME_ERROR( "Objects' clustering lpp eval error" );
     }
-    if ( is_unset( _metrics.lppProbesClu ) ) {
-        _metrics.lppProbesClu = eval.probesClusteringLPP();
-        if ( is_unset( _metrics.lppProbesClu ) ) THROW_RUNTIME_ERROR( "Probes' clustering lpp eval error" );
+    if ( is_unset( _metrics.lppProbesPtn ) ) {
+        _metrics.lppProbesPtn = eval.probesClusteringLPP();
+        if ( is_unset( _metrics.lppProbesPtn ) ) THROW_RUNTIME_ERROR( "Probes' clustering lpp eval error" );
     }
 
     updateClustersLLH();

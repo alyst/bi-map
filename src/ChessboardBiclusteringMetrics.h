@@ -54,13 +54,13 @@ struct LLHMetrics {
     */
 struct StatsMetrics {
     log_prob_t  lppBlocks;      /** blocks log prior probability */
-    log_prob_t  lppObjClu;      /** object's clustering log prior prob. */
-    log_prob_t  lppProbesClu;   /** probe's clustering log prior prob. */
+    log_prob_t  lppObjsPtn;     /** object's partition log prior prob. */
+    log_prob_t  lppProbesPtn;   /** probe's partition log prior prob. */
     LLHMetrics  llhObjs;        /** object's likelihood metrics + quantitative */
     LLHMetrics  llhProbes;      /** probe's likelihood metrics */
 
     StatsMetrics()
-    : lppBlocks( ::unset() ), lppObjClu( ::unset() ), lppProbesClu( ::unset() )
+    : lppBlocks( ::unset() ), lppObjsPtn( ::unset() ), lppProbesPtn( ::unset() )
     {}
 
     void unset( bool objects = true, bool probes = true ) {
@@ -69,13 +69,13 @@ struct StatsMetrics {
         // any modification affects blocks LPP
         lppBlocks = ::unset();
         if ( objects ) {
-            lppObjClu = ::unset();
+            lppObjsPtn = ::unset();
             llhObjs.topo = llhObjs.conf = ::unset();
             llhProbes.conf = ::unset();
             // probes topo component is not affected
         }
         if ( probes ) {
-            lppProbesClu = ::unset();
+            lppProbesPtn = ::unset();
             llhProbes.topo = llhProbes.conf = ::unset();
             llhObjs.conf = ::unset();
             // objects topo component is not affected
@@ -83,12 +83,12 @@ struct StatsMetrics {
     }
 
     bool is_unset() const {
-        return ( ::is_unset( lppBlocks ) || ::is_unset( lppObjClu ) || ::is_unset( lppProbesClu )
+        return ( ::is_unset( lppBlocks ) || ::is_unset( lppObjsPtn ) || ::is_unset( lppProbesPtn )
                     || llhObjs.is_unset() || llhProbes.is_unset() );
     }
 
     log_prob_t lpp() const {
-        return ( lppBlocks + lppObjClu + lppProbesClu );
+        return ( lppBlocks + lppObjsPtn + lppProbesPtn );
     }
 
     log_prob_t llh() const {
@@ -104,8 +104,8 @@ struct StatsMetrics {
     void serialize(Archive & ar, const unsigned int version)
     {
         ar & BOOST_SERIALIZATION_NVP( lppBlocks );
-        ar & BOOST_SERIALIZATION_NVP( lppObjClu );
-        ar & BOOST_SERIALIZATION_NVP( lppProbesClu );
+        ar & BOOST_SERIALIZATION_NVP( lppObjsPtn );
+        ar & BOOST_SERIALIZATION_NVP( lppProbesPtn );
         ar & BOOST_SERIALIZATION_NVP( llhObjs );
         ar & BOOST_SERIALIZATION_NVP( llhProbes );
     }
