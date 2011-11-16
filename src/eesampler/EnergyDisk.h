@@ -16,11 +16,11 @@ template<class Particle>
 class ParticleCacheEnergiesProxy;
 
 template<class Particle>
-class EnergyDisk {
+class ParticleCache {
 public:
     typedef Particle particle_type;
     typedef CascadeParticle<particle_type> cascade_particle_type;
-    typedef EnergyDisk<particle_type> disk_type;
+    typedef ParticleCache<particle_type> cache_type;
     typedef ParticleCacheEnergiesProxy<particle_type> energies_proxy_type;
 
 private:
@@ -34,13 +34,13 @@ private:
     TurbineCascadeExecutionMonitor*     _pMonitor;
 
 public:
-    EnergyDisk(
+    ParticleCache(
         std::size_t maxParticles
     ) : _maxParticles( maxParticles ), _pMonitor( NULL )
     {
     }
 
-    ~EnergyDisk()
+    ~ParticleCache()
     {
         for ( const_particle_iterator pIt = _particles.begin();
               pIt != _particles.end(); ++pIt ) {
@@ -51,12 +51,12 @@ public:
         }
     }
 
-    void fill( const disk_type& energyDisk, double time, size_t iteration )
+    void fill( const cache_type& cache, double time, size_t iteration )
     {
-        // paste particles to new disk
-        for ( size_t ix = 0; ix < energyDisk.size(); ++ix )
+        // paste particles to the new cache
+        for ( size_t ix = 0; ix < cache.size(); ++ix )
         {
-            push( energyDisk[ ix ], energyDisk[ ix ].serial, 0, 0 );
+            push( cache[ ix ], cache[ ix ].serial, 0, 0 );
         }
     }
 
@@ -125,7 +125,7 @@ public:
     typedef Particle particle_type;
     typedef float energy_type;
     typedef CascadeParticle<particle_type> cascade_particle_type;
-    typedef EnergyDisk<particle_type> disk_type;
+    typedef ParticleCache<particle_type> cache_type;
     typedef ParticleCacheEnergiesProxy<particle_type> energies_proxy_type;
     typedef std::vector<energy_type> energy_vector_type;
 
@@ -133,7 +133,7 @@ private:
     typedef size_t sequence_index;
     typedef std::multimap<energy_type, sequence_index> energy_to_sequence_map_type;
 
-    friend class EnergyDisk<Particle>;
+    friend class ParticleCache<Particle>;
 
     class ParticleEnergyIterator {
         typedef typename energy_to_sequence_map_type::const_iterator internal_iterator;
@@ -163,10 +163,10 @@ private:
             return ( !operator==( that ) );
         }
         const cascade_particle_type& operator*() const {
-            return ( _energies._disk[ _it->second ] );
+            return ( _energies._cache[ _it->second ] );
         }
         const cascade_particle_type& operator->() const {
-            return ( _energies._disk[ _it->second ] );
+            return ( _energies._cache[ _it->second ] );
         }
         ParticleEnergyIterator operator++() {
             ParticleEnergyIterator res( *this );
@@ -184,15 +184,15 @@ private:
     typedef energy_to_sequence_map_type::const_reverse_iterator const_reverese_energy_iterator;
 
 protected:
-    const disk_type& _disk;
+    const cache_type& _cache;
     energy_to_sequence_map_type _energyMap;
 
     template<typename EnergyEval>
-    ParticleCacheEnergiesProxy( const EnergyDisk<Particle>& disk, const EnergyEval& eval )
-    : _disk( disk )
+    ParticleCacheEnergiesProxy( const ParticleCache<Particle>& cache, const EnergyEval& eval )
+    : _cache( cache )
     {
-        for ( size_t ix = 0; ix < disk.size(); ix++ ) {
-            _energyMap.insert( std::make_pair( eval( disk[ ix ] ), ix ) );
+        for ( size_t ix = 0; ix < cache.size(); ix++ ) {
+            _energyMap.insert( std::make_pair( eval( cache[ ix ] ), ix ) );
         }
     };
 
@@ -224,20 +224,20 @@ public:
         if ( _energyMap.empty() ) return ( NULL );
         const_energy_iterator pIt = _energyMap.begin();
         std::advance( pIt, std::min( rank, _energyMap.size()-1 ) );
-        return ( &_disk[ pIt->second ] );
+        return ( &_cache[ pIt->second ] );
     }
     const cascade_particle_type* particleNotFound() const {
         return ( NULL );
     }
 
     template<class OutputStream>
-    void print( OutputStream& out, size_t iteration, size_t diskId ) const
+    void print( OutputStream& out, size_t iteration, size_t cacheId ) const
     {
         energy_vector_type  energies;
         energies.reserve( _energyMap.size() );
 
         for ( energy_to_sequence_map_type::const_iterator pit = _energyMap.begin(); pit != _energyMap.end(); ++pit ) {
-            out << iteration << '\t' << diskId << '\t' << pit->first << '\n';
+            out << iteration << '\t' << cacheId << '\t' << pit->first << '\n';
         }
     }
 
@@ -310,13 +310,13 @@ ParticleCacheEnergiesProxy<Particle>::pickRandomParticle(
     if ( offset > 0 ) {
         std::advance( pit, offset );
     }
-    return ( &_disk[ pit->second ] );
+    return ( &_cache[ pit->second ] );
 #endif
 }
 
 template<class Particle>
-const typename EnergyDisk<Particle>::cascade_particle_type*
-EnergyDisk<Particle>::push(
+const typename ParticleCache<Particle>::cascade_particle_type*
+ParticleCache<Particle>::push(
     const cascade_particle_type& particle
 ){
     if ( !std::isfinite( particle.energy() ) ) {
@@ -341,7 +341,7 @@ EnergyDisk<Particle>::push(
 }
 
 /**
- *  Gets a vector of energies of all particles in the disk
+ *  Gets a vector of energies of all particles in the cache
  *  within the specified energy range.
  */
 template<class Particle>

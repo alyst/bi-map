@@ -234,21 +234,21 @@ struct Particle2dCollector {
 
 class Particle2dInterpolationGenerator {
 private:
-    typedef EnergyDisk<StaticParticle2d>::energies_proxy_type energy_disk_type;
+    typedef ParticleCache<StaticParticle2d>::energies_proxy_type particle_cache_type;
 
 public:
     typedef std::vector<StaticParticle2d> particle_container_type;
 
     particle_container_type operator()( const gsl_rng* rng,
-                                        const energy_disk_type& disk ) const
+                                        const particle_cache_type& cache ) const
     {
         particle_container_type res;
-        if ( disk.size() < 2 )                   return ( res );
-        size_t ix1 = gsl_rng_uniform_int( rng, disk.size()-1 );
-        size_t ix2 = gsl_rng_uniform_int( rng, disk.size()-2 );
+        if ( cache.size() < 2 )                   return ( res );
+        size_t ix1 = gsl_rng_uniform_int( rng, cache.size()-1 );
+        size_t ix2 = gsl_rng_uniform_int( rng, cache.size()-2 );
         if ( ix2 == ix1 ) ix2++;
-        const Particle2d& pt1 = disk.nthParticle( ix1 )->particle;
-        const Particle2d& pt2 = disk.nthParticle( ix2 )->particle;
+        const Particle2d& pt1 = cache.nthParticle( ix1 )->particle;
+        const Particle2d& pt2 = cache.nthParticle( ix2 )->particle;
         const double k = gsl_rng_uniform( rng );
 
         Particle2d lerp1;

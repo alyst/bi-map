@@ -20,7 +20,7 @@ private:
         size_t eeReleasedJumps; // jumps to released particles
         size_t eeReleasedSuccJumps; // succ. jumps to released particles
         size_t particlesGenerated; /// generated (from this turbine) particles
-        size_t particlesReleased; /// particles released to energy disk
+        size_t particlesReleased; /// particles released to the cache
 
         TurbineStats()
         : eeJumps( 0 ), eeSuccessfulJumps( 0 )

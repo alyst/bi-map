@@ -453,7 +453,7 @@ public:
         typename turbine_container_type::iterator ltit = _unit._turbines.find( destinationIx );
         if ( ltit != _unit._turbines.end() ) {
             BOOST_ASSERT( ltit->second->level() >= _nodeInfo.level );
-            return ( ltit->second->energyDisk()->push_many( particlesBegin, particlesEnd,
+            return ( ltit->second->particleCache()->push_many( particlesBegin, particlesEnd,
                                                             _unit._timer.elapsed(), _unit._iteration ) );
         }
         typename connection_container_type::iterator ctit = _unit._connections.find( destinationIx );
@@ -775,7 +775,7 @@ TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGenerator,
     energy_landscape_type energyLandscape;
 
     for ( typename turbine_container_type::const_iterator it = _turbines.begin(); it != _turbines.end(); ++it ) {
-        energy_vector_type turbineEnergies = it->second->energyDisk()
+        energy_vector_type turbineEnergies = it->second->particleCache()
                 ->energies( _turbines.begin()->second->movingParticle().staticParticleEnergyEval() ).particleEnergies();
         if ( !turbineEnergies.empty() ) {
             typename energy_landscape_type::iterator lit = energyLandscape.find( it->second->level() );

@@ -32,16 +32,16 @@ void ChessboardBiclusteringCrossoverGenerator::push_to_result(
 
 ChessboardBiclusteringCrossoverGenerator::particle_container_type 
 ChessboardBiclusteringCrossoverGenerator::operator()(
-    const gsl_rng*  rng, 
-    const energy_disk_type& disk
+    const gsl_rng*                 rng,
+    const particle_cache_type&     cache
 ) const {
     particle_container_type res;
-    if ( disk.size() < 2 )                   return ( res );
-    size_t ix1 = gsl_rng_uniform_int( rng, disk.size() );
-    size_t ix2 = gsl_rng_uniform_int( rng, disk.size()-1 );
+    if ( cache.size() < 2 )                   return ( res );
+    size_t ix1 = gsl_rng_uniform_int( rng, cache.size() );
+    size_t ix2 = gsl_rng_uniform_int( rng, cache.size()-1 );
     if ( ix2 == ix1 ) ix2++;
-    ChessboardBiclusteringFit ptn1( _precomputed, _priors, *disk.nthParticle( ix1 )->particle.clustering );
-    ChessboardBiclusteringFit ptn2( _precomputed, _priors, *disk.nthParticle( ix2 )->particle.clustering );
+    ChessboardBiclusteringFit ptn1( _precomputed, _priors, *cache.nthParticle( ix1 )->particle.clustering );
+    ChessboardBiclusteringFit ptn2( _precomputed, _priors, *cache.nthParticle( ix2 )->particle.clustering );
 
     if ( gsl_rng_uniform( rng ) < OBJ_XOVER_RATE ) {
         // object's partition crossover

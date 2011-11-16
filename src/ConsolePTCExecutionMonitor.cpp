@@ -10,11 +10,11 @@ ConsolePTCExecutionMonitor::ConsolePTCExecutionMonitor(
 {
     if ( particleLog ) {
         _particlesLogStream.open( particleLog );
-        _particlesLogStream << "disk\tenergy\tstart\tend\treleased\n";
+        _particlesLogStream << "cache\tenergy\tstart\tend\treleased\n";
     }
     if ( eeJumpLog ) {
         _eeJumpLogStream.open( eeJumpLog );
-        _eeJumpLogStream << "iteration\tdisk\tenergy\tnew_energy\treleased\taccepted\n";
+        _eeJumpLogStream << "iteration\tcache\tenergy\tnew_energy\treleased\taccepted\n";
     }
 }
 
