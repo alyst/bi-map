@@ -2,58 +2,36 @@
 
 #include "../BasicTypedefs.h"
 
+#include <map>
 #include <vector>
 #include <algorithm>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_randist.h>
-#include <boost/multi_index_container.hpp>
-#include <boost/multi_index/indexed_by.hpp>
-#include <boost/multi_index/ordered_index.hpp>
-#include <boost/multi_index/sequenced_index.hpp>
-#include <boost/multi_index/mem_fun.hpp>
 
 #include "ExecutionMonitor.h"
 #include "Particle.h"
+
+template<class Particle>
+class ParticleCacheEnergiesProxy;
 
 template<class Particle>
 class EnergyDisk {
 public:
     typedef Particle particle_type;
     typedef CascadeParticle<particle_type> cascade_particle_type;
-    typedef typename cascade_particle_type::energy_type energy_type;
-    typedef std::vector<energy_type> energy_vector_type;
     typedef EnergyDisk<particle_type> disk_type;
+    typedef ParticleCacheEnergiesProxy<particle_type> energies_proxy_type;
 
 private:
-    typedef boost::multi_index::multi_index_container<
-    cascade_particle_type,
-    boost::multi_index::indexed_by<
-        // by assigned serial number
-        boost::multi_index::ordered_non_unique<boost::multi_index::const_mem_fun<
-                cascade_particle_type, const energy_type, &cascade_particle_type::energy> >,
-        // by entity contents
-        boost::multi_index::sequenced<>
-    > > particles_container_type;
+    typedef std::vector<cascade_particle_type> particles_container_type;
 
-    typedef typename particles_container_type::template nth_index<0>::type particles_energy_index;
-    typedef typename particles_container_type::template nth_index<1>::type particles_sequential_index;
-    typedef typename particles_energy_index::const_iterator const_particle_iterator;
-    typedef typename particles_energy_index::const_reverse_iterator const_reverse_particle_iterator;
-    typedef typename particles_energy_index::iterator particle_iterator;
-    typedef typename particles_sequential_index::const_iterator const_particle_sequential_iterator;
+    typedef typename particles_container_type::const_iterator const_particle_iterator;
+    typedef typename particles_container_type::iterator particle_iterator;
 
     std::size_t                         _maxParticles;
     particles_container_type            _particles;
     TurbineCascadeExecutionMonitor*     _pMonitor;
-
-    particles_energy_index& particlesEnergyIndex() {
-        return ( _particles.template get<0>() );
-    }
-
-    particles_sequential_index& particlesSequentialIndex() {
-        return ( _particles.template get<1>() );
-    }
 
 public:
     EnergyDisk(
@@ -64,30 +42,21 @@ public:
 
     ~EnergyDisk()
     {
-        for ( const_particle_iterator pIt = particlesEnergyIndex().begin();
-              pIt != particlesEnergyIndex().end(); ++pIt ) {
+        for ( const_particle_iterator pIt = _particles.begin();
+              pIt != _particles.end(); ++pIt ) {
             if ( _pMonitor ) {
                 /// @todo: submit proper values, change signature
-                _pMonitor->notifyParticlePopped( 0, pIt->energy(), 0, false );
+                _pMonitor->notifyParticlePopped( 0, 0, 0, false );
             }
         }
-    }
-
-    const particles_energy_index& particlesEnergyIndex() const {
-        return ( _particles.template get<0>() );
-    }
-
-    const particles_sequential_index& particlesSequentialIndex() const {
-        return ( _particles.template get<1>() );
     }
 
     void fill( const disk_type& energyDisk, double time, size_t iteration )
     {
         // paste particles to new disk
-        for ( const_particle_iterator pIt = energyDisk.particlesEnergyIndex().begin();
-              pIt != energyDisk.particlesEnergyIndex().end(); ++pIt )
+        for ( size_t ix = 0; ix < energyDisk.size(); ++ix )
         {
-            push( *pIt, pIt->serial, 0, 0 );
+            push( energyDisk[ ix ], energyDisk[ ix ].serial, 0, 0 );
         }
     }
 
@@ -104,26 +73,11 @@ public:
     }
 
     bool isFull() const {
-        return ( particlesEnergyIndex().size() >= capacity() );
+        return ( size() >= capacity() );
     }
 
-    std::pair<const_particle_iterator, const_particle_iterator> findParticlesRange( energy_type minEnergy, energy_type maxEnergy ) const;
-
-    const cascade_particle_type* pickRandomParticle( const gsl_rng* rng, energy_type minEnergy, energy_type maxEnergy ) const;
-
-    const cascade_particle_type* energyQuantileParticle( prob_t quantile ) const;
-
-    energy_type energyRange( prob_t quantileMin = 0, prob_t quantileMax = 1 ) const;
-
-    const cascade_particle_type* nthParticle( size_t rank ) const {
-        if ( particlesEnergyIndex().empty() ) return ( NULL );
-        const_particle_iterator pIt = particlesEnergyIndex().begin();
-        std::advance( pIt, std::min( rank, size()-1 ) );
-        return ( &*pIt );
-    }
-
-    const cascade_particle_type* particleNotFound() const {
-        return ( NULL );
+    const cascade_particle_type& operator[]( size_t index ) const {
+        return ( _particles[ index ] );
     }
 
     const cascade_particle_type* push( const cascade_particle_type& particle ) ;
@@ -143,7 +97,7 @@ public:
         for ( Iterator pit = particlesBegin; pit != particlesEnd; ++pit ) {
             /// @todo serial
             cascade_particle_type mp( 0, time, iteration, *pit );
-            if ( push( mp ) == particleNotFound() ) {
+            if ( push( mp ) == NULL ) {
                 //return ( false );
             }
         }
@@ -151,26 +105,142 @@ public:
     }
 
     size_t particlesCount() const {
-        return ( particlesEnergyIndex().size() );
+        return ( size() );
     }
+
+    const cascade_particle_type* particleNotFound() const {
+        return ( NULL );
+    }
+
+    template<typename EnergyEval>
+    energies_proxy_type energies( const EnergyEval& eval ) const
+    {
+        return ( ParticleCacheEnergiesProxy<Particle>( *this, eval ) );
+    }
+};
+
+template<class Particle>
+class ParticleCacheEnergiesProxy {
+public:
+    typedef Particle particle_type;
+    typedef float energy_type;
+    typedef CascadeParticle<particle_type> cascade_particle_type;
+    typedef EnergyDisk<particle_type> disk_type;
+    typedef ParticleCacheEnergiesProxy<particle_type> energies_proxy_type;
+    typedef std::vector<energy_type> energy_vector_type;
+
+private:
+    typedef size_t sequence_index;
+    typedef std::multimap<energy_type, sequence_index> energy_to_sequence_map_type;
+
+    friend class EnergyDisk<Particle>;
+
+    class ParticleEnergyIterator {
+        typedef typename energy_to_sequence_map_type::const_iterator internal_iterator;
+
+        const energies_proxy_type&   _energies;
+        internal_iterator           _it;
+
+    protected:
+        ParticleEnergyIterator( const energies_proxy_type& energies )
+        : _energies( energies ), _it( energies._energyMap.end() )
+        {
+        }
+
+        ParticleEnergyIterator( const energies_proxy_type& energies, const internal_iterator& it )
+        : _energies( energies ), _it( it )
+        {
+        }
+
+    public:
+        bool operator==( const ParticleEnergyIterator& that ) const
+        {
+            if ( &_energies != &that._energies ) throw std::runtime_error( "Iterator belong to different containers" );
+            return ( _it == that._it );
+        }
+        bool operator!=( const ParticleEnergyIterator& that ) const
+        {
+            return ( !operator==( that ) );
+        }
+        const cascade_particle_type& operator*() const {
+            return ( _energies._disk[ _it->second ] );
+        }
+        const cascade_particle_type& operator->() const {
+            return ( _energies._disk[ _it->second ] );
+        }
+        ParticleEnergyIterator operator++() {
+            ParticleEnergyIterator res( *this );
+            _it++;
+            return ( res );
+        }
+        ParticleEnergyIterator& operator++(int) {
+            _it++;
+            return ( *this );
+        }
+    };
+
+    typedef ParticleEnergyIterator const_particle_iterator;
+    typedef energy_to_sequence_map_type::const_iterator const_energy_iterator;
+    typedef energy_to_sequence_map_type::const_reverse_iterator const_reverese_energy_iterator;
+
+protected:
+    const disk_type& _disk;
+    energy_to_sequence_map_type _energyMap;
+
+    template<typename EnergyEval>
+    ParticleCacheEnergiesProxy( const EnergyDisk<Particle>& disk, const EnergyEval& eval )
+    : _disk( disk )
+    {
+        for ( size_t ix = 0; ix < disk.size(); ix++ ) {
+            _energyMap.insert( std::make_pair( eval( disk[ ix ] ), ix ) );
+        }
+    };
+
+    const_energy_iterator energyQuantile( prob_t quantile ) const;
+
+public:
+    static const sequence_index ParticleNA = (sequence_index)( -1 );
 
     energy_vector_type particleEnergies(
         energy_type minEnergy = -std::numeric_limits<energy_type>::infinity(),
-        energy_type maxEnergy = std::numeric_limits<energy_type>::infinity() ) const ;
+        energy_type maxEnergy = std::numeric_limits<energy_type>::infinity() ) const;
+
+    const cascade_particle_type* pickRandomParticle( const gsl_rng* rng, energy_type minEnergy, energy_type maxEnergy ) const;
+
+    energy_type energyRange( prob_t quantileMin = 0, prob_t quantileMax = 1 ) const;
+
+    const_particle_iterator begin() const {
+        return ( const_particle_iterator( *this, _energyMap.begin() ) );
+    }
+    const_particle_iterator end() const {
+        return ( const_particle_iterator( *this ) );
+    }
+
+    size_t size() const {
+        return ( _energyMap.size() );
+    }
+
+    const cascade_particle_type* nthParticle( size_t rank ) const {
+        if ( _energyMap.empty() ) return ( NULL );
+        const_energy_iterator pIt = _energyMap.begin();
+        std::advance( pIt, std::min( rank, _energyMap.size()-1 ) );
+        return ( &_disk[ pIt->second ] );
+    }
+    const cascade_particle_type* particleNotFound() const {
+        return ( NULL );
+    }
 
     template<class OutputStream>
     void print( OutputStream& out, size_t iteration, size_t diskId ) const
     {
         energy_vector_type  energies;
-        energies.reserve( particlesCount() );
+        energies.reserve( _energyMap.size() );
 
-        for ( const_particle_iterator pit = particlesEnergyIndex().begin(); pit != particlesEnergyIndex().end(); ++pit ) {
-            energies.push_back( pit->energy() );
-        }
-        for ( int i = 0; i < energies.size(); i++ ) {
-            out << iteration << '\t' << diskId << '\t' << energies[ i ] << '\n';
+        for ( energy_to_sequence_map_type::const_iterator pit = _energyMap.begin(); pit != _energyMap.end(); ++pit ) {
+            out << iteration << '\t' << diskId << '\t' << pit->first << '\n';
         }
     }
+
 };
 
 /******************************************************************************
@@ -178,43 +248,45 @@ public:
  ******************************************************************************/
 
 template<class Particle>
-typename EnergyDisk<Particle>::energy_type EnergyDisk<Particle>::energyRange(
+typename ParticleCacheEnergiesProxy<Particle>::energy_type ParticleCacheEnergiesProxy<Particle>::energyRange(
     prob_t  quantileMin,
     prob_t  quantileMax
 ) const {
     if ( quantileMin > quantileMax ) return ( std::numeric_limits<double>::signaling_NaN() );
-    if ( particlesEnergyIndex().size() <= 1 ) return ( 0 );
-    const cascade_particle_type* eMin = energyQuantileParticle( quantileMin );
-    if ( eMin == NULL ) return ( std::numeric_limits<double>::signaling_NaN() );
-    const cascade_particle_type* eMax = energyQuantileParticle( quantileMax );
-    if ( eMax == NULL ) return ( std::numeric_limits<double>::signaling_NaN() );
-    return ( eMax->energy() - eMin->energy() );
+    if ( _energyMap.size() <= 1 ) return ( 0 );
+    const const_energy_iterator eMinIt = energyQuantile( quantileMin );
+    if ( eMinIt == _energyMap.end() ) return ( std::numeric_limits<double>::signaling_NaN() );
+    const const_energy_iterator eMaxIt = energyQuantile( quantileMax );
+    if ( eMaxIt == _energyMap.end() ) return ( std::numeric_limits<double>::signaling_NaN() );
+    return ( eMaxIt->first - eMinIt->first );
 }
 
 template<class Particle>
-const typename EnergyDisk<Particle>::cascade_particle_type*
-EnergyDisk<Particle>::energyQuantileParticle(
+typename ParticleCacheEnergiesProxy<Particle>::const_energy_iterator
+ParticleCacheEnergiesProxy<Particle>::energyQuantile(
     prob_t  quantile
 ) const {
-    if ( particlesEnergyIndex().empty() || quantile < 0 || quantile > 1 ) {
-        return ( NULL );
+    if ( _energyMap.empty() || quantile < 0 || quantile > 1 ) {
+        return ( _energyMap.end() );
     }
-    size_t ix = (int)( std::floor( quantile * particlesEnergyIndex().size() ) );
-    if ( ix < particlesEnergyIndex().size() / 2 ) {
-        const_particle_iterator pIt = particlesEnergyIndex().begin();
-        if ( ix > 0 ) std::advance( pIt, ix );
-        return ( &*pIt );
+    size_t ix = (int)( std::floor( quantile * _energyMap.size() ) );
+    if ( ix < _energyMap.size() / 2 ) {
+        const_energy_iterator eIt = _energyMap.begin();
+        if ( ix > 0 ) std::advance( eIt, ix );
+        return ( eIt );
     }
     else {
-        const_reverse_particle_iterator pRit = particlesEnergyIndex().rbegin();
-        if ( ix < particlesEnergyIndex().size() - 1 ) std::advance( pRit, particlesEnergyIndex().size() - 1 - ix );
-        return ( &*pRit );
+        energy_to_sequence_map_type::const_iterator eIt = _energyMap.end();
+        for ( ; ix < _energyMap.size(); ix++ ) {
+            eIt--;
+        }
+        return ( eIt );
     }
 }
 
 template<class Particle>
-const typename EnergyDisk<Particle>::cascade_particle_type*
-EnergyDisk<Particle>::pickRandomParticle(
+const typename ParticleCacheEnergiesProxy<Particle>::cascade_particle_type*
+ParticleCacheEnergiesProxy<Particle>::pickRandomParticle(
     const gsl_rng*  rng,
     energy_type     minEnergy,
     energy_type     maxEnergy
@@ -226,31 +298,20 @@ EnergyDisk<Particle>::pickRandomParticle(
     pit--;
     return ( pit->energy <= rndEnergy ? &(*pit) : NULL );
 #else
-    std::pair<const_particle_iterator, const_particle_iterator> range = findParticlesRange( minEnergy, maxEnergy );
-    if ( range.first == particlesEnergyIndex().end() ) return ( NULL );
+    const_energy_iterator lowerBound = _energyMap.lower_bound( minEnergy );
+    const_energy_iterator upperBound = _energyMap.upper_bound( maxEnergy );
+    if ( lowerBound == _energyMap.end() ) return ( NULL );
     size_t rangeSize = 0;
-    for ( const_particle_iterator pit = range.first; pit != range.second; ++pit ) {
+    for ( const_energy_iterator pit = lowerBound; pit != upperBound; ++pit ) {
         rangeSize++;
     }
-    const_particle_iterator pit = range.first;
+    const_energy_iterator pit = lowerBound;
     size_t offset = rangeSize > 0 ? gsl_rng_uniform_int( rng, rangeSize ) : 0;
     if ( offset > 0 ) {
         std::advance( pit, offset );
     }
-    return ( &*pit );
+    return ( &_disk[ pit->second ] );
 #endif
-}
-
-template<class Particle>
-std::pair<typename EnergyDisk<Particle>::const_particle_iterator,
-          typename EnergyDisk<Particle>::const_particle_iterator> 
-EnergyDisk<Particle>::findParticlesRange(
-    energy_type minEnergy,
-    energy_type maxEnergy
-) const {
-    BOOST_ASSERT( minEnergy <= maxEnergy );
-    return ( std::make_pair( particlesEnergyIndex().lower_bound( minEnergy ),
-                             particlesEnergyIndex().upper_bound( maxEnergy ) ) );
 }
 
 template<class Particle>
@@ -265,7 +326,6 @@ EnergyDisk<Particle>::push(
     if ( particle.energy() < 0 ) {
         LOG_DEBUG2( "Particle E=" << particle.energy() );
     }
-    const cascade_particle_type* pushed = NULL;
     if ( isFull() ) {
 #if 0
         if ( _pMonitor ) {
@@ -273,19 +333,11 @@ EnergyDisk<Particle>::push(
             _pMonitor->notifyParticlePopped( _index, oldPit->energy, oldPit->outerIteration, oldPit->released );
         }
 #endif
-        // remove the earliest particle stored
-        particlesSequentialIndex().pop_front();
+        // remove the earliest particle stored, all ParticleCacheEnergiesProxy<> should be discarded as indices changed
+        _particles.erase( _particles.begin() );
     }
-    std::pair<const_particle_iterator, bool> insRes = particlesEnergyIndex().insert( particle );
-    if ( insRes.second ) {
-        pushed = &*insRes.first;
-#if 0
-        if ( _pMonitor ) _pMonitor->notifyParticlePushed( _index, pushed->energy );
-#endif
-    } else {
-        LOG_WARN( "Particle E=" << particle.energy() << " not pushed" );
-    }
-    return ( pushed );
+    _particles.push_back( particle );
+    return ( &_particles.back() );
 }
 
 /**
@@ -293,19 +345,18 @@ EnergyDisk<Particle>::push(
  *  within the specified energy range.
  */
 template<class Particle>
-typename EnergyDisk<Particle>::energy_vector_type
-EnergyDisk<Particle>::particleEnergies(
+typename ParticleCacheEnergiesProxy<Particle>::energy_vector_type
+ParticleCacheEnergiesProxy<Particle>::particleEnergies(
     energy_type minEnergy,   /** minimal energy */
     energy_type maxEnergy    /** maximal energy */
 ) const {
     energy_vector_type  res;
-    res.reserve( particlesCount() );
+    res.reserve( _energyMap.size() );
 
-    for ( const_particle_iterator pit = particlesEnergyIndex().begin();
-          pit != particlesEnergyIndex().end(); ++pit ) {
-        if ( pit->energy() > minEnergy && pit->energy() <= maxEnergy ) {
-            res.push_back( pit->energy() );
-        }
+    const const_energy_iterator ubIt = _energyMap.upper_bound( maxEnergy );
+    for ( const_energy_iterator eit = _energyMap.lower_bound( minEnergy );
+          eit != ubIt; ++eit ) {
+        res.push_back( eit->first );
     }
     LOG_DEBUG1( res.size() << " particles E=(" << minEnergy
                 << " (" << ( res.size() > 0 ? res[0] : std::numeric_limits<double>::quiet_NaN() )
@@ -313,4 +364,3 @@ EnergyDisk<Particle>::particleEnergies(
                 << "])" );
     return ( res );
 }
-

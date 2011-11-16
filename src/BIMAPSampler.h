@@ -15,6 +15,7 @@
 class DynamicChessboardBiclustering {
 public:
     typedef StaticChessboardBiclustering static_particle_type;
+    typedef ChessboardBiclusteringEnergyEval static_particle_energy_eval_type;
 
 private:
     const PrecomputedData&          _precomputed;
@@ -77,6 +78,10 @@ public:
     {
         _sampler.doSamplingStep( _pClus );
     }
+
+    ChessboardBiclusteringEnergyEval staticParticleEnergyEval() const {
+        return ( ChessboardBiclusteringEnergyEval() );
+    }
 };
 
 /**
@@ -85,6 +90,7 @@ public:
 struct DynamicChessboardBiclusteringFactory {
     typedef DynamicChessboardBiclustering dynamic_particle_type;
     typedef StaticChessboardBiclustering static_particle_type;
+    typedef ChessboardBiclusteringEnergyEval static_particle_energy_eval_type;
 
     const gsl_rng*                      rndNumGen;
     const PrecomputedData&              precomputed;

@@ -101,8 +101,22 @@ struct Particle2dEval {
     }
 };
 
+struct Particle2dEnergyEval {
+    typedef StaticParticle2d particle_type;
+
+    double operator()( const StaticParticle2d& val ) const {
+        return ( val.energy() );
+    }
+
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version)
+    {
+    }
+};
+
 struct DynamicParticle2d {
     typedef Particle2d particle_type;
+    typedef Particle2dEnergyEval static_particle_energy_eval_type;
 
     const Particle2dEval eval;
     const gsl_rng*  rng;
@@ -152,11 +166,16 @@ struct DynamicParticle2d {
         }
         return ( -_pcl._energy );
     }
+
+    static_particle_energy_eval_type staticParticleEnergyEval() const {
+        return ( static_particle_energy_eval_type() );
+    }
 };
 
 struct DynamicParticle2dFactory {
     typedef DynamicParticle2d dynamic_particle_type;
-    typedef StaticParticle2d static_particle_type;
+    typedef Particle2dEnergyEval static_particle_energy_eval_type;
+    typedef Particle2dEnergyEval::particle_type static_particle_type;
 
     const gsl_rng* rng;
     const Particle2dDistrParam param;
@@ -215,12 +234,13 @@ struct Particle2dCollector {
 
 class Particle2dInterpolationGenerator {
 private:
-    typedef EnergyDisk<StaticParticle2d> energy_disk_type;
+    typedef EnergyDisk<StaticParticle2d>::energies_proxy_type energy_disk_type;
 
 public:
     typedef std::vector<StaticParticle2d> particle_container_type;
 
-    particle_container_type operator()( const gsl_rng* rng, const energy_disk_type& disk ) const
+    particle_container_type operator()( const gsl_rng* rng,
+                                        const energy_disk_type& disk ) const
     {
         particle_container_type res;
         if ( disk.size() < 2 )                   return ( res );

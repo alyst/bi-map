@@ -16,7 +16,7 @@ private:
     const PrecomputedData&          _precomputed;
     const ChessboardBiclusteringPriors&    _priors;
     mutable ChessboardBiclusteringGibbsSampler _sampler;
-    typedef EnergyDisk<particle_type> energy_disk_type;
+    typedef EnergyDisk<particle_type>::energies_proxy_type energy_disk_type;
 
     void push_to_result( particle_container_type& res, const ChessboardBiclusteringFit& ptn ) const;
 
@@ -27,7 +27,8 @@ public:
                    const ChessboardBiclusteringPriors& priors,
                    const ChessboardBiclusteringHyperPriors& hyperpriors );
 
-    virtual particle_container_type operator()( const gsl_rng* rng, const energy_disk_type& disk ) const;
+    virtual particle_container_type operator()( const gsl_rng* rng, 
+                                                const energy_disk_type& disk ) const;
     virtual ~ChessboardBiclusteringCrossoverGenerator()
     {
     }

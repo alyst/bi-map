@@ -359,6 +359,22 @@ struct StaticChessboardBiclustering {
     }
 };
 
+struct ChessboardBiclusteringEnergyEval {
+    friend class boost::serialization::access;
+
+    typedef log_prob_t energy_type;
+    typedef StaticChessboardBiclustering particle_type;
+
+    double operator()( const particle_type& p ) const {
+        return ( p.energy() );
+    }
+
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version)
+    {
+    }
+};
+
 BOOST_CLASS_IMPLEMENTATION( StaticChessboardBiclustering, object_serializable )
 BOOST_CLASS_TRACKING( StaticChessboardBiclustering, track_never )
 

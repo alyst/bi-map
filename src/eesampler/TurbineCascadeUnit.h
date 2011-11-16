@@ -116,9 +116,10 @@ public:
 /**
  *  Do-nothing implementation of UnitCommunicator concept.
  **/
-template<class Particle>
+template<class ParticleEnergyEval>
 struct DummyUnitCommunicator {
-    typedef Particle particle_type;
+    typedef ParticleEnergyEval energy_eval_type;
+    typedef typename energy_eval_type::particle_type particle_type;
     typedef boost::timer timer_type;
     typedef TurbineEnergyLadder::energy_landscape_type energy_landscape_type;
 
@@ -130,7 +131,7 @@ struct DummyUnitCommunicator {
     };
 
     typedef DummyLandscapeRequestStatus landscape_request_status_type;
-    typedef DummyTurbineConnection<Particle> turbine_connection_type;
+    typedef DummyTurbineConnection<energy_eval_type> turbine_connection_type;
 
     template<class CascadeUnit>
     void sendUnitStatus( const CascadeUnit& unit ) {};
@@ -157,8 +158,8 @@ struct DummyUnitCommunicator {
     messaging between parallel units (using e.g. MPI).
  */
 template<class ParticleCollector, class DynamicParticleFactory, 
-         class ParticleGenerator = SunkenParticleGenerator<typename DynamicParticleFactory::static_particle_type>, 
-         class UnitCommunicator = DummyUnitCommunicator<typename DynamicParticleFactory::static_particle_type> >
+         class ParticleGenerator = SunkenParticleGenerator<typename DynamicParticleFactory::static_particle_energy_eval_type>, 
+         class UnitCommunicator = DummyUnitCommunicator<typename DynamicParticleFactory::static_particle_energy_eval_type> >
 class TurbineCascadeUnit {
 public:
     typedef boost::dynamic_bitset<> units_mask_type;
@@ -288,13 +289,13 @@ public:
 
 template<class ParticleCollector, class DynamicParticleFactory, class ParticleGenerator>
 TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGenerator, 
-                   DummyUnitCommunicator<typename DynamicParticleFactory::static_particle_type> >*
+                   DummyUnitCommunicator<typename DynamicParticleFactory::static_particle_energy_eval_type> >*
 CreateSingleUnitCascade( const TurbineCascadeParams& params, const gsl_rng* rng, 
                          const DynamicParticleFactory& dynParticleFactory, 
                          const ParticleGenerator* pGenerator, ParticleCollector& pCollector )
 {
     return ( new TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGenerator, 
-                                DummyUnitCommunicator<typename DynamicParticleFactory::static_particle_type> >( 0, params,
+                                DummyUnitCommunicator<typename DynamicParticleFactory::static_particle_energy_eval_type> >( 0, params,
                                  createTurbineCascadeStructure( params.levelsCount, params.turbinesCount, 1 ),
                                  rng, dynParticleFactory, pGenerator, &pCollector ) );
 }
@@ -318,6 +319,7 @@ GenericTurbineConnector
 private:
     typedef TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGenerator, UnitCommunicator> cascade_unit_type;
     typedef ParticleTurbineBase<factory_type> base_turbine_type;
+    typedef typename base_turbine_type::static_particle_energy_eval_type static_particle_energy_eval_type;
     typedef typename cascade_unit_type::turbine_ix_set_type turbine_ix_set_type;
     typedef typename communicator_type::turbine_connection_type connection_type;
     typedef typename connection_type::jump_request_status_type external_jump_request_status_type;
@@ -341,19 +343,21 @@ public:
             return ( _external ? _external->particle() : _particle );
         }
 
-        GenericJumpRequestStatus( connector_type& conn, turbine_ix_t initiatorIx, turbine_ix_t processorIx, const EEJumpParams& params )
+        GenericJumpRequestStatus( connector_type& conn, turbine_ix_t initiatorIx, turbine_ix_t processorIx,
+                                  const static_particle_energy_eval_type& energyEval,
+                                  const EEJumpParams& params )
         : _params( params )
         {
             typename turbine_container_type::const_iterator tit = conn._unit._turbines.find( processorIx );
             if ( tit != conn._unit._turbines.end() ) {
                 // try local ee-jump
-                _particle = tit->second->processJumpRequest( _params, false );
+                _particle = tit->second->processJumpRequest( _params, energyEval, false );
             }
             else {
                 typename connection_container_type::iterator cit = conn._unit._connections.find( processorIx );
                 if ( cit != conn._unit._connections.end() ) {
                     // create external request
-                    _external.reset( cit->second->requestJump( initiatorIx, params ) );
+                    _external.reset( cit->second->requestJump( initiatorIx, energyEval, params ) );
                 }
                 else {
                     THROW_RUNTIME_ERROR( "Turbine #" << processorIx << " not found in unit or its connections" );
@@ -434,8 +438,11 @@ public:
         }
     }
 
-    jump_request_status_type requestJump( turbine_ix_t initiatorIx, turbine_ix_t processorIx, const EEJumpParams& params ) {
-        return ( jump_request_status_type( *this, initiatorIx, processorIx, params ) );
+    jump_request_status_type requestJump( turbine_ix_t initiatorIx, turbine_ix_t processorIx,
+                                          const EEJumpParams& params ) {
+        return ( jump_request_status_type( *this, initiatorIx, processorIx,
+                                           _unit._turbines.find( initiatorIx )->second->movingParticle().staticParticleEnergyEval(),
+                                           params ) );
     }
 
     template<class ParticleIterator>
@@ -768,7 +775,8 @@ TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGenerator,
     energy_landscape_type energyLandscape;
 
     for ( typename turbine_container_type::const_iterator it = _turbines.begin(); it != _turbines.end(); ++it ) {
-        energy_vector_type turbineEnergies = it->second->energyDisk()->particleEnergies();
+        energy_vector_type turbineEnergies = it->second->energyDisk()
+                ->energies( _turbines.begin()->second->movingParticle().staticParticleEnergyEval() ).particleEnergies();
         if ( !turbineEnergies.empty() ) {
             typename energy_landscape_type::iterator lit = energyLandscape.find( it->second->level() );
             if ( lit == energyLandscape.end() ) {

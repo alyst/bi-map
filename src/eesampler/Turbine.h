@@ -98,14 +98,17 @@ struct TurbineParams {
 /**
     Implementation of ParticleGenerator concept that generates nothing.
  */
-template<class Particle>
+template<class ParticleEnergyEval>
 class SunkenParticleGenerator{
 public:
-    typedef Particle particle_type;
+    typedef ParticleEnergyEval static_particle_energy_eval_type;
+    typedef typename static_particle_energy_eval_type::particle_type particle_type;
     typedef std::vector<particle_type> particle_container_type;
     typedef EnergyDisk<particle_type> energy_disk_type;
 
-    virtual particle_container_type operator()( const gsl_rng* rng, const energy_disk_type& particles )
+    virtual particle_container_type operator()( const gsl_rng* rng,
+                                                const static_particle_energy_eval_type& energyEval,
+                                                const energy_disk_type& particles )
     {
         return ( particle_container_type() );
     }
@@ -123,9 +126,11 @@ public:
     typedef DynamicParticleFactory factory_type;
     typedef typename DynamicParticleFactory::dynamic_particle_type dynamic_particle_type;
     typedef typename DynamicParticleFactory::static_particle_type particle_type;
+    typedef typename dynamic_particle_type::static_particle_energy_eval_type static_particle_energy_eval_type;
     typedef boost::scoped_ptr<dynamic_particle_type> dynamic_particle_pointer_type;
     typedef EnergyDisk<particle_type> disk_type;
-    typedef typename disk_type::energy_vector_type energy_vector_type;
+    typedef ParticleCacheEnergiesProxy<particle_type> energies_proxy_type;
+    typedef typename energies_proxy_type::energy_vector_type energy_vector_type;
     typedef std::map<size_t, energy_vector_type> energy_landscape_type;
     typedef typename disk_type::cascade_particle_type cascade_particle_type;
     typedef boost::shared_ptr<disk_type>  disk_pointer_type;
@@ -231,7 +236,9 @@ public:
     }
 
     boost::optional<const cascade_particle_type> processJumpRequest(
-        const EEJumpParams& params, bool unboundMinEnergy = false
+        const EEJumpParams&     params,
+        const static_particle_energy_eval_type& energyEval,
+        bool unboundMinEnergy = false
     ) const;
 
     const disk_pointer_type& energyDisk() const {
@@ -372,20 +379,23 @@ public:
 template<class DynamicParticleFactory>
 boost::optional<const typename ParticleTurbineBase<DynamicParticleFactory>::cascade_particle_type>
 ParticleTurbineBase<DynamicParticleFactory>::processJumpRequest(
-    const EEJumpParams& params,             /** i parameters of the jump */
+    const EEJumpParams&     params,         /** i parameters of the jump */
+    const static_particle_energy_eval_type& energyEval,     /** i energy evaluator used to calculate energies for particles on the disk */
     bool                unboundMinEnergy    /** i if bound the low energy of the jump alternatives,
                                                   when true, acts like energy optimization
                                               */
 ) const {
     typedef boost::optional<const cascade_particle_type> optional_particle;
 
-    energy_type energyDelta = _params.eeJumpEnergyTolerance * energyDisk()->energyRange( 0, _params.eeMaxEnergyQuantile );
-    const cascade_particle_type* pJumpParticle = energyDisk()
-        ? energyDisk()->pickRandomParticle( _rng, unboundMinEnergy
+    const cascade_particle_type* pJumpParticle = NULL;
+    if ( energyDisk() ) {
+        typename disk_type::energies_proxy_type energies = energyDisk()->energies( energyEval );
+        energy_type energyDelta = _params.eeJumpEnergyTolerance * energies.energyRange( 0, _params.eeMaxEnergyQuantile );
+        pJumpParticle = energies.pickRandomParticle( _rng, unboundMinEnergy
                                                   ? -std::numeric_limits<energy_type>::infinity()
                                                   : params.energy - energyDelta,
-                                                  params.energy + energyDelta )
-        : NULL;
+                                                  params.energy + energyDelta );
+    }
     if ( pJumpParticle == NULL ) {
         // no suitable particles
         return ( optional_particle() );
@@ -452,7 +462,7 @@ void ParticleTurbine<DynamicParticleFactory, ParticleGenerator, TurbineConnectio
     // decide if equi-energy jump is required
     if ( _iteration % TURBINE_LOG_REPORT_PERIOD == 0 ) {
         if ( energyDisk() && !energyDisk()->isEmpty() ) {
-            const cascade_particle_type& cpt = *((const disk_type&)*energyDisk()).particlesSequentialIndex().rbegin();
+            const cascade_particle_type& cpt = (*energyDisk())[ energyDisk()->size() - 1 ];
             // output last stored particle information
             LOG_INFO( "Turbine #" << super::index() << ": " << _iteration << " iteration(s) made, last particle E=" 
                         << cpt.energy() << ":\n" << cpt.particle );
@@ -498,7 +508,8 @@ void ParticleTurbine<DynamicParticleFactory, ParticleGenerator, TurbineConnectio
     if ( destinationIx != TURBINE_NA ) {
         prob_t generationRate = dynamicGenerationRate( destinationIx );
         if ( generationRate > 0 && gsl_rng_uniform( _rng ) <= generationRate ) {
-            const typename generator_type::particle_container_type generated = (*_pGenerator)( _rng, *energyDisk() );
+            const typename generator_type::particle_container_type generated =
+                (*_pGenerator)( _rng, energyDisk()->energies( movingParticle().staticParticleEnergyEval() ) );
 #if 0
             if ( _pMonitor && turbineIx < _params.turbinesCount ) {
                 _pMonitor->notifyParticlesGenerated( index, generated.size() );
