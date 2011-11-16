@@ -9,7 +9,7 @@
 #include <boost/make_shared.hpp>
 #include <boost/scoped_ptr.hpp>
 
-#include "EnergyDisk.h"
+#include "ParticleCache.h"
 #include "ITurbineConnection.h"
 
 bool is_equienergy_jump_accepted( const gsl_rng* rng,

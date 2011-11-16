@@ -5,7 +5,7 @@
 #include "ChessboardBiclusteringFit.h"
 #include "ChessboardBiclusteringGibbsSampler.h"
 
-#include "eesampler/EnergyDisk.h"
+#include "eesampler/ParticleCache.h"
 
 class ChessboardBiclusteringCrossoverGenerator {
 public:
