@@ -173,7 +173,7 @@ GibbsSample<typename Partition::cluster_index_type> SampleClusterOfElement(
             cluSamples.push_back( clusample_type( newCluIx, clusterPriorDelta
                                    + stats.paramsLPP( partition, newParams[0],
                                                       newClustersItems[0], newClustersItems[0] ),
-                                   stats.llhDelta( partition, newClustersItems, newParams, oldClusters ),
+                                   (log_prob_t)stats.llhDelta( partition, newClustersItems, newParams, oldClusters ),
                                    newParams[0], curCluWithoutElemParams ) );
         }
     }
@@ -194,7 +194,7 @@ GibbsSample<typename Partition::cluster_index_type> SampleClusterOfElement(
             paramsSampler( newParams[0], noElm, singleElm, true, true );
             cluSamples.push_back( clusample_type( newCluIx, newClusterPriorDelta
                                                   + stats.paramsLPP( partition, newParams[0], noElm, singleElm ),
-                                                  stats.llhDelta( partition, newClustersItems, newParams, oldClusters ),
+                                                  (log_prob_t)stats.llhDelta( partition, newClustersItems, newParams, oldClusters ),
                                                   newParams[0], curCluWithoutElemParams
                                                 ) );
         }
@@ -202,7 +202,7 @@ GibbsSample<typename Partition::cluster_index_type> SampleClusterOfElement(
 
     // apply clamping and temperature
     log_prob_t maxCluLnP = -std::numeric_limits<log_prob_t>::infinity();
-    if ( is_unset( ptnTotalLnP ) ) ptnTotalLnP = stats.lpp( partition ) + stats.llh( partition );
+    if ( is_unset( ptnTotalLnP ) ) ptnTotalLnP = stats.lpp( partition ) + (log_prob_t)stats.llh( partition );
     probability_vector_t    clusampleProbs( cluSamples.size(), unset() );
     for ( size_t i = 0; i < cluSamples.size(); i++ ) {
         log_prob_t& prob = clusampleProbs[i];

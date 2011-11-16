@@ -39,19 +39,21 @@ ProbesPartitionEx::cluster_index_type ProbesPartitionEx::exchangeElements(
     return ( res );
 }
 
-log_prob_t FixedProbesPartitionStats::probesLLH(
+LLHMetrics FixedProbesPartitionStats::probesLLH(
     const probe_bitset_t&   probes,
     const params_type&      params
 ) const {
-    double llh = 0;
+    LLHMetrics llh;
 
+    // quantitative component
+    llh.quant = 0;
     ChessboardBiclusteringLLHEval eval = LLHEval( clusFit );
     // enabled cells
     foreach_bit( object_clundex_t, objCluIx, params.blocksMask ) {
         const object_set_t&   objects = clusFit.objectsCluster( objCluIx ).items();
         signal_t signal = params.objectsSignal[ objCluIx ];
         BOOST_ASSERT( !is_unset( signal ) );
-        llh += eval.cellsDataLLH( objects, probes, signal );
+        llh.quant += eval.cellsDataLLH( objects, probes, signal );
         BOOST_ASSERT( is_finite( llh ) );
     }
 
@@ -59,18 +61,18 @@ log_prob_t FixedProbesPartitionStats::probesLLH(
     boost::dynamic_bitset<> notMask = ~params.blocksMask;
     const DataSignalNoiseCache& snCache = clusFit.signalNoiseCache();
     foreach_bit( object_clundex_t, objCluIx, notMask ) {
-        llh += snCache.noiseLLH( clusFit.objectsCluster( objCluIx ).items(), probes );
+        llh.quant += snCache.noiseLLH( clusFit.objectsCluster( objCluIx ).items(), probes );
         BOOST_ASSERT( !is_unset( llh ) );
     }
 
     ChessboardBiclusteringStructureLLHEval structEval = StructureLLHEval( clusFit );
-    llh += structEval.probesClusterMismatchLLH( probes );
-    llh += structEval.objectClustersPerProbeClusterLLH( clusFit.boundObjectsClusters( probes ).size() );
+    llh.topo = structEval.probesClusterMismatchLLH( probes );
+    llh.conf = structEval.objectClustersPerProbeClusterLLH( clusFit.boundObjectsClusters( probes ).size() );
 
     return ( llh );
 }
 
-log_prob_t FixedProbesPartitionStats::llhDelta(
+LLHMetrics FixedProbesPartitionStats::llhDelta(
     const std::vector<ProbesPartition::elements_set_proxy_type>& newClusters,    /** new clusters */
     const std::vector<params_type>&                 newParams,      /** params of new clusters */
     const boost::unordered_set<object_clundex_t>&   oldIndexes      /** indicies of clusters,
@@ -81,7 +83,7 @@ log_prob_t FixedProbesPartitionStats::llhDelta(
     BOOST_ASSERT( newClusters.size() == newParams.size() );
 
     // calculate llh
-    double llh = 0;
+    LLHMetrics llh( 0 );
     for ( size_t i = 0; i < newClusters.size(); i++ ) {
         // new cluster's internal LLH
         llh += probesLLH( newClusters[i],  newParams[i] );
@@ -119,8 +121,8 @@ log_prob_t FixedProbesPartitionStats::llhDelta(
                 if ( !found ) boundProbeClusNew.insert( clusFit.clusterOfProbe( probeIx ) );
             }
         }
-        llh += structEval.probeClustersPerObjectClusterLLH( boundProbeClusNew.size() )
-             - structEval.probeClustersPerObjectClusterLLH( clusFit.boundProbesClusters( *ocit ).size() );
+        llh.conf += structEval.probeClustersPerObjectClusterLLH( boundProbeClusNew.size() )
+                 - structEval.probeClustersPerObjectClusterLLH( clusFit.boundProbesClusters( *ocit ).size() );
     }
 
     return ( llh );

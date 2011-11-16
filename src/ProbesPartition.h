@@ -285,19 +285,19 @@ struct FixedProbesPartitionStats {
      *  not concerning its relation to other clusters
      *  (co-occurence, block probes and abundances, object multipliers).
      */
-    log_prob_t probesLLH( const probe_bitset_t& probes, const params_type& params ) const;
+    LLHMetrics probesLLH( const probe_bitset_t& probes, const params_type& params ) const;
 
     /**
      *  Likelihood of modified projections clusters,
      *  (co-occurence of projections, relation to other clusters,
      *   block probes and abundances).
      */
-    log_prob_t llhDelta( const std::vector<ProbesPartition::elements_set_proxy_type>& newClusters,
+    LLHMetrics llhDelta( const std::vector<ProbesPartition::elements_set_proxy_type>& newClusters,
                 const std::vector<params_type>& newParams,
                 const ProbesPartition::cluster_index_set_type& oldIndexes ) const;
 
-    log_prob_t llh() const {
-        return ( clusFit.llh() );
+    LLHMetrics llh() const {
+        return ( clusFit.metrics().llhProbes );
     }
     log_prob_t paramsLPP( const params_type& params, const probe_bitset_t& clusterProbes, const probe_bitset_t& sampledProbes ) const;
 
@@ -317,16 +317,16 @@ private:
 struct ProbesPartitionStats {
     typedef ProbesClusterParams params_type;
 
-    log_prob_t llhDelta( const ProbesPartition& ptn,
+    LLHMetrics llhDelta( const ProbesPartition& ptn,
                 const std::vector<ProbesPartition::elements_set_proxy_type>& newClusters,
                 const std::vector<params_type>& newParams,
                 const ProbesPartition::cluster_index_set_type& oldIndexes
     ) const {
         return ( FixedProbesPartitionStats( ptn ).llhDelta( newClusters, newParams, oldIndexes ) );
     }
-    log_prob_t llh( const ProbesPartition& ptn ) const {
+    LLHMetrics llh( const ProbesPartition& ptn ) const {
         const ChessboardBiclusteringFit& clusFit = ptn;
-        return ( clusFit.llh() );
+        return ( clusFit.metrics().llhProbes );
     }
     log_prob_t lpp( const ProbesPartition& ptn ) const {
         const ChessboardBiclusteringFit& clusFit = ptn;

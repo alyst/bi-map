@@ -99,7 +99,7 @@ log_prob_t ChessboardBiclusteringGibbsHelper::ObjectMultipleDataLLH::operator()(
     size_t multiple
 ) const {
     params.objectMultiple[ objIx ] = multiple;
-    return ( FixedObjectsPartitionStats( clusFit ).objectLLH( objIx, params ) );
+    return ( FixedObjectsPartitionStats( clusFit ).objectLLH( objIx, params ).total() );
 }
 
 GibbsSample<size_t> ChessboardBiclusteringGibbsHelper::sampleObjectMultiple(

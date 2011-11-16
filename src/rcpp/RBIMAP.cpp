@@ -462,8 +462,8 @@ SEXP ConvertBIMAPWalkToRObject(
 
             stepVec[ elmIx ] = elmIx;
             turbineVec[ elmIx ] = stepIt->turbineIx;
-            llhVec[ elmIx ] = stepIt->llh;
-            lppVec[ elmIx ] = stepIt->lpp;
+            llhVec[ elmIx ] = stepIt->metrics.llh();
+            lppVec[ elmIx ] = stepIt->metrics.lpp();
             timeVec[ elmIx ] = stepIt->time;
             clusSerialVec[ elmIx ] = clus.serial();
             baselinePeak[ elmIx ] = clus.baselineSignalParams().lnScRate();

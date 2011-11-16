@@ -9,6 +9,7 @@
 #include "ChessboardBiclustering.h"
 #include "PrecomputedData.h"
 #include "DataSignalNoiseCache.h"
+#include "ChessboardBiclusteringMetrics.h"
 
 #include "dynamic_bitset_utils.h"
 
@@ -46,14 +47,12 @@ protected:
 
     mutable boost::shared_ptr<DataSignalNoiseCache>  _signalNoiseCache;
 
-    mutable log_prob_t  _llh;           /** total log likelihood */
-    mutable log_prob_t  _lpp;           /** total log prior probability */
-    mutable log_prob_t  _objCluLPP;     /** object's clustering log prior prob. */
-    mutable log_prob_t  _probeCluLPP;   /** probe's clustering log prior prob. */
+    typedef std::vector<LLHMetrics> llhmetrics_vector_type;
 
-    mutable lnprob_vector_type  _objClusterLLH;
-    mutable lnprob_vector_type  _probeClusterLLH;
-    mutable lnprob_vector_type  _probeClusterStructLLH;
+    mutable StatsMetrics        _metrics;   /** statistical metrics */
+
+    mutable llhmetrics_vector_type  _objClusterLLH;
+    mutable llhmetrics_vector_type  _probeClusterLLH;
 
     mutable lnprob_vector_type  _objClusterLPP;
 
@@ -67,15 +66,10 @@ protected:
 
     block_counts_matrix_type _blockToSample; /** how many each block have to be sampled */
 
-    log_prob_t evalLPP() const;
-    log_prob_t evalLLH() const;
+    void updateLPP() const;
     void updateBlocksProbesLLH() const;
     void updateClustersLLH() const;
-
-    void resetTotalLnP() const {
-        _lpp = unset();
-        _llh = unset();
-    }
+    void updateMetrics() const;
 
     void resetAllCaches() const;
     void resetObjectsClusterCache( object_clundex_t objCluIx, bool contentsChanged ) const;
@@ -105,24 +99,19 @@ protected:
         } else {
             _blockIsSignalLLH.reset( objectsClusters().size(), probesClusters().size(), unset() );
         }
-        ar >> boost::serialization::make_nvp( "llh", _llh );
-        ar >> boost::serialization::make_nvp( "lpp", _lpp );
-        ar >> boost::serialization::make_nvp( "objCluLPP", _objCluLPP );
-        ar >> boost::serialization::make_nvp( "probeCluLPP", _probeCluLPP );
+        ar >> boost::serialization::make_nvp( "metrics", _metrics );
         ar >> boost::serialization::make_nvp( "signalNoiseCache", _signalNoiseCache );
 #ifdef _DEBUG
         // debugging version: check that serializing of llh/lpp works by recalculating after cache reset
-        double prevLPP = _lpp;
-        double prevLLH = _llh;
-        resetTotalLnP();
-        double newLPP = lpp();
-        double newLLH = llh();
-        REPORT_PROB_ERROR_IF( std::abs( newLPP - prevLPP ) > LN_PROB_ERROR_TOL,
-                              "Incorrect LPP serialization: real=" << newLPP
-                              << " serialized=" << prevLPP );
-        REPORT_PROB_ERROR_IF( std::abs( newLLH - prevLLH ) > LN_PROB_ERROR_TOL,
-                              "Incorrect LLH serialization: real=" << newLLH
-                              << " serialized=" << prevLLH );
+        StatsMetrics prevMetrics = _metrics;
+        _metrics.unset( true, true );
+        StatsMetrics curMetric = _metrics;
+        REPORT_PROB_ERROR_IF( std::abs( curMetric.lpp() - prevMetrics.lpp() ) > LN_PROB_ERROR_TOL,
+                              "Incorrect LPP serialization: real=" << curMetric.lpp()
+                              << " serialized=" << prevMetrics.lpp() );
+        REPORT_PROB_ERROR_IF( std::abs( curMetric.llh() - prevMetrics.llh() ) > LN_PROB_ERROR_TOL,
+                              "Incorrect LLH serialization: real=" << curMetric.llh()
+                              << " serialized=" << prevMetrics.llh() );
 #else
         resetCachesAfterLoading();
 #endif
@@ -143,10 +132,7 @@ protected:
         if ( _blockIsSignalLLHValid ) {
             ar << boost::serialization::make_nvp( "blockSignalLLH", _blockIsSignalLLH );
         }
-        ar << boost::serialization::make_nvp( "llh", _llh );
-        ar << boost::serialization::make_nvp( "lpp", _lpp );
-        ar << boost::serialization::make_nvp( "objCluLPP", _objCluLPP );
-        ar << boost::serialization::make_nvp( "probeCluLPP", _probeCluLPP );
+        ar << boost::serialization::make_nvp( "metrics", _metrics );
         ar << boost::serialization::make_nvp( "signalNoiseCache", _signalNoiseCache );
     }
 
@@ -189,37 +175,33 @@ public:
         return ( _priors );
     }
 
-    log_prob_t llh() const {
-        if ( is_unset( _llh ) ) {
-            _llh = evalLLH();
-            LOG_DEBUG2( "LLH=" << _llh );
+    const StatsMetrics metrics() const {
+        if ( _metrics.is_unset() ) {
+            updateMetrics();
         }
-        return ( _llh );
+        return ( _metrics );
+    }
+    const log_prob_t llh() const {
+        return ( metrics().llh() );
     }
     log_prob_t lpp() const {
-        if ( is_unset( _lpp ) ) {
-            _lpp = evalLPP();
-            LOG_DEBUG2( "LPP=" << _lpp );
-        }
-        return ( _lpp );
+        return ( metrics().lpp() );
     }
     log_prob_t totalLnP() const {
 #ifdef _DEBUG
         // debugging version: check that caching of llh/lpp works by recalculating after cache reset
-        double prevLPP = lpp();
-        double prevLLH = llh();
+        StatsMetrics prevMetrics = metrics();
         resetAllCaches();
-        double newLPP = lpp();
-        double newLLH = llh();
-        REPORT_PROB_ERROR_IF( std::abs( newLPP - prevLPP ) > LN_PROB_ERROR_TOL,
-                              "Incorrect LPP caching: new=" << newLPP
-                              << " old=" << prevLPP );
-        REPORT_PROB_ERROR_IF( std::abs( newLLH - prevLLH ) > LN_PROB_ERROR_TOL,
-                              "Incorrect LLH caching: new=" << newLLH
-                              << " old=" << prevLLH );
-        return ( newLLH + newLPP );
+        StatsMetrics curMetrics = metrics();
+        REPORT_PROB_ERROR_IF( std::abs( curMetrics.lpp() - prevMetrics.lpp() ) > LN_PROB_ERROR_TOL,
+                              "Incorrect LPP caching: new=" << curMetrics.lpp()
+                              << " old=" << prevMetrics.lpp() );
+        REPORT_PROB_ERROR_IF( std::abs( curMetrics.llh() - prevMetrics.llh() ) > LN_PROB_ERROR_TOL,
+                              "Incorrect LLH caching: new=" << curMetrics.llh()
+                              << " old=" << prevMetrics.llh() );
+        return ( curMetrics.totalLnP() );
 #else
-        return ( llh() + lpp() );
+        return ( metrics().totalLnP() );
 #endif
     }
 
@@ -232,20 +214,18 @@ public:
         return ( res );
     }
 
-    log_prob_t objectsClusterLLH( object_clundex_t cluIx ) const {
-        log_prob_t res = _objClusterLLH[ cluIx ];
-        if ( is_unset( res ) ) {
+    LLHMetrics objectsClusterLLH( object_clundex_t cluIx ) const {
+        LLHMetrics& res = _objClusterLLH[ cluIx ];
+        if ( res.is_unset() ) {
             updateClustersLLH();
-            res = _objClusterLLH[ cluIx ];
         }
         return ( res );
     }
 
-    log_prob_t probesClusterLLH( probe_clundex_t cluIx ) const {
-        log_prob_t res = _probeClusterLLH[ cluIx ];
-        if ( is_unset( res ) ) {
+    LLHMetrics probesClusterLLH( probe_clundex_t cluIx ) const {
+        LLHMetrics& res = _probeClusterLLH[ cluIx ];
+        if ( res.is_unset() ) {
             updateClustersLLH();
-            res = _probeClusterLLH[ cluIx ];
         }
         return ( res );
     }
@@ -338,40 +318,33 @@ struct StaticChessboardBiclustering {
     typedef log_prob_t energy_type;
     typedef ChessboardBiclusteringFit::block_counts_matrix_type block_counts_matrix_type;
 
-    boost::shared_ptr<ChessboardBiclustering>      clustering;
-    boost::shared_ptr<block_counts_matrix_type> blocksToSample; /** how many each block have to be sampled */
-    energy_type                             llh;    /** log of likelihood */
-    energy_type                             lpp;    /** log of prior probability */
+    boost::shared_ptr<ChessboardBiclustering>       clustering;
+    boost::shared_ptr<block_counts_matrix_type>     blocksToSample; /** how many each block have to be sampled */
+    StatsMetrics                                    metrics;
 
     StaticChessboardBiclustering()
-    : llh( std::numeric_limits<energy_type>::quiet_NaN() )
-    , lpp( std::numeric_limits<energy_type>::quiet_NaN() )
     {}
 
     StaticChessboardBiclustering( const ChessboardBiclustering& clustering )
     : clustering( new ChessboardBiclustering( clustering ) )
-    , llh( std::numeric_limits<energy_type>::quiet_NaN() )
-    , lpp( std::numeric_limits<energy_type>::quiet_NaN() )
     {
     }
 
     StaticChessboardBiclustering( const ChessboardBiclusteringFit& clustering )
     : clustering( new ChessboardBiclustering( clustering ) )
     , blocksToSample( new block_counts_matrix_type( clustering.blocksToSample() ) )
-    , llh( clustering.llh() )
-    , lpp( clustering.lpp() )
+    , metrics( clustering.metrics() )
     {
     }
 
     energy_type energy() const {
-        return ( -llh - lpp );
+        return ( -metrics.totalLnP() );
     }
 
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version)
     {
-        ar & BOOST_SERIALIZATION_NVP( llh );
-        ar & BOOST_SERIALIZATION_NVP( lpp );
+        ar & BOOST_SERIALIZATION_NVP( metrics );
         ar & BOOST_SERIALIZATION_NVP( clustering );
         ar & BOOST_SERIALIZATION_NVP( blocksToSample );
     }
