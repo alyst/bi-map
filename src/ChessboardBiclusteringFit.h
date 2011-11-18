@@ -359,6 +359,9 @@ struct StaticChessboardBiclustering {
     }
 };
 
+BOOST_CLASS_IMPLEMENTATION( StaticChessboardBiclustering, object_serializable )
+BOOST_CLASS_TRACKING( StaticChessboardBiclustering, track_never )
+
 struct ChessboardBiclusteringEnergyEval {
     friend class boost::serialization::access;
 
@@ -375,8 +378,8 @@ struct ChessboardBiclusteringEnergyEval {
     }
 };
 
-BOOST_CLASS_IMPLEMENTATION( StaticChessboardBiclustering, object_serializable )
-BOOST_CLASS_TRACKING( StaticChessboardBiclustering, track_never )
+BOOST_CLASS_IMPLEMENTATION( ChessboardBiclusteringEnergyEval, object_serializable )
+BOOST_CLASS_TRACKING( ChessboardBiclusteringEnergyEval, track_never )
 
 namespace boost { namespace serialization {
 
