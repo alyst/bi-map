@@ -55,7 +55,7 @@ public:
 
 /**
  *  Adjustment of chessboard biclusterings frequency distribution
- *  by adjusting PDFs of objects, probes parititions and
+ *  by adjusting PDFs of objects, probes partitions and
  *  "on"/"off" cell masks.
  * 
  *  @see PartitionPDFEval

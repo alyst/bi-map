@@ -166,7 +166,7 @@ bool FixedObjectsParamsSampler::operator()(
     bool                    posterior   /** i  use current values (from partition, not params) to obtain posterior sample
                                                otherwise, get prior sample */
 ) const {
-    LOG_DEBUG2( "Samping objects cluster parameters, "
+    LOG_DEBUG2( "Sampling objects cluster parameters, "
                 << clusterObjs.size() << " in cluster, "
                 << sampledObjects.size() << " sampled, "
                 << (overwrite ? "overwrite" : "no-overwrite")
@@ -196,7 +196,7 @@ bool FixedObjectsParamsSampler::operator()(
         params.blocksMask.set( probeCluIx, isEnabled );
 
         if ( isEnabled && sampleSignals ) {
-            LOG_DEBUG2( "Cross-Cluster is enabled" );
+            LOG_DEBUG2( "Block is enabled" );
             // if block wasn't enabled before, make sure all its probes would have signals
             // randomize signals for all cluster's probes
             randomized = true;

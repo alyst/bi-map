@@ -52,9 +52,9 @@ ChessboardBiclusteringsPDFEval::ChessboardBiclusteringsPDFEval
                                       to the their indices -- due to splitting of existing
                                       clusters by the independent components
                                   */
-    prob_t          objects_threshold, /** i frequency thershold for objects to be
+    prob_t          objects_threshold, /** i frequency threshold for objects to be
                                              considered co-clustered */
-    prob_t          probes_threshold   /** i frequency thershold for probes to be
+    prob_t          probes_threshold   /** i frequency threshold for probes to be
                                              considered co-clustered */
 ){
     IndexedPartitionsCollection<ObjectsCluster> objPtnColl( walk );
