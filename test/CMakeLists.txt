@@ -21,6 +21,8 @@ set( BIMAPTest_Sources
      "SemindexedMap.cpp"
      "ChessboardBiclusteringEvalTest.cpp"
      "array2dTest.cpp"
+     "symmetric_array2dTest.cpp"
+     "OrderedDistanceMatrixTest.cpp"
 )
 
 add_executable( BIMAP-test ${BIMAPTest_Sources} )
