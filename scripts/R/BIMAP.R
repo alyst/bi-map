@@ -498,7 +498,7 @@ BIMAP.mcmcwalk.lastClustering <- function( walk, serial )
 #' @return data.frame with clusters information
 #' @author astukalov
 #' @export
-BIMAP.mcmcwalk_biclusterings_order <- function( walk, n = 30 ) {
+BIMAP.mcmcwalk.biclusterings_order <- function( walk, n = 30 ) {
     clus.df <- walk@clusterings
     rownames( clus.df ) <- clus.df$clustering_id
     clus.df <- clus.df[ order(
