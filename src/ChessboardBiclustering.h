@@ -408,16 +408,25 @@ public:
         return ( const_block_iterator( const_cast<ChessboardBiclustering&>( *this ), false ) );
     }
 
+    /**
+     *  1D bit-array of blocks states.
+     */
     blocks_mask_t blocksMask( bool objectsMajor = true ) const;
     size_t enabledBlocksCount() const {
         return ( _blocksMask.count() );
     }
 
+    /**
+     *  1D bit-array of blocks states for given objects cluster.
+     */
     dynamic_bitset_view objectsClusterSectionMask( object_clundex_t cluIx ) const {
         return ( dynamic_bitset_view( _blocksMask, cluIx * _probesClusters.size(), 1, 
                                       probesClusters().size() ) );
     }
 
+    /**
+     *  1D bit-array of blocks states for given probes cluster.
+     */
     dynamic_bitset_view probesClusterSectionMask( probe_clundex_t cluIx ) const {
         return ( dynamic_bitset_view( _blocksMask, cluIx, _probesClusters.size(), 
                                       objectsClusters().size() ) );
@@ -432,10 +441,16 @@ public:
         return ( const_block_iterator( const_cast<ChessboardBiclustering&>( *this ), false ) );
     }
 
+    /**
+     *  Number of objects in the model.
+     */
     size_t objectsCount() const {
         return ( _objectToCluster.size() );
     }
 
+    /**
+     *  Number of probes in the model.
+     */
     size_t probesCount() const {
         return ( _probeToCluster.size() );
     }
