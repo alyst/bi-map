@@ -11,14 +11,14 @@
 
 ChessboardBiclusteringGibbsHelper::ChessboardBiclusteringGibbsHelper(
     const gsl_rng*                      rndNumGen,
-    const ChessboardBiclusteringFit&           clusteringFit,
-    const SamplingTransform&            samplingTransform,
-    log_prob_t                          totalLnP
+    const ChessboardBiclusteringFit&    clusteringFit,
+    const ChessboardBiclusteringEnergyEval& energyEval,
+    const SamplingTransform&            samplingTransform
 ) : _rndNumGen( rndNumGen )
   , _fit( clusteringFit )
   , _objectsSetDistanceThreshold( 1 + clusteringFit.data().objectsCount() / 10 )
+  , _energyEval( energyEval )
   , _samplingTransform( samplingTransform )
-  , _totalLnP( is_unset( totalLnP ) ? _fit.totalLnP() : totalLnP )
 {
 }
 
@@ -28,7 +28,7 @@ log_prob_t ChessboardBiclusteringGibbsHelper::BlockEnablementDataLLHCached::oper
     log_prob_t res = isEnabled
                ? clusFit.blockIsSignalLLH( objCluIx, probeCluIx )
                : clusFit.blockIsNoiseLLH( objCluIx, probeCluIx );
-    LOG_DEBUG2( "CC_" << isEnabled << "[" << objCluIx << ", " << probeCluIx << "]=" << res );
+    LOG_DEBUG2( "Block_" << isEnabled << "[" << objCluIx << ", " << probeCluIx << "]=" << res );
     return ( res );
 }
 
@@ -40,14 +40,14 @@ GibbsSample<bool> ChessboardBiclusteringGibbsHelper::sampleBlockEnablement(
     return ( MetropolisHastringsPosteriorSample<bool>(
         rndNumGen(), 
         BinaryTransition(),
-        BlockEnablementDataLLHCached( _fit, objCluIx, probeCluIx ),
+        BlockEnablementDataLLHCached( _energyEval, _fit, objCluIx, probeCluIx ),
         PriorEval( _fit ).blockEnablementPrior( 
                 ccIt->isEnabled() ? ccIt->signal()
                 : _fit.precomputed().blockSignal( ccIt->objectsCluster().items(), 
                                                     ccIt->probesCluster().items(),
                                                     _fit.objectMultiples()
                                                   ) ),
-        ccIt->isEnabled(), _totalLnP, _samplingTransform ) );
+        ccIt->isEnabled(), totalLnP(), _samplingTransform ) );
 }
 
 GibbsSample<bool> ChessboardBiclusteringGibbsHelper::sampleBlockEnablement(
@@ -60,7 +60,7 @@ GibbsSample<bool> ChessboardBiclusteringGibbsHelper::sampleBlockEnablement(
         BinaryTransition(),
         BlockEnablementDataLLH( _fit.signalNoiseCache(), objects, probes ),
         PriorEval( _fit ).blockEnablementPrior( _fit.precomputed().blockSignal( objects, probes, _fit.objectMultiples() ) ),
-        curEnabled, _totalLnP, _samplingTransform ) );
+        curEnabled, totalLnP(), _samplingTransform ) );
 }
 
 GibbsSample<object_clundex_t> ChessboardBiclusteringGibbsHelper::sampleClusterOfObject( 
@@ -72,10 +72,11 @@ GibbsSample<object_clundex_t> ChessboardBiclusteringGibbsHelper::sampleClusterOf
 ){
     return ( SampleClusterOfElement( rndNumGen(), 
                                        ObjectsPartition( _fit ), 
-                                       ObjectsPartitionStats( rndNumGen(), _fit.data(), _fit.priors() ),
+                                       ObjectsPartitionStats( rndNumGen(), _fit.data(), _fit.priors(),
+                                                              _energyEval.weights.objects ),
                                        objIx, 
                                        FixedObjectsParamsSampler( *this, true, true, true ),
-                                       stepParams, _samplingTransform, _totalLnP,
+                                       stepParams, _samplingTransform, totalLnP(),
                                        stripeParamsNew, stripeParamsOld, cluCandidates ) );
 }
 
@@ -88,10 +89,11 @@ GibbsSample<probe_clundex_t> ChessboardBiclusteringGibbsHelper::sampleClusterOfP
 ){
     return ( SampleClusterOfElement( rndNumGen(),
                                        ProbesPartition( _fit ),
-                                       ProbesPartitionStats( rndNumGen(), _fit.data(), _fit.priors() ),
+                                       ProbesPartitionStats( rndNumGen(), _fit.data(), _fit.priors(),
+                                                             _energyEval.weights.probes ),
                                        probeIx,
                                        FixedProbesParamsSampler( *this, true, true ),
-                                       stepParams, _samplingTransform, _totalLnP,
+                                       stepParams, _samplingTransform, totalLnP(),
                                        stripeParamsNew, stripeParamsOld, cluCandidates ) );
 }
 
@@ -99,7 +101,8 @@ log_prob_t ChessboardBiclusteringGibbsHelper::ObjectMultipleDataLLH::operator()(
     size_t multiple
 ) const {
     params.objectMultiple[ objIx ] = multiple;
-    return ( FixedObjectsPartitionStats( clusFit ).objectLLH( objIx, params ).total() );
+    return ( FixedObjectsPartitionStats( clusFit ).objectLLH( objIx, params )
+             .total( energyEval.weights.objects ) );
 }
 
 GibbsSample<size_t> ChessboardBiclusteringGibbsHelper::sampleObjectMultiple(
@@ -108,9 +111,9 @@ GibbsSample<size_t> ChessboardBiclusteringGibbsHelper::sampleObjectMultiple(
     return ( MetropolisHastringsPosteriorSample<size_t>( 
         rndNumGen(), 
         objectMultipleTransition(),
-        ObjectMultipleDataLLH( _fit, objIx ),
+        ObjectMultipleDataLLH( _energyEval, _fit, objIx ),
         PriorEval( _fit ).objectMultiplePrior( _fit.objectsCluster( _fit.clusterOfObject( objIx ) ).size() ),
-        _fit.objectMultiple( objIx ), _totalLnP, _samplingTransform ) );
+        _fit.objectMultiple( objIx ), totalLnP(), _samplingTransform ) );
 }
 
 GibbsSample<signal_t> ChessboardBiclusteringGibbsHelper::sampleSignal(
@@ -124,7 +127,7 @@ GibbsSample<signal_t> ChessboardBiclusteringGibbsHelper::sampleSignal(
             signalTransition(),
             LLHEval( _fit ).signalDataLLHEval( objects, probes ),
             PriorEval( _fit ).signalPrior(),
-            curSignal, _totalLnP, _samplingTransform );
+            curSignal, totalLnP(), _samplingTransform );
 
     return ( res );
 }

@@ -317,16 +317,16 @@ private:
 struct ProbesPartitionStats {
     typedef ProbesClusterParams params_type;
 
-    LLHMetrics llhDelta( const ProbesPartition& ptn,
+    log_prob_t llhDelta( const ProbesPartition& ptn,
                 const std::vector<ProbesPartition::elements_set_proxy_type>& newClusters,
                 const std::vector<params_type>& newParams,
                 const ProbesPartition::cluster_index_set_type& oldIndexes
     ) const {
-        return ( FixedProbesPartitionStats( ptn ).llhDelta( newClusters, newParams, oldIndexes ) );
+        return ( FixedProbesPartitionStats( ptn ).llhDelta( newClusters, newParams, oldIndexes )( weights ) );
     }
-    LLHMetrics llh( const ProbesPartition& ptn ) const {
+    log_prob_t llh( const ProbesPartition& ptn ) const {
         const ChessboardBiclusteringFit& clusFit = ptn;
-        return ( clusFit.metrics().llhProbes );
+        return ( clusFit.metrics().llhProbes( weights ) );
     }
     log_prob_t lpp( const ProbesPartition& ptn ) const {
         const ChessboardBiclusteringFit& clusFit = ptn;
@@ -344,12 +344,15 @@ struct ProbesPartitionStats {
     ProbesPartitionStats(
         const gsl_rng*                  rndNumGen,
         const OPAData&                  data,
-        const ChessboardBiclusteringPriors&    priors
-    ) : rndNumGen( rndNumGen ), data( data ), priors( priors )
+        const ChessboardBiclusteringPriors&    priors,
+        const LLHPartitionWeights&      weights
+    ) : rndNumGen( rndNumGen ), data( data )
+    , priors( priors ), weights( weights )
     {}
 
 private:
     const gsl_rng*                      rndNumGen;
     const OPAData&                      data;
-    const ChessboardBiclusteringPriors&        priors;
+    const ChessboardBiclusteringPriors& priors;
+    const LLHPartitionWeights&          weights; 
 };

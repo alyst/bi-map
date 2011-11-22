@@ -363,19 +363,19 @@ private:
 struct ObjectsPartitionStats {
     typedef ObjectsClusterParams params_type;
 
-    LLHMetrics objectLLH( const ObjectsPartition& clus, object_index_t objIx, const params_type& params ) const
+    log_prob_t objectLLH( const ObjectsPartition& clus, object_index_t objIx, const params_type& params ) const
     {
-        return ( FixedObjectsPartitionStats( clus ).objectLLH( objIx, params ) );
+        return ( FixedObjectsPartitionStats( clus ).objectLLH( objIx, params )( weights ) );
     }
-    LLHMetrics llhDelta( const ObjectsPartition& ptn,
+    log_prob_t llhDelta( const ObjectsPartition& ptn,
                 const std::vector<ObjectsPartition::elements_set_proxy_type>& newClusters,
                 const std::vector<params_type>& newParams,
                 const ObjectsPartition::cluster_index_set_type& oldIndexes
     ) const {
-        return ( FixedObjectsPartitionStats( ptn ).llhDelta( newClusters, newParams, oldIndexes ) );
+        return ( FixedObjectsPartitionStats( ptn ).llhDelta( newClusters, newParams, oldIndexes )( weights ) );
     }
-    LLHMetrics llh( const ObjectsPartition& ptn ) const {
-        return ( ((const ChessboardBiclusteringFit&)ptn).llh() );
+    log_prob_t llh( const ObjectsPartition& ptn ) const {
+        return ( ((const ChessboardBiclusteringFit&)ptn).metrics().llhObjs( weights ) );
     }
     log_prob_t lpp( const ObjectsPartition& ptn ) const {
         return ( ((const ChessboardBiclusteringFit&)ptn).lpp() );
@@ -393,12 +393,15 @@ struct ObjectsPartitionStats {
     ObjectsPartitionStats(
         const gsl_rng*                  rndNumGen,
         const OPAData&                  data,
-        const ChessboardBiclusteringPriors&    priors
-    ) : rndNumGen( rndNumGen ), data( data ), priors( priors )
+        const ChessboardBiclusteringPriors&    priors,
+        const LLHPartitionWeights&      weights
+    ) : rndNumGen( rndNumGen ), data( data )
+    , priors( priors ), weights( weights )
     {}
 
 private:
     const gsl_rng*                      rndNumGen;
     const OPAData&                      data;
-    const ChessboardBiclusteringPriors&        priors;
+    const ChessboardBiclusteringPriors& priors;
+    const LLHPartitionWeights&          weights; 
 };

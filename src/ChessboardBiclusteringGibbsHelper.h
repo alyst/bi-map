@@ -46,10 +46,10 @@ public:
 class ChessboardBiclusteringGibbsHelper {
 private:
     const gsl_rng*                      _rndNumGen;
-    const ChessboardBiclusteringFit&           _fit;
+    const ChessboardBiclusteringFit&    _fit;
     const size_t                        _objectsSetDistanceThreshold;
+    const ChessboardBiclusteringEnergyEval _energyEval;
     const SamplingTransform             _samplingTransform;
-    log_prob_t                          _totalLnP;
 
 public:
     typedef ChessboardBiclustering::const_block_iterator const_block_iterator;
@@ -63,10 +63,12 @@ public:
 
     class BaseLLH {
     protected:
-        const ChessboardBiclusteringFit&   clusFit;
+        const ChessboardBiclusteringEnergyEval& energyEval;
+        const ChessboardBiclusteringFit&        clusFit;
 
-        BaseLLH( const ChessboardBiclusteringFit& clusFit )
-        : clusFit( clusFit )
+        BaseLLH( const ChessboardBiclusteringEnergyEval& energyEval,
+                 const ChessboardBiclusteringFit& clusFit )
+        : energyEval( energyEval ), clusFit( clusFit )
         {}
     };
 
@@ -75,8 +77,10 @@ public:
         ObjectsClusterParams        params;
 
     public:
-        ObjectMultipleDataLLH( const ChessboardBiclusteringFit& clusFit, object_index_t objIx )
-        : BaseLLH( clusFit ), objIx( objIx )
+        ObjectMultipleDataLLH( const ChessboardBiclusteringEnergyEval& energyEval,
+                               const ChessboardBiclusteringFit& clusFit,
+                               object_index_t objIx )
+        : BaseLLH( energyEval, clusFit ), objIx( objIx )
         , params( clusFit.objectsClusterParams( clusFit.clusterOfObject( objIx ) ) )
         {}
         log_prob_t operator()( size_t multiple ) const;
@@ -91,8 +95,12 @@ public:
         probe_clundex_t     probeCluIx;
 
     public:
-        BlockEnablementDataLLHCached( const ChessboardBiclusteringFit& clusFit, object_clundex_t objCluIx, probe_clundex_t probeCluIx )
-        : BaseLLH( clusFit ), objCluIx( objCluIx ), probeCluIx( probeCluIx )
+        BlockEnablementDataLLHCached(
+            const ChessboardBiclusteringEnergyEval& energyEval,
+            const ChessboardBiclusteringFit& clusFit,
+            object_clundex_t objCluIx, probe_clundex_t probeCluIx )
+        : BaseLLH( energyEval, clusFit )
+        , objCluIx( objCluIx ), probeCluIx( probeCluIx )
         {}
 
         log_prob_t operator()( bool isEnabled ) const;
@@ -100,8 +108,8 @@ public:
 
     ChessboardBiclusteringGibbsHelper( const gsl_rng* rndNumGen,
                                 const ChessboardBiclusteringFit& fit,
-                                const SamplingTransform& samplingTransform,
-                                log_prob_t totalLnP = unset() );
+                                const ChessboardBiclusteringEnergyEval& energyEval,
+                                const SamplingTransform& samplingTransform );
 
     const gsl_rng* rndNumGen() const {
         return ( _rndNumGen );
@@ -113,6 +121,12 @@ public:
 
     const ChessboardBiclusteringFit& clusteringFit() const {
         return ( _fit );
+    }
+    const ChessboardBiclusteringEnergyEval& energyEval() const {
+        return ( _energyEval );
+    }
+    const log_prob_t totalLnP() const {
+        return ( _fit.totalLnP( energyEval().weights ) );
     }
 
     void probeToClusterProbs( probe_index_t probeIx, probability_vector_t& out );

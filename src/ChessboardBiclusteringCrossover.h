@@ -25,7 +25,8 @@ public:
                    const gsl_rng* rndNumGen,
                    const PrecomputedData& precomputed,
                    const ChessboardBiclusteringPriors& priors,
-                   const ChessboardBiclusteringHyperPriors& hyperpriors );
+                   const ChessboardBiclusteringHyperPriors& hyperpriors,
+                   const ChessboardBiclusteringEnergyEval& energyEval );
 
     virtual particle_container_type operator()( const gsl_rng* rng, 
                                                 const particle_cache_type& cache ) const;

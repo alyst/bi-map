@@ -109,6 +109,8 @@
 #define R_SLOT_OBJECTS_SUBPARTITIONS        "objects.subpartitions"
 #define R_SLOT_PROBES_SUBPARTITIONS         "probes.subpartitions"
 
+#define R_SLOT_PROB_WEIGHTS                 "prob.weights"
+
 #define R_COLUMN_COMPONENT_INDEX            "component.index"
 #define R_COLUMN_SUBPARTITION_SERIAL        "subpartition.serial"
 
@@ -478,7 +480,7 @@ SEXP ConvertBIMAPWalkToRObject(
             stepVec[ elmIx ] = elmIx;
             turbineVec[ elmIx ] = stepIt->turbineIx;
 
-            llhVec[ elmIx ] = stepIt->metrics.llh();
+            llhVec[ elmIx ] = stepIt->metrics.llh( walk.probWeights() );
             llhQuantVec[ elmIx ] = stepIt->metrics.llhObjs.quant;
             llhObjsTopoVec[ elmIx ] = stepIt->metrics.llhObjs.topo;
             llhObjsExpDesignVec[ elmIx ] = stepIt->metrics.llhObjs.conf;
@@ -519,6 +521,24 @@ SEXP ConvertBIMAPWalkToRObject(
                 Rcpp::Named( R_COLUMN_TRUE_MISS_RATE, trueMissRate ),
                 Rcpp::Named( R_STRINGS_AS_FACTORS, false )
              );
+    }
+    {
+        Rprintf( "Exporting the weights of probability components...\n" );
+        Rcpp::CharacterVector weightNameVec( 4 );
+        Rcpp::NumericVector   valueVec( 4 );
+        weightNameVec[0] = R_COLUMN_LLH_OBJECTS_TOPO;
+        valueVec[0] =  walk.probWeights().objects.topo;
+        weightNameVec[1] = R_COLUMN_LLH_OBJECTS_EXP_DESIGN;
+        valueVec[1] =  walk.probWeights().objects.conf;
+        weightNameVec[2] = R_COLUMN_LLH_PROBES_TOPO;
+        valueVec[2] =  walk.probWeights().probes.topo;
+        weightNameVec[3] = R_COLUMN_LLH_PROBES_EXP_DESIGN;
+        valueVec[3] =  walk.probWeights().probes.conf;
+        rWalk.slot( R_SLOT_PROB_WEIGHTS ) = Rcpp::DataFrame::create(
+            Rcpp::Named( "name", weightNameVec ),
+            Rcpp::Named( "value", valueVec ),
+            Rcpp::Named( R_STRINGS_AS_FACTORS, false )
+        );
     }
     {
         Rprintf( "Exporting biclusterings structure...\n" );

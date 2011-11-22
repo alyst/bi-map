@@ -47,6 +47,7 @@ TEST( ChessboardBiclusteringEval, objects_partition )
     priors.objectClustering.concentration = 0.1;
     priors.objectClustering.discount = 0.0;
     priors.cellEnablementProb = 0.1;
+    LLHWeights weights;
 
     ChessboardBiclustering ccActual( 3, 1 );
     ccActual.setSignalPrior( GaussianDistribution( 0, 0.5 ) );
@@ -75,7 +76,7 @@ TEST( ChessboardBiclusteringEval, objects_partition )
     BOOST_ASSERT( ccActual.checkBlocks() );
     PrecomputedData    precomputed( data, precomputedDataParams, signalParams );
     ChessboardBiclusteringFit fitCcActual( precomputed, priors, ccActual );
-    LOG_INFO( "Actual partition llh=" << fitCcActual.llh() );
+    LOG_INFO( "Actual partition llh=" << fitCcActual.llh( weights ) );
 
     ChessboardBiclustering ccWrongSignal( ccActual );
     {
@@ -87,8 +88,8 @@ TEST( ChessboardBiclusteringEval, objects_partition )
         ccWrongSignal.objectsClusterParams( 1 ) = oc1Params;
     }
     ChessboardBiclusteringFit fitCcWrongSignal( precomputed, priors, ccWrongSignal );
-    LOG_INFO( "Wrong signal partition llh=" << fitCcWrongSignal.llh() );
-    EXPECT_GT( fitCcActual.llh(), fitCcWrongSignal.llh() );
+    LOG_INFO( "Wrong signal partition llh=" << fitCcWrongSignal.llh( weights ) );
+    EXPECT_GT( fitCcActual.llh( weights ), fitCcWrongSignal.llh( weights ) );
 
     ChessboardBiclustering ccWrongMultiple( ccActual );
     {
@@ -98,8 +99,8 @@ TEST( ChessboardBiclusteringEval, objects_partition )
         ccWrongMultiple.objectsClusterParams( 1 ) = oc1Params;
     }
     ChessboardBiclusteringFit fitCcWrongMultiple( precomputed, priors, ccWrongMultiple );
-    LOG_INFO( "Wrong multiple partition llh=" << fitCcWrongMultiple.llh() );
-    EXPECT_GT( fitCcActual.llh(), fitCcWrongMultiple.llh() );
+    LOG_INFO( "Wrong multiple partition llh=" << fitCcWrongMultiple.llh(weights) );
+    EXPECT_GT( fitCcActual.llh( weights ), fitCcWrongMultiple.llh(weights) );
 
     ChessboardBiclustering ccOneCluster( ccActual );
     {
@@ -110,8 +111,8 @@ TEST( ChessboardBiclusteringEval, objects_partition )
         ccOneCluster.objectsClusterParams( 0 ) = oc0Params;
     }
     ChessboardBiclusteringFit fitCcOneCluster( precomputed, priors, ccOneCluster );
-    LOG_INFO( "One cluster partition llh=" << fitCcOneCluster.llh() );
-    EXPECT_GT( fitCcActual.llh(), fitCcOneCluster.llh() );
+    LOG_INFO( "One cluster partition llh=" << fitCcOneCluster.llh(weights) );
+    EXPECT_GT( fitCcActual.llh( weights ), fitCcOneCluster.llh(weights) );
 
     ChessboardBiclustering ccThreeClusters( ccActual );
     {
@@ -123,8 +124,8 @@ TEST( ChessboardBiclusteringEval, objects_partition )
         ccThreeClusters.cleanupClusters();
     }
     ChessboardBiclusteringFit fitCcThreeClusters( precomputed, priors, ccThreeClusters );
-    LOG_INFO( "3 clusters partition llh=" << fitCcThreeClusters.llh() );
-    EXPECT_GE( fitCcActual.llh(), fitCcThreeClusters.llh() );
+    LOG_INFO( "3 clusters partition llh=" << fitCcThreeClusters.llh(weights) );
+    EXPECT_GE( fitCcActual.llh( weights ), fitCcThreeClusters.llh(weights) );
     EXPECT_GT( fitCcActual.lpp(), fitCcThreeClusters.lpp() );
 
     ChessboardBiclustering ccTwoWrongClusters( ccActual );
@@ -133,8 +134,8 @@ TEST( ChessboardBiclusteringEval, objects_partition )
         ccTwoWrongClusters.cleanupClusters();
     }
     ChessboardBiclusteringFit fitCcTwoWrongClusters( precomputed, priors, ccTwoWrongClusters );
-    LOG_INFO( "2 wrong clusters partition llh=" << fitCcTwoWrongClusters.llh() );
-    EXPECT_GT( fitCcActual.llh(), fitCcTwoWrongClusters.llh() );
+    LOG_INFO( "2 wrong clusters partition llh=" << fitCcTwoWrongClusters.llh(weights) );
+    EXPECT_GT( fitCcActual.llh( weights ), fitCcTwoWrongClusters.llh(weights) );
 }
 
 TEST( ChessboardBiclusteringEval, objects_partition_llh_delta )
@@ -171,6 +172,7 @@ TEST( ChessboardBiclusteringEval, objects_partition_llh_delta )
     priors.objectClustering.concentration = 0.1;
     priors.objectClustering.discount = 0.0;
     priors.cellEnablementProb = 0.1;
+    LLHWeights weights;
 
     ChessboardBiclustering ccActual( 3, 1 );
     ccActual.setSignalPrior( GaussianDistribution( 0, 0.5 ) );
@@ -198,7 +200,7 @@ TEST( ChessboardBiclusteringEval, objects_partition_llh_delta )
     BOOST_ASSERT( ccActual.checkBlocks() );
     PrecomputedData    precomputed( data, precomputedDataParams, signalParams );
     ChessboardBiclusteringFit fitCcActual( precomputed, priors, ccActual );
-    LOG_INFO( "Actual partition llh=" << fitCcActual.llh() );
+    LOG_INFO( "Actual partition llh=" << fitCcActual.llh(weights) );
 
     ChessboardBiclustering ccOneCluster( ccActual );
     {
@@ -209,7 +211,7 @@ TEST( ChessboardBiclusteringEval, objects_partition_llh_delta )
         ccOneCluster.objectsClusterParams( 0 ) = oc0Params;
     }
     ChessboardBiclusteringFit fitCcOneCluster( precomputed, priors, ccOneCluster );
-    LOG_INFO( "One cluster partition llh=" << fitCcOneCluster.llh() );
+    LOG_INFO( "One cluster partition llh=" << fitCcOneCluster.llh(weights) );
 
     ChessboardBiclustering ccThreeClusters( ccActual );
     {
@@ -221,7 +223,7 @@ TEST( ChessboardBiclusteringEval, objects_partition_llh_delta )
         ccThreeClusters.cleanupClusters();
     }
     ChessboardBiclusteringFit fitCcThreeClusters( precomputed, priors, ccThreeClusters );
-    LOG_INFO( "3 clusters partition llh=" << fitCcThreeClusters.llh() );
+    LOG_INFO( "3 clusters partition llh=" << fitCcThreeClusters.llh(weights) );
 
     ObjectsPartition opActual( fitCcActual );
     FixedObjectsPartitionStats opsActual( fitCcActual );
@@ -236,9 +238,9 @@ TEST( ChessboardBiclusteringEval, objects_partition_llh_delta )
     ObjectsPartition::cluster_index_set_type actualToOneOldClusters;
     actualToOneOldClusters.insert( 0 );
     actualToOneOldClusters.insert( 1 );
-    double actualToOneLLHDelta = opsActual.llhDelta( actualToOneItems, actualToOneParams, actualToOneOldClusters );
+    double actualToOneLLHDelta = opsActual.llhDelta( actualToOneItems, actualToOneParams, actualToOneOldClusters )( weights.objects );
     LOG_INFO( "Delta between Actual and One cluster partition llhDelta=" << actualToOneLLHDelta );
-    EXPECT_DOUBLE_EQ( fitCcOneCluster.llh() - opsActual.llh(), actualToOneLLHDelta );
+    EXPECT_DOUBLE_EQ( fitCcOneCluster.metrics().llhObjs(weights.objects) - opsActual.llh()(weights.objects), actualToOneLLHDelta );
 
     std::vector<ObjectsPartition::elements_set_proxy_type> actualToThreeItems;
     actualToThreeItems.push_back( opActual.cluster( 0 ).items() );
@@ -251,9 +253,9 @@ TEST( ChessboardBiclusteringEval, objects_partition_llh_delta )
     actualToThreeParams[ 1 ].probeSignal[ 0 ] = 2;
     ObjectsPartition::cluster_index_set_type actualToThreeOldClusters;
     actualToThreeOldClusters.insert( 0 );
-    double actualToThreeDelta = opsActual.llhDelta( actualToThreeItems, actualToThreeParams, actualToThreeOldClusters );
+    double actualToThreeDelta = opsActual.llhDelta( actualToThreeItems, actualToThreeParams, actualToThreeOldClusters )( weights.objects );
     LOG_INFO( "Delta between Actual and One cluster partition llhDelta=" << actualToThreeDelta );
-    EXPECT_DOUBLE_EQ( fitCcThreeClusters.llh() - opsActual.llh(), actualToThreeDelta );
+    EXPECT_DOUBLE_EQ( fitCcThreeClusters.metrics().llhObjs(weights.objects) - opsActual.llh()( weights.objects ), actualToThreeDelta );
 }
 
 TEST( ChessboardBiclusteringEval, objects2_probes2_partition )
@@ -277,6 +279,7 @@ protein 1-1 1-2 1-3 1-4   2-1   2-2   2-3   2-4 3-1 3-2 3-3 3-4   4-1   4-2   4-
     priors.objectClustering.concentration = 0.1;
     priors.objectClustering.discount = 0.0;
     priors.cellEnablementProb = 0.1;
+    LLHWeights weights;
 
     PrecomputedData    precomputed( data, precomputedDataParams, signalParams );
 
@@ -311,7 +314,7 @@ protein 1-1 1-2 1-3 1-4   2-1   2-2   2-3   2-4 3-1 3-2 3-3 3-4   4-1   4-2   4-
     BOOST_ASSERT( ccActual.checkProbesPartition() );
     BOOST_ASSERT( ccActual.checkBlocks() );
     ChessboardBiclusteringFit fitCcActual( precomputed, priors, ccActual );
-    LOG_INFO( "Actual partition llh=" << fitCcActual.llh() );
+    LOG_INFO( "Actual partition llh=" << fitCcActual.llh(weights) );
 
     ChessboardBiclustering ccWrongSignal( ccActual );
     {
@@ -320,8 +323,8 @@ protein 1-1 1-2 1-3 1-4   2-1   2-2   2-3   2-4 3-1 3-2 3-3 3-4   4-1   4-2   4-
         ccWrongSignal.objectsClusterParams( 0 ) = oc0Params;
     }
     ChessboardBiclusteringFit fitCcWrongSignal( precomputed, priors, ccWrongSignal );
-    LOG_INFO( "Wrong signal partition llh=" << fitCcWrongSignal.llh() );
-    EXPECT_GT( fitCcActual.llh(), fitCcWrongSignal.llh() );
+    LOG_INFO( "Wrong signal partition llh=" << fitCcWrongSignal.llh(weights) );
+    EXPECT_GT( fitCcActual.llh(weights), fitCcWrongSignal.llh(weights) );
 
     ChessboardBiclustering ccWrongMultiple( ccActual );
     {
@@ -333,8 +336,8 @@ protein 1-1 1-2 1-3 1-4   2-1   2-2   2-3   2-4 3-1 3-2 3-3 3-4   4-1   4-2   4-
         ccWrongMultiple.objectsClusterParams( 1 ) = oc1Params;
     }
     ChessboardBiclusteringFit fitCcWrongMultiple( precomputed, priors, ccWrongMultiple );
-    LOG_INFO( "Wrong multiple partition llh=" << fitCcWrongMultiple.llh() );
-    EXPECT_GT( fitCcActual.llh(), fitCcWrongMultiple.llh() );
+    LOG_INFO( "Wrong multiple partition llh=" << fitCcWrongMultiple.llh(weights) );
+    EXPECT_GT( fitCcActual.llh(weights), fitCcWrongMultiple.llh(weights) );
 
     ChessboardBiclustering ccThreeObjectClusters( ccActual );
     {
@@ -346,8 +349,8 @@ protein 1-1 1-2 1-3 1-4   2-1   2-2   2-3   2-4 3-1 3-2 3-3 3-4   4-1   4-2   4-
         ccThreeObjectClusters.objectsClusterParams( 2 ) = oc2Params;
     }
     ChessboardBiclusteringFit fitCcThreeObjectClusters( precomputed, priors, ccThreeObjectClusters );
-    LOG_INFO( "Wrong 3 objects clusters partition llh=" << fitCcThreeObjectClusters.llh() );
-    EXPECT_GT( fitCcActual.llh(), fitCcThreeObjectClusters.llh() );
+    LOG_INFO( "Wrong 3 objects clusters partition llh=" << fitCcThreeObjectClusters.llh(weights) );
+    EXPECT_GT( fitCcActual.llh(weights), fitCcThreeObjectClusters.llh(weights) );
 
     ChessboardBiclustering ccThreeProbeClusters( ccActual );
     {
@@ -359,8 +362,8 @@ protein 1-1 1-2 1-3 1-4   2-1   2-2   2-3   2-4 3-1 3-2 3-3 3-4   4-1   4-2   4-
         ccThreeProbeClusters.probesClusterParams( 2 ) = oc2Params;
     }
     ChessboardBiclusteringFit fitCcThreeProbeClusters( precomputed, priors, ccThreeProbeClusters );
-    LOG_INFO( "Wrong 3 probes clusters partition llh=" << fitCcThreeProbeClusters.llh() );
-    EXPECT_GT( fitCcActual.llh(), fitCcThreeProbeClusters.llh() );
+    LOG_INFO( "Wrong 3 probes clusters partition llh=" << fitCcThreeProbeClusters.llh(weights) );
+    EXPECT_GT( fitCcActual.llh(weights), fitCcThreeProbeClusters.llh(weights) );
 
     ChessboardBiclustering ccThreeProbeClusters2( ccThreeProbeClusters );
     {
@@ -371,6 +374,6 @@ protein 1-1 1-2 1-3 1-4   2-1   2-2   2-3   2-4 3-1 3-2 3-3 3-4   4-1   4-2   4-
         ccThreeProbeClusters2.probesClusterParams( 2 ) = oc2Params;
     }
     ChessboardBiclusteringFit fitCcThreeProbeClusters2( precomputed, priors, ccThreeProbeClusters2 );
-    LOG_INFO( "Wrong 3 probes clusters partition-2 llh=" << fitCcThreeProbeClusters2.llh() );
-    EXPECT_GT( fitCcActual.llh(), fitCcThreeProbeClusters2.llh() );
+    LOG_INFO( "Wrong 3 probes clusters partition-2 llh=" << fitCcThreeProbeClusters2.llh(weights) );
+    EXPECT_GT( fitCcActual.llh(weights), fitCcThreeProbeClusters2.llh(weights) );
 }

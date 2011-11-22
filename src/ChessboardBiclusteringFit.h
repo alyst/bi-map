@@ -109,9 +109,9 @@ protected:
         REPORT_PROB_ERROR_IF( std::abs( curMetric.lpp() - prevMetrics.lpp() ) > LN_PROB_ERROR_TOL,
                               "Incorrect LPP serialization: real=" << curMetric.lpp()
                               << " serialized=" << prevMetrics.lpp() );
-        REPORT_PROB_ERROR_IF( std::abs( curMetric.llh() - prevMetrics.llh() ) > LN_PROB_ERROR_TOL,
-                              "Incorrect LLH serialization: real=" << curMetric.llh()
-                              << " serialized=" << prevMetrics.llh() );
+        REPORT_PROB_ERROR_IF( std::abs( curMetric.llh( LLHWeights() ) - prevMetrics.llh( LLHWeights() ) ) > LN_PROB_ERROR_TOL,
+                              "Incorrect LLH serialization: real=" << curMetric.llh( LLHWeights() )
+                              << " serialized=" << prevMetrics.llh( LLHWeights() ) );
 #else
         resetCachesAfterLoading();
 #endif
@@ -181,13 +181,13 @@ public:
         }
         return ( _metrics );
     }
-    const log_prob_t llh() const {
-        return ( metrics().llh() );
+    const log_prob_t llh( const LLHWeights& weights ) const {
+        return ( metrics().llh( weights ) );
     }
     log_prob_t lpp() const {
         return ( metrics().lpp() );
     }
-    log_prob_t totalLnP() const {
+    log_prob_t totalLnP( const LLHWeights& weights ) const {
 #ifdef _DEBUG
         // debugging version: check that caching of llh/lpp works by recalculating after cache reset
         StatsMetrics prevMetrics = metrics();
@@ -196,12 +196,12 @@ public:
         REPORT_PROB_ERROR_IF( std::abs( curMetrics.lpp() - prevMetrics.lpp() ) > LN_PROB_ERROR_TOL,
                               "Incorrect LPP caching: new=" << curMetrics.lpp()
                               << " old=" << prevMetrics.lpp() );
-        REPORT_PROB_ERROR_IF( std::abs( curMetrics.llh() - prevMetrics.llh() ) > LN_PROB_ERROR_TOL,
-                              "Incorrect LLH caching: new=" << curMetrics.llh()
-                              << " old=" << prevMetrics.llh() );
-        return ( curMetrics.totalLnP() );
+        REPORT_PROB_ERROR_IF( std::abs( curMetrics.llh( weights ) - prevMetrics.llh( weights ) ) > LN_PROB_ERROR_TOL,
+                              "Incorrect LLH caching: new=" << curMetrics.llh( weights )
+                              << " old=" << prevMetrics.llh( weights ) );
+        return ( curMetrics.totalLnP( weights ) );
 #else
-        return ( metrics().totalLnP() );
+        return ( metrics().totalLnP( weights ) );
 #endif
     }
 
@@ -369,13 +369,16 @@ struct ChessboardBiclusteringEnergyEval {
     typedef log_prob_t energy_type;
     typedef StaticChessboardBiclustering particle_type;
 
+    LLHWeights  weights;
+
     energy_type operator()( const pre_energy_type& preEnergy ) const {
-        return ( -preEnergy.totalLnP() );
+        return ( -preEnergy.totalLnP( weights ) );
     }
 
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version)
     {
+        ar & BOOST_SERIALIZATION_NVP( weights );
     }
 };
 

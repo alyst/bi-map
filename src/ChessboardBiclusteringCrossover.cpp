@@ -12,10 +12,11 @@ ChessboardBiclusteringCrossoverGenerator::ChessboardBiclusteringCrossoverGenerat
     const gsl_rng* rndNumGen,
     const PrecomputedData& precomputed,
     const ChessboardBiclusteringPriors& priors,
-    const ChessboardBiclusteringHyperPriors& hyperpriors
+    const ChessboardBiclusteringHyperPriors& hyperpriors,
+    const ChessboardBiclusteringEnergyEval& energyEval
 )   : _precomputed( precomputed )
     , _priors( priors )
-    , _sampler( rndNumGen, precomputed, hyperpriors, GibbsSamplerParams() )
+    , _sampler( rndNumGen, precomputed, hyperpriors, GibbsSamplerParams(), energyEval )
 {
 
 }

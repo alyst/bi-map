@@ -2,6 +2,34 @@
 
 #include "BasicTypedefs.h"
 
+struct LLHPartitionWeights {
+    log_prob_t  topo;
+    log_prob_t  conf;
+
+    LLHPartitionWeights()
+    : topo( 1.0 ), conf( 1.0 )
+    {}
+
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version)
+    {
+        ar & BOOST_SERIALIZATION_NVP( topo );
+        ar & BOOST_SERIALIZATION_NVP( conf );
+    }
+};
+
+struct LLHWeights {
+    LLHPartitionWeights objects;
+    LLHPartitionWeights probes;
+
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version)
+    {
+        ar & BOOST_SERIALIZATION_NVP( objects );
+        ar & BOOST_SERIALIZATION_NVP( probes );
+    }
+};
+
 /**
  *  Vector of log-likelihood metrics.
  */
@@ -22,9 +50,9 @@ struct LLHMetrics {
                  || ::is_unset( topo )
                  || ::is_unset( conf ) );
     }
-    double total() const {
+    double total( const LLHPartitionWeights& w ) const {
         BOOST_ASSERT( !is_unset() );
-        return ( quant + topo + conf );
+        return ( quant + w.topo * topo + w.conf * conf );
     }
     LLHMetrics& operator+=( const LLHMetrics& b ) {
         quant += b.quant;
@@ -36,8 +64,8 @@ struct LLHMetrics {
         topo -= b.topo;
         conf -= b.conf;
     }
-    operator log_prob_t() const {
-        return ( total() );
+    log_prob_t operator()( const LLHPartitionWeights& w ) const {
+        return ( total( w ) );
     }
 
     template<class Archive>
@@ -50,8 +78,8 @@ struct LLHMetrics {
 };
 
 /**
-    *  Vector of statistical metrics.
-    */
+ *  Vector of statistical metrics.
+ */
 struct StatsMetrics {
     log_prob_t  lppBlocks;      /** blocks log prior probability */
     log_prob_t  lppObjsPtn;     /** object's partition log prior prob. */
@@ -91,13 +119,17 @@ struct StatsMetrics {
         return ( lppBlocks + lppObjsPtn + lppProbesPtn );
     }
 
-    log_prob_t llh() const {
-        return ( llhObjs.total() + llhProbes.conf + llhProbes.topo );
+    log_prob_t llh( const LLHWeights& w ) const {
+        return (   llhObjs.quant
+                 + llhObjs.topo * w.objects.topo
+                 + llhObjs.conf * w.objects.conf 
+                 + llhProbes.topo * w.probes.topo
+                 + llhProbes.conf * w.probes.conf );
     }
 
-    log_prob_t totalLnP() const {
+    log_prob_t totalLnP( const LLHWeights& w ) const {
         BOOST_ASSERT( !is_unset() );
-        return ( lpp() + llh() );
+        return ( lpp() + llh( w ) );
     }
 
     template<class Archive>

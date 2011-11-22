@@ -71,6 +71,7 @@ private:
     const ChessboardBiclusteringHyperPriors&   _hyperpriors;
     const GibbsSamplerParams&       _params;
 
+    ChessboardBiclusteringEnergyEval _energyEval;
     SamplingTransform               _samplingTransform;
 
     size_t                          _iteration;
@@ -81,9 +82,17 @@ public:
                    const PrecomputedData&   precomputed,
                    const ChessboardBiclusteringHyperPriors& hyperpriors, 
                    const GibbsSamplerParams& params,
+                   const ChessboardBiclusteringEnergyEval& energyEval,
                    const SamplingTransform& transform = SamplingTransform() );
 
     ChessboardBiclusteringGibbsHelper createGibbsHelper( const ChessboardBiclusteringFit& clusFit ) const;
+
+    const ChessboardBiclusteringEnergyEval& energyEval() const {
+        return ( _energyEval );
+    }
+    void setEnergyEval( const ChessboardBiclusteringEnergyEval& energyEval ) {
+        _energyEval = energyEval;
+    }
 
     void setTransform( const SamplingTransform& transform )
     {

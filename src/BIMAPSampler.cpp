@@ -41,7 +41,7 @@ BIMAPSamplerHelper::BIMAPSamplerHelper(
   , params( samplerParams )
   , rndNumGen( CreateRndNumGen( rndNumGenSeed ) )
   , dynamicCrossCluFactory( rndNumGen, precomputed, priors, hyperpriors, params )
-  , crossoverGenerator( rndNumGen, precomputed, priors, hyperpriors )
+  , crossoverGenerator( rndNumGen, precomputed, priors, hyperpriors, ChessboardBiclusteringEnergyEval() )
 {
 }
 
@@ -182,7 +182,9 @@ void BIMAPSamplerHelper::generateMissingProbeSignals(
     probe_clundex_t             probeCluIx
 ) const {
     ChessboardBiclusteringFit fit( precomputed, priors, clus );
-    ChessboardBiclusteringGibbsHelper helper( rndNumGen, fit, SamplingTransform(), 0 );
+    ChessboardBiclusteringGibbsHelper helper( rndNumGen, fit,
+                                              ChessboardBiclusteringEnergyEval(),
+                                              SamplingTransform() );
     clus.setBlockSignal( objCluIx, probeCluIx,
                            helper.initialSignal( objCluIx, probeCluIx, NULL ).value ); 
 }
@@ -200,6 +202,10 @@ bool BIMAPSampleCollector::storeSample( double time, turbine_ix_t originIx,
                                         const particle_type& particle,
                                         const particle_energy_eval_type& energyEval )
 {
+    if ( _walk.stepsCount() == 0 ) {
+        // initialize llh weights
+        _walk.setProbWeights( energyEval.weights );
+    }
     _walk.step( time, originIx, *particle.clustering, particle.metrics );
     if ( ( time > _lastSampleReportTime + _params.maxReportingDelay )
       || ( ( _walk.stepsCount() % _params.reportingPeriod ) == 0 )
@@ -223,11 +229,11 @@ ChessboardBiclusteringEnergyEval DynamicChessboardBiclusteringFactory::updateEne
 
 BIMAPWalk BIMAPSampler_run(
     const BIMAPSamplerHelper&  helper,
-    ChessboardBiclusteringsIndexing&   chessboardBiclusteringsIndexing,
-    const GibbsSamplerParams&   gibbsSamplerParams,
-    const TurbineCascadeParams& eeCascadeParams,
-    const BIMAPSampleCollectorParams&  collectorParams,
-    const ChessboardBiclustering&      iniClus,
+    ChessboardBiclusteringsIndexing&    chessboardBiclusteringsIndexing,
+    const GibbsSamplerParams&           gibbsSamplerParams,
+    const TurbineCascadeParams&         eeCascadeParams,
+    const BIMAPSampleCollectorParams&   collectorParams,
+    const ChessboardBiclustering&       iniClus,
     const TurbineCascadeExecutionMonitor*   pMon
 ){
     typedef TurbineCascadeUnit<BIMAPSampleCollector, DynamicChessboardBiclusteringFactory, ChessboardBiclusteringCrossoverGenerator> equi_energy_sampler_type;

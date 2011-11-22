@@ -30,6 +30,7 @@ public:
                             const PrecomputedData& precomputed,
                             const ChessboardBiclusteringPriors& priors,
                             const ChessboardBiclusteringHyperPriors& hyperpriors,
+                            const ChessboardBiclusteringEnergyEval& energyEval,
                             const GibbsSamplerParams& params,
                             double minEnergy, double temperature )
     : _precomputed( precomputed )
@@ -37,6 +38,7 @@ public:
     , _hyperpriors( hyperpriors )
     , _params( params )
     , _sampler( rndNumGen, precomputed, hyperpriors, params,
+                energyEval,
                 SamplingTransform( -minEnergy, temperature ) )
     , _pClus( _precomputed, _priors )
     {
@@ -71,7 +73,7 @@ public:
 
     double energy() const
     {
-        return ( -_pClus.totalLnP() );
+        return ( _sampler.energyEval()( _pClus.metrics() ) );
     }
 
     void iterate()
@@ -80,10 +82,12 @@ public:
     }
 
     const static_particle_energy_eval_type& energyEval() const {
-        return ( ChessboardBiclusteringEnergyEval() );
+        return ( _sampler.energyEval() );
     }
     void setEnergyEval( const static_particle_energy_eval_type& energyEval ) {
+        _sampler.setEnergyEval( energyEval );
     }
+
 };
 
 /**
@@ -116,7 +120,8 @@ struct DynamicChessboardBiclusteringFactory {
     DynamicChessboardBiclustering* operator()( double minEnergy, double temperature ) const
     {
         return ( new DynamicChessboardBiclustering( rndNumGen, precomputed,
-                                             priors, hyperpriors, params, 
+                                             priors, hyperpriors,
+                                             ChessboardBiclusteringEnergyEval(), params, 
                                              minEnergy, temperature ) );
     }
     ChessboardBiclusteringEnergyEval updateEnergyEval( const ChessboardBiclusteringEnergyEval& energyEval,

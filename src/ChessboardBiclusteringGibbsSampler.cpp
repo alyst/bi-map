@@ -31,11 +31,13 @@ ChessboardBiclusteringGibbsSampler::ChessboardBiclusteringGibbsSampler(
     const PrecomputedData& precomputed, 
     const ChessboardBiclusteringHyperPriors& hyperpriors, 
     const GibbsSamplerParams& params, 
+    const ChessboardBiclusteringEnergyEval& energyEval,
     const SamplingTransform& samplingTransform
 ) : _rndNumGen( rndNumGen )
   , _precomputed( precomputed )
   , _hyperpriors( hyperpriors )
   , _params( params )
+  , _energyEval( energyEval )
   , _samplingTransform( samplingTransform )
   , _iteration( 0 )
 {
@@ -43,7 +45,7 @@ ChessboardBiclusteringGibbsSampler::ChessboardBiclusteringGibbsSampler(
 
 ChessboardBiclusteringGibbsHelper ChessboardBiclusteringGibbsSampler::createGibbsHelper( const ChessboardBiclusteringFit& clusFit ) const
 {
-    return ( ChessboardBiclusteringGibbsHelper( rndNumGen(), clusFit, _samplingTransform ) );
+    return ( ChessboardBiclusteringGibbsHelper( rndNumGen(), clusFit, _energyEval, _samplingTransform ) );
 }
 
 probability_vector_t ChessboardBiclusteringGibbsSampler::elementsPickupRates(
@@ -140,7 +142,8 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
         if ( !is_unset( obj2Dist.second ) ) {
             // do the step
             obj_split_merge_step    smStep( rndNumGen(), 
-                                            ObjectsPartitionStats( rndNumGen(), clus.data(), clus.priors() ), 
+                                            ObjectsPartitionStats( rndNumGen(), clus.data(), clus.priors(),
+                                                                   _energyEval.weights.objects ), 
                                             ObjectsParamsSampler( *this, true, true, true ),
                                             _samplingTransform, _params.objectsSplitMergeParams );
             obj_split_merge_step::result_type res = smStep( ObjectsPartitionEx( clus ), obj1ix, obj2Dist.first );
@@ -163,7 +166,8 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
         if ( !is_unset( obj2Dist.second ) ) {
             // do the step
             obj_split_merge_step    smStep( rndNumGen(), 
-                                            ObjectsPartitionStats( rndNumGen(), clus.data(), clus.priors() ), 
+                                            ObjectsPartitionStats( rndNumGen(), clus.data(), clus.priors(),
+                                                                   _energyEval.weights.objects ), 
                                             ObjectsParamsSampler( *this, true, true, true ),
                                             _samplingTransform, _params.objectsSplitMergeParams );
             obj_split_merge_step::result_type res = smStep( ObjectsPartitionEx( clus ), obj1ix, obj2Dist.first );
@@ -195,7 +199,7 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
             obj2clu.insert( clus.clusterOfObject( _precomputed.objectCoSignalDistances()( objIx, i ).first ) );
         }
 #if defined(_DEBUG)
-        log_prob_t prevLLH = clus.llh();
+        log_prob_t prevLLH = clus.llh( _energyEval.weights );
         log_prob_t prevLPP = clus.lpp();
         log_prob_t prevCluLPP = PriorEval( clus ).objectsClusteringLPP();
 #endif
@@ -231,10 +235,10 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
             clus.setObjectsClusterSamples( newCluIx, _params.blockResamples );
             clus.cleanupClusters();
 #if defined(_DEBUG)
-            REPORT_PROB_ERROR_IF( std::abs( prevLLH + newCluIx.oddsRatio.llhRatio - clus.llh() ) > LN_PROB_ERROR_TOL,
+            REPORT_PROB_ERROR_IF( std::abs( prevLLH + newCluIx.oddsRatio.llhRatio - clus.llh( _energyEval.weights ) ) > LN_PROB_ERROR_TOL,
                         "O LLH error: " << prevLLH << "+" << newCluIx.oddsRatio.llhRatio
                         << "=" << prevLLH + newCluIx.oddsRatio.llhRatio
-                        << "!=" << clus.llh() );
+                        << "!=" << clus.llh( _energyEval.weights ) );
             log_prob_t newCluLPP = PriorEval( clus ).objectsClusteringLPP();
             REPORT_PROB_ERROR_IF( std::abs( prevCluLPP + cluLPPDeltaNew - cluLPPDeltaOld - newCluLPP ) > LN_PROB_ERROR_TOL,
                               "OC LPP error: " << prevCluLPP << "+" << cluLPPDeltaNew - cluLPPDeltaOld
@@ -276,7 +280,8 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
         if ( !is_unset( probe2Dist.second ) ) {
             // do the step
             probe_split_merge_step    smStep( rndNumGen(), 
-                                            ProbesPartitionStats( rndNumGen(), clus.data(), clus.priors() ), 
+                                            ProbesPartitionStats( rndNumGen(), clus.data(), clus.priors(),
+                                                                  _energyEval.weights.probes ), 
                                             ProbesParamsSampler( *this, true, true ),
                                             _samplingTransform, _params.probesSplitMergeParams );
             probe_split_merge_step::result_type res = smStep( ProbesPartitionEx( clus ), probe1ix, probe2Dist.first );
@@ -299,7 +304,8 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
         if ( !is_unset( probe2Dist.second ) ) {
             // do the step
             probe_split_merge_step    smStep( rndNumGen(), 
-                                            ProbesPartitionStats( rndNumGen(), clus.data(), clus.priors() ), 
+                                            ProbesPartitionStats( rndNumGen(), clus.data(), clus.priors(),
+                                                                  _energyEval.weights.probes ), 
                                             ProbesParamsSampler( *this, true, true ),
                                             _samplingTransform, _params.probesSplitMergeParams );
             probe_split_merge_step::result_type res = smStep( ProbesPartitionEx( clus ), probe1ix, probe2Dist.first );
@@ -331,7 +337,7 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
             probe2clu.insert( clus.clusterOfProbe( _precomputed.probeCoSignalDistances()( probeIx, i ).first ) );
         }
 #if defined(_DEBUG)
-        log_prob_t prevLLH = clus.llh();
+        log_prob_t prevLLH = clus.llh( _energyEval.weights );
         log_prob_t prevLPP = clus.lpp();
         log_prob_t prevCluLPP = PriorEval( clus ).probesClusteringLPP();
 #endif
@@ -367,10 +373,10 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
             clus.setProbesClusterSamples( newCluIx, _params.blockResamples );
             clus.cleanupClusters();
 #if defined(_DEBUG)
-            REPORT_PROB_ERROR_IF( std::abs( prevLLH + newCluIx.oddsRatio.llhRatio - clus.llh() ) > LN_PROB_ERROR_TOL,
+            REPORT_PROB_ERROR_IF( std::abs( prevLLH + newCluIx.oddsRatio.llhRatio - clus.llh(_energyEval.weights) ) > LN_PROB_ERROR_TOL,
                         "S LLH error: " << prevLLH << "+" << newCluIx.oddsRatio.llhRatio
                         << "=" << prevLLH + newCluIx.oddsRatio.llhRatio
-                        << "!=" << clus.llh() );
+                        << "!=" << clus.llh(_energyEval.weights) );
             log_prob_t newCluLPP = PriorEval( clus ).probesClusteringLPP();
             REPORT_PROB_ERROR_IF( std::abs( prevCluLPP + cluLPPDeltaNew - cluLPPDeltaOld - newCluLPP ) > LN_PROB_ERROR_TOL,
                               "SC LPP error: " << prevCluLPP << "+" << cluLPPDeltaNew - cluLPPDeltaOld
@@ -383,7 +389,7 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
                              << "!=" << newLPP );
 #endif
             LOG_DEBUG1( "Probe " << probeIx << " put to " << newCluIx << " from " << probeCluIx
-                    << " oldLnP=" << (prevLLH + prevLPP) << " newLnP=" << clus.totalLnP() );
+                    << " oldLnP=" << (prevLLH + prevLPP) << " newLnP=" << clus.totalLnP(_energyEval.weights) );
         }
         else {
             //clus.probesClusterParams( newCluIx ) = params;
@@ -467,11 +473,11 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
     if ( isPriorsUpdateRequired() ) {
         // update priors
 #if defined(_DEBUG)
-        log_prob_t oldLnP = clus.totalLnP();
+        log_prob_t oldLnP = clus.totalLnP(_energyEval.weights);
         LOG_DEBUG2( "Iteration " << _iteration << ":" );
         LOG_DEBUG2( "Signal prior: N(" << clus.baselineSignalParams().lnScRate() << "," << clus.derivedPriors().signalPrior.sigma << "^2)" );
         LOG_DEBUG2( "Noise signal: " << clus.noiseParams().successRate );
-        LOG_DEBUG2( "OldLnP=" << oldLnP << " newLnP=" << clus.totalLnP() );
+        LOG_DEBUG2( "OldLnP=" << oldLnP << " newLnP=" << clus.totalLnP(_energyEval.weights) );
 #endif
         ChessboardBiclusteringGibbsHelper helper = createGibbsHelper( clus );
         clus.setSignalPrior( helper.sampleSignalPrior( _hyperpriors ) );
@@ -480,5 +486,5 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
 
     _iteration++;
 
-    return ( clus.totalLnP() );
+    return ( clus.totalLnP(_energyEval.weights) );
 }

@@ -90,6 +90,7 @@ private:
     ChessboardBiclusteringsIndexing&   _chessboardBiclusteringsIndexing;        /** walker's indexer of biclusterings */
     StepsIndexing               _steps;
     PriorParamsStepsIndexing    _priorParamsSteps;
+    LLHWeights                  _probWeights;
 
     BOOST_SERIALIZATION_SPLIT_MEMBER();
 
@@ -111,6 +112,7 @@ private:
             ar << boost::serialization::make_nvp( "objectsData", cclus._objectsData );
         }
         ar << boost::serialization::make_nvp( "priorParamSteps", _priorParamsSteps );
+        ar << boost::serialization::make_nvp( "probWeights", _probWeights );
     }
 
     template<class Archive>
@@ -143,13 +145,15 @@ private:
             _steps.get<0>().push_back( BIMAPStep( time, turbineIx, ChessboardBiclusteringIndexed( *pScaffoldIt, blocksData, objectsData, clusteringData ), metrics ) );
         }
         ar >> boost::serialization::make_nvp( "priorParamSteps", _priorParamsSteps );
+        ar >> boost::serialization::make_nvp( "probWeights", _probWeights );
     }
 
 protected:
     friend class BIMAPSampler;
 
 public:
-    BIMAPWalk( ChessboardBiclusteringsIndexing& chessboardBiclusteringsIndexing );
+    BIMAPWalk( ChessboardBiclusteringsIndexing& chessboardBiclusteringsIndexing,
+               const LLHWeights& probWeights = LLHWeights() );
 
     typedef StepsIndexing::const_iterator const_step_iterator;
     typedef PriorParamsStepsIndexing::const_iterator const_priors_step_iterator;
@@ -166,6 +170,13 @@ public:
     }
     ChessboardBiclusteringsIndexing& indexing() {
         return ( _chessboardBiclusteringsIndexing );
+    }
+
+    const LLHWeights& probWeights() const {
+        return ( _probWeights );
+    }
+    void setProbWeights( const LLHWeights& weights ) {
+        _probWeights = weights;
     }
 
     size_t stepsCount() const {

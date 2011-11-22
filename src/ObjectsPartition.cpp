@@ -272,8 +272,8 @@ log_prob_t ObjectsParamsSampler::transitionLP(
         bool enabledAfter = cluAfter.isEnabled();
         if ( enabledBefore != enabledAfter ) {
             // block probe transition probability
-            ChessboardBiclusteringGibbsHelper::BlockEnablementDataLLHCached llhBefore( helperBefore.clusteringFit(), cluIx, probeCluIx );
-            ChessboardBiclusteringGibbsHelper::BlockEnablementDataLLHCached llhAfter( helperAfter.clusteringFit(), cluIx, probeCluIx );
+            ChessboardBiclusteringGibbsHelper::BlockEnablementDataLLHCached llhBefore( helperBefore.energyEval(), helperBefore.clusteringFit(), cluIx, probeCluIx );
+            ChessboardBiclusteringGibbsHelper::BlockEnablementDataLLHCached llhAfter( helperAfter.energyEval(), helperAfter.clusteringFit(), cluIx, probeCluIx );
             BernoulliDistribution prior = priorEval.blockEnablementPrior();
             log_prob_t  lnOddsRatio = prior( enabledAfter ) - prior( enabledBefore )
                                     + llhAfter( enabledAfter ) - llhBefore( enabledBefore );
