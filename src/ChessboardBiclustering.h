@@ -165,8 +165,7 @@ private:
         friend class ChessboardBiclusteringIterator;
 
         ChessboardBiclustering&    _clustering;
-        size_t              _ccIndex;       /** index of block in blocks mask */
-        probe_clundex_t     _probesClusterIndex;
+        size_t                     _ccIndex;       /** index of block in blocks mask */
 
         BlockProxy( ChessboardBiclustering& clustering,
                     size_t index = blocks_mask_t::npos
