@@ -245,20 +245,23 @@ receiveParticles(
     *  Updated EE energy ladder.
     *  Sent after any turbine has finished burning in to all units.
     */
-template<class Particle>
+template<class ParticleEnergyEval>
 struct EnergyLadderMessage {
-    typedef Particle particle_type;
+    typedef typename ParticleEnergyEval::particle_type particle_type;
+    typedef ParticleEnergyEval particle_energy_eval_type;
 
     turbine_ix_t            originIx;
     TurbineEnergyLadder     ladder;
 
-    particle_type           iniParticle;
+    particle_energy_eval_type   energyEval;
+    particle_type               iniParticle;
 
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version)
     {
         ar & BOOST_SERIALIZATION_NVP( originIx );
         ar & BOOST_SERIALIZATION_NVP( ladder );
+        ar & BOOST_SERIALIZATION_NVP( energyEval );
         ar & BOOST_SERIALIZATION_NVP( iniParticle );
     }
 };
@@ -282,8 +285,11 @@ public:
     typedef MPITurbineConnection<ParticleEnergyEval> turbine_connection_type;
     //typedef TurbineCascadeUnit<ParticleCollector, ParticleEnergyEval, DynamicParticleFactory, ParticleGenerator, communicator_type> cascade_unit_type;
     typedef boost::mpi::communicator mpi_communicator_type;
-    typedef TurbineEnergyLadder::energy_landscape_type energy_landscape_type;
     typedef boost::mpi::timer timer_type;
+
+    typedef typename particle_type::pre_energy_type pre_energy_type;
+    typedef std::vector<pre_energy_type> pre_energy_vector_type;
+    typedef std::map<size_t, pre_energy_vector_type> pre_energy_landscape_type;
 
 private:
     /**
@@ -292,15 +298,12 @@ private:
      *  transiently access the memory of response.
      */
     class MPIEnergyLandscapeRequestStorage: public MPIIBroadcastStorage<turbine_ix_t, false> {
-    public:
-        typedef TurbineEnergyLadder::energy_landscape_type energy_landscape_type;
-
     private:
         typedef MPIIBroadcastStorage<turbine_ix_t, false> super;
 
         super::ranks_mask_type              _waitingUnits;
-        energy_landscape_type               _cumulativeLandscape;
-        std::vector<energy_landscape_type>  _landscapes;
+        pre_energy_landscape_type           _cumulativeLandscape;
+        std::vector<pre_energy_landscape_type>  _landscapes;
         std::vector<mpi::request>           _landscapeResponseRequests;   /// MPI landscape response statuses
 #if defined(MPI_TIMEOUT_CONTROL)
         double                              _lastReported;
@@ -314,7 +317,7 @@ private:
         );
         ~MPIEnergyLandscapeRequestStorage();
         bool complete();
-        const energy_landscape_type& energyLandscape() const {
+        const pre_energy_landscape_type& energyLandscape() const {
             return ( _cumulativeLandscape );
         }
     };
@@ -328,7 +331,6 @@ public:
         boost::shared_ptr<MPIEnergyLandscapeRequestStorage> _p;
 
     public:
-        typedef TurbineEnergyLadder::energy_landscape_type energy_landscape_type;
         typedef typename MPIEnergyLandscapeRequestStorage::ranks_mask_type ranks_mask_type;
 
         MPIEnergyLandscapeRequestStatus( communicator_type& comm, turbine_ix_t senderIx )
@@ -338,7 +340,7 @@ public:
 #endif
         ) ) {};
         bool complete() { return ( _p->complete() ); }
-        const energy_landscape_type& energyLandscape() const { return ( _p->energyLandscape() ); }
+        const pre_energy_landscape_type& energyLandscape() const { return ( _p->energyLandscape() ); }
     };
 
     typedef MPIEnergyLandscapeRequestStatus landscape_request_status_type;
@@ -353,10 +355,11 @@ private:
     typedef boost::unordered_map<turbine_ix_t, TurbineStatus> turbine_status_map_type;
     typedef MPIIBroadcastStorage< std::vector<TurbineStatusMessage>, false > turbine_status_ibroadcast_type;
     typedef MPIISendStorage< std::vector<TurbineStatusMessage>, false > turbine_status_isend_type;
-    typedef MPIIBroadcastStorage< EnergyLadderMessage<particle_type>, true > energy_ladder_status_ibroadcast_type;
+    typedef EnergyLadderMessage<energy_eval_type> energy_ladder_message_type;
+    typedef MPIIBroadcastStorage< energy_ladder_message_type, true > energy_ladder_status_ibroadcast_type;
     typedef MPIISendStorage< EEJumpResponseMessage<energy_eval_type>, true > jump_response_isend_request_type;
     typedef MPIISendStorage< std::vector< ParticleMessage<particle_type> >, !is_particle_mpi_datatype::value > particle_isend_request_type;
-    typedef MPIISendStorage<energy_landscape_type, true> landscape_response_isend_request_type;
+    typedef MPIISendStorage<pre_energy_landscape_type, true> landscape_response_isend_request_type;
     typedef boost::ptr_vector<particle_isend_request_type> particle_isend_request_container_type;
     typedef boost::ptr_vector<jump_response_isend_request_type> jump_response_isend_request_container_type;
     typedef boost::ptr_vector<landscape_response_isend_request_type> landscape_response_isend_request_container_type;
@@ -400,7 +403,8 @@ public:
     template<class CascadeUnit>
     void broadcastUnitStatuses( const CascadeUnit& unit );
     void broadcastShutdown( turbine_ix_t originIx );
-    void broadcastEnergyLadder( turbine_ix_t originIx, const TurbineEnergyLadder& ladder, const particle_type& iniParticle );
+    void broadcastEnergyLadder( turbine_ix_t originIx, const TurbineEnergyLadder& ladder,
+                                const energy_eval_type& energyEval, const particle_type& iniParticle );
     template<class CascadeUnit>
     bool processExternalEvents( CascadeUnit& unit, bool wait );
     template<class CascadeUnit>
@@ -684,7 +688,7 @@ bool MPIUnitCommunicator<Particle>::processIncomingMessage(
             LOG_DEBUG2( "#" << rank() << ": got energy landscape request from unit #" << msgStatus.source() );
             turbine_ix_t originIx;
             _comm.recv( msgStatus.source(), msgStatus.tag(), originIx );
-            typename cascade_unit_type::energy_landscape_type localLandscape = unit.localEnergyLandscape();
+            pre_energy_landscape_type localLandscape = unit.localEnergyLandscape();
             LOG_DEBUG2( "#" << rank() << ": sending " << localLandscape.size() << " particle energies to turbine #" << originIx );
             _landscapeResponseISendRequests.push_back( new landscape_response_isend_request_type( _comm, msgStatus.source(), 
                                                                                                   MTAG_EnergyLandscapeResponse, localLandscape
@@ -702,9 +706,9 @@ bool MPIUnitCommunicator<Particle>::processIncomingMessage(
         case MTAG_AdjustEnergyLadder:
         {
             LOG_DEBUG1( "#" << rank() << ": got energy ladder adjustment" );
-            EnergyLadderMessage<particle_type> msg;
+            energy_ladder_message_type msg;
             _comm.recv( msgStatus.source(), msgStatus.tag(), msg );
-            unit.adjustUnitEnergyLadder( msg.originIx, msg.ladder, msg.iniParticle );
+            unit.adjustUnitEnergyLadder( msg.originIx, msg.ladder, msg.energyEval, msg.iniParticle );
         }
         break;
 
@@ -777,11 +781,13 @@ template<typename ParticleEnergyEval>
 void MPIUnitCommunicator<ParticleEnergyEval>::broadcastEnergyLadder(
     turbine_ix_t                originIx,
     const TurbineEnergyLadder&  ladder,
+    const energy_eval_type&     energyEval, 
     const particle_type&        iniParticle
 ){
-    EnergyLadderMessage<particle_type> msg;
+    energy_ladder_message_type msg;
     msg.originIx = originIx;
     msg.ladder = ladder;
+    msg.energyEval = energyEval;
     msg.iniParticle = iniParticle;
 
     if ( _energyLadderIBroadcastRequest ) _energyLadderIBroadcastRequest.reset();

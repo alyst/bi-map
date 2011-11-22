@@ -79,8 +79,10 @@ public:
         _sampler.doSamplingStep( _pClus );
     }
 
-    ChessboardBiclusteringEnergyEval staticParticleEnergyEval() const {
+    const static_particle_energy_eval_type& energyEval() const {
         return ( ChessboardBiclusteringEnergyEval() );
+    }
+    void setEnergyEval( const static_particle_energy_eval_type& energyEval ) {
     }
 };
 
@@ -117,6 +119,8 @@ struct DynamicChessboardBiclusteringFactory {
                                              priors, hyperpriors, params, 
                                              minEnergy, temperature ) );
     }
+    ChessboardBiclusteringEnergyEval updateEnergyEval( const ChessboardBiclusteringEnergyEval& energyEval,
+        std::vector<StatsMetrics>& energyLandscape ) const;
 };
 
 /**
@@ -177,13 +181,14 @@ class BIMAPSampleCollector {
 private:
     BIMAPWalk                          _walk;
     const BIMAPSampleCollectorParams&  _params;
-    double                              _lastSampleReportTime;
+    double                             _lastSampleReportTime;
 
 public:
     typedef StaticChessboardBiclustering particle_type;
+    typedef ChessboardBiclusteringEnergyEval particle_energy_eval_type;
 
     BIMAPSampleCollector( ChessboardBiclusteringsIndexing& chessboardBiclusteringsIndexing,
-                           const BIMAPSampleCollectorParams& params );
+                          const BIMAPSampleCollectorParams& params );
 
     const BIMAPWalk& walk() const { return ( _walk ); }
     bool storeSample( double time, turbine_ix_t originIx, const particle_type& particle );

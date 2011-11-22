@@ -177,7 +177,7 @@ ChessboardBiclustering BIMAPSamplerHelper::trivialClustering() const
 }
 
 void BIMAPSamplerHelper::generateMissingProbeSignals(
-    ChessboardBiclustering&            clus,
+    ChessboardBiclustering&     clus,
     object_clundex_t            objCluIx,
     probe_clundex_t             probeCluIx
 ) const {
@@ -188,7 +188,7 @@ void BIMAPSamplerHelper::generateMissingProbeSignals(
 }
 
 BIMAPSampleCollector::BIMAPSampleCollector(
-    ChessboardBiclusteringsIndexing&           chessboardBiclusteringsIndexing,
+    ChessboardBiclusteringsIndexing&   chessboardBiclusteringsIndexing,
     const BIMAPSampleCollectorParams&  params
 ) : _walk( chessboardBiclusteringsIndexing )
   , _params( params )
@@ -209,6 +209,14 @@ bool BIMAPSampleCollector::storeSample( double time, turbine_ix_t originIx, cons
         _walk.step( time, originIx, particle.clustering->derivedPriors() );
     }
     return ( _walk.stepsCount() >= _params.walkSamples );
+}
+
+ChessboardBiclusteringEnergyEval DynamicChessboardBiclusteringFactory::updateEnergyEval(
+    const ChessboardBiclusteringEnergyEval& energyEval,
+    std::vector<StatsMetrics>& energyLandscape
+) const {
+    /// @TODO
+    return ( ChessboardBiclusteringEnergyEval() );
 }
 
 BIMAPWalk BIMAPSampler_run(

@@ -89,13 +89,16 @@ struct TurbineEnergyLadder {
         ar & BOOST_SERIALIZATION_NVP( steps );
     }
 
-    static void AppendLandscape( energy_landscape_type& dest, const energy_landscape_type& src )
+    template<typename PreEnergyType>
+    static void AppendLandscape( std::map<size_t, std::vector<PreEnergyType> >& dest,
+                                 const std::map<size_t, std::vector<PreEnergyType> >& src )
     {
+        typedef std::map<size_t, std::vector<PreEnergyType> > pre_energy_landscape_type;
         // merge local and external landscapes
-        for ( energy_landscape_type::const_iterator sit = src.begin();
+        for ( typename pre_energy_landscape_type::const_iterator sit = src.begin();
               sit != src.end(); ++sit
         ){
-            energy_landscape_type::iterator dit = dest.find( sit->first );
+            typename pre_energy_landscape_type::iterator dit = dest.find( sit->first );
             if ( dit != dest.end() ) {
                 dit->second.insert( dit->second.end(),
                                     sit->second.begin(), sit->second.end() );
@@ -120,13 +123,18 @@ template<class ParticleEnergyEval>
 struct DummyUnitCommunicator {
     typedef ParticleEnergyEval energy_eval_type;
     typedef typename energy_eval_type::particle_type particle_type;
+
+    typedef typename particle_type::pre_energy_type pre_energy_type;
+    typedef std::vector<pre_energy_type> pre_energy_vector_type;
+    typedef std::map<size_t, pre_energy_vector_type> pre_energy_landscape_type;
+
     typedef boost::timer timer_type;
     typedef TurbineEnergyLadder::energy_landscape_type energy_landscape_type;
 
     struct DummyLandscapeRequestStatus {
         bool complete() const { return ( true ); }
-        energy_landscape_type energyLandscape() const {
-            return ( energy_landscape_type() );
+        pre_energy_landscape_type energyLandscape() const {
+            return ( pre_energy_landscape_type() );
         }
     };
 
@@ -138,7 +146,8 @@ struct DummyUnitCommunicator {
     template<class CascadeUnit>
     void broadcastUnitStatuses( const CascadeUnit& unit ) {};
     void broadcastShutdown( turbine_ix_t originIx ) {};
-    void broadcastEnergyLadder( turbine_ix_t originIx, const TurbineEnergyLadder& ladder, const particle_type& iniParticle ) {};
+    void broadcastEnergyLadder( turbine_ix_t originIx, const TurbineEnergyLadder& ladder,
+                                const energy_eval_type& energyEval, const particle_type& iniParticle ) {};
     template<class CascadeUnit>
     bool processExternalEvents( CascadeUnit& unit, bool wait ) { return ( false ); };
     template<class CascadeUnit>
@@ -181,9 +190,17 @@ public:
     typedef boost::dynamic_bitset<>  turbine_ix_set_type;
     typedef GenericTurbineConnector connector_type;
     typedef ParticleTurbine<factory_type, generator_type, connector_type> turbine_type;
-    typedef typename turbine_type::energy_vector_type energy_vector_type;
-    typedef typename turbine_type::energy_landscape_type energy_landscape_type;
+
     typedef typename connector_type::jump_request_status_type jump_request_status_type;
+
+    typedef typename DynamicParticleFactory::static_particle_energy_eval_type particle_energy_eval_type;
+    typedef typename particle_energy_eval_type::energy_type energy_type;
+    typedef std::vector<energy_type> energy_vector_type;
+    typedef std::map<size_t, energy_vector_type> energy_landscape_type;
+
+    typedef typename particle_type::pre_energy_type pre_energy_type;
+    typedef std::vector<pre_energy_type> pre_energy_vector_type;
+    typedef std::map<size_t, pre_energy_vector_type> pre_energy_landscape_type;
 
     typedef TurbineCascadeUnit<collector_type, factory_type, generator_type, communicator_type> cascade_unit_type;
 
@@ -249,7 +266,9 @@ public:
     void processTurbineCreated( turbine_ix_t turbineIx );
     void processBurnInOver();
     void adjustCascadeEnergyLadder( turbine_ix_t turbineIx );
-    void adjustUnitEnergyLadder( turbine_ix_t originIx, const TurbineEnergyLadder& ladder, const particle_type& iniParticle );
+    void adjustUnitEnergyLadder( turbine_ix_t originIx, const TurbineEnergyLadder& ladder,
+                                 const particle_energy_eval_type& energyEval,
+                                 const particle_type& iniParticle );
     bool sampleParticle( turbine_ix_t turbineIx, const particle_type& particle );
 
     bool storesSamples() const {
@@ -284,7 +303,7 @@ public:
     double elapsed() const {
         return ( _timer.elapsed() );
     }
-    energy_landscape_type localEnergyLandscape() const;
+    pre_energy_landscape_type localEnergyLandscape() const;
 };
 
 template<class ParticleCollector, class DynamicParticleFactory, class ParticleGenerator>
@@ -684,7 +703,7 @@ adjustCascadeEnergyLadder(
     LOG_INFO( UNIT_LOG_PREFIX( *this ) << "leading turbine #" << turbineIx << ": "
               << turbine.iteration() << " iterations done, starting ladder adjustment" );
 
-    energy_landscape_type globalEnergyLandscape = localEnergyLandscape();
+    pre_energy_landscape_type preEnergyLandscape = localEnergyLandscape();
     if ( _pUnitComm ) {
         // send energy landscape request
         LOG_INFO( UNIT_LOG_PREFIX( *this ) << "turbine #" << turbineIx << " requesting energy landscape" );
@@ -703,31 +722,43 @@ adjustCascadeEnergyLadder(
             if ( _shuttingDown ) return;
         }
         // merge local and external landscapes
-        TurbineEnergyLadder::AppendLandscape( globalEnergyLandscape, status.energyLandscape() );
+        TurbineEnergyLadder::AppendLandscape( preEnergyLandscape, status.energyLandscape() );
     }
-    // sort energies in landscape
-    for ( typename energy_landscape_type::iterator lit = globalEnergyLandscape.begin();
-          lit != globalEnergyLandscape.end(); ++lit
+    // convert to energies and sort
+    energy_landscape_type energyLandscape;
+    for ( typename pre_energy_landscape_type::iterator lit = preEnergyLandscape.begin();
+          lit != preEnergyLandscape.end(); ++lit
     ){
-        std::sort( lit->second.begin(), lit->second.end() );
-        LOG_INFO( UNIT_LOG_PREFIX( *this ) << " landscape level #" << lit->first << ": " << lit->second.size() 
-                    << " energy values in range [" << ( lit->second.size() > 0 ? lit->second.front() : std::numeric_limits<energy_type>::quiet_NaN() )
-                    << ", " << ( lit->second.size() > 0 ? lit->second.back() : std::numeric_limits<energy_type>::quiet_NaN() ) << "]" );
+        energy_vector_type levelLandscape;
+        for ( size_t i = 0; i < lit->second.size(); i++ ) {
+            levelLandscape.push_back( turbine.energyEval()( lit->second[i] ) );
+        }
+        std::sort( levelLandscape.begin(), levelLandscape.end() );
+        energyLandscape[ lit->first ] = levelLandscape;
+        LOG_INFO( UNIT_LOG_PREFIX( *this ) << " landscape level #" << lit->first << ": " << levelLandscape.size() 
+                    << " energy values in range [" << ( levelLandscape.size() > 0 ? levelLandscape.front() : std::numeric_limits<energy_type>::quiet_NaN() )
+                    << ", " << ( levelLandscape.size() > 0 ? levelLandscape.back() : std::numeric_limits<energy_type>::quiet_NaN() ) << "]" );
     }
-    if ( globalEnergyLandscape.size() == 0 ) {
+    if ( energyLandscape.size() == 0 ) {
         LOG_WARN( UNIT_LOG_PREFIX( *this ) << "skipping energy ladder formation, landscape is empty" );
         return;
     }
 
     // build energy ladder steps
-    TurbineEnergyLadder ladder( _params, globalEnergyLandscape );
+    TurbineEnergyLadder ladder( _params, energyLandscape );
+
+    particle_energy_eval_type newEnergyEval = turbine.energyEval();
+    if ( preEnergyLandscape.count( 0 ) ) {
+        LOG_INFO( UNIT_LOG_PREFIX( *this ) << "Updating energy evaluator" );
+        newEnergyEval = _dynamicParticleFactory.updateEnergyEval( turbine.energyEval(), preEnergyLandscape[0] );
+    }
 
     const particle_type& iniParticle = turbine.movingParticle();
-    adjustUnitEnergyLadder( turbineIx, ladder, iniParticle );
+    adjustUnitEnergyLadder( turbineIx, ladder, newEnergyEval, iniParticle );
     if ( _pUnitComm ) {
         LOG_DEBUG1( UNIT_LOG_PREFIX( *this ) << "broadcasting adjusted ladder" );
         // broadcast adjusted turbine params to all units
-        _pUnitComm->broadcastEnergyLadder( turbineIx, ladder, iniParticle );
+        _pUnitComm->broadcastEnergyLadder( turbineIx, ladder, newEnergyEval, iniParticle );
     }
 }
 
@@ -769,16 +800,15 @@ void TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGener
 }
 
 template<class ParticleCollector, class DynamicParticleFactory, class ParticleGenerator, class UnitCommunicator>
-typename TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGenerator, UnitCommunicator>::energy_landscape_type
+typename TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGenerator, UnitCommunicator>::pre_energy_landscape_type
 TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGenerator, UnitCommunicator>::localEnergyLandscape() const
 {
-    energy_landscape_type energyLandscape;
+    pre_energy_landscape_type energyLandscape;
 
     for ( typename turbine_container_type::const_iterator it = _turbines.begin(); it != _turbines.end(); ++it ) {
-        energy_vector_type turbineEnergies = it->second->particleCache()
-                ->energies( _turbines.begin()->second->movingParticle().staticParticleEnergyEval() ).particleEnergies();
+        pre_energy_vector_type turbineEnergies = it->second->particleCache()->preEnergies();
         if ( !turbineEnergies.empty() ) {
-            typename energy_landscape_type::iterator lit = energyLandscape.find( it->second->level() );
+            typename pre_energy_landscape_type::iterator lit = energyLandscape.find( it->second->level() );
             if ( lit == energyLandscape.end() ) {
                 energyLandscape[ it->second->level() ] = turbineEnergies;
             } else {
@@ -796,6 +826,7 @@ template<class ParticleCollector, class DynamicParticleFactory, class ParticleGe
 void TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGenerator, UnitCommunicator>::adjustUnitEnergyLadder(
     turbine_ix_t                originIx,       /** turbine initiated adjustment */
     const TurbineEnergyLadder&  ladder,         /** adjusted energy transforms */
+    const particle_energy_eval_type& energyEval,
     const particle_type&        iniParticle     /** particle to initialize new turbines */
 ){
     LOG_DEBUG1( UNIT_LOG_PREFIX( *this ) << "adjusting energy ladder" );
@@ -810,6 +841,7 @@ void TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGener
             ){
                 newETransform.minEnergyThreshold = adjTurbine.energyTransform().minEnergyThreshold;
             }
+            adjTurbine.setEnergyEval( energyEval );
             adjTurbine.setEnergyTransform( newETransform );
             LOG_INFO( UNIT_LOG_PREFIX( *this ) << "adjusted turbine #" << adjTurbine.index()
                           << " params: E_min=" << newETransform.minEnergyThreshold
@@ -830,6 +862,7 @@ void TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGener
             BOOST_ASSERT( pNewTurbine->index() == nodeProps.turbineIx );
             BOOST_ASSERT( _turbines.find( nodeProps.turbineIx ) != _turbines.end() );
             pNewTurbine->setMovingParticle( iniParticle );
+            pNewTurbine->setEnergyEval( energyEval );
         }
     }
 }

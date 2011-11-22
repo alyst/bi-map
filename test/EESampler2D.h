@@ -48,6 +48,9 @@ struct Particle2dDistrParam {
 };
 
 struct StaticParticle2d : public Particle2d {
+    typedef double pre_energy_type;
+    typedef double energy_type;
+
     double      _energy;
 
     StaticParticle2d()
@@ -60,7 +63,7 @@ struct StaticParticle2d : public Particle2d {
     ) : Particle2d( particle ), _energy( energy )
     {}
 
-    double energy() const {
+    double preEnergy() const {
         return ( _energy );
     }
 
@@ -103,9 +106,10 @@ struct Particle2dEval {
 
 struct Particle2dEnergyEval {
     typedef StaticParticle2d particle_type;
+    typedef double energy_type;
 
-    double operator()( const StaticParticle2d& val ) const {
-        return ( val.energy() );
+    energy_type operator()( const double preEnergy ) const {
+        return ( preEnergy );
     }
 
     template<class Archive>
@@ -167,8 +171,11 @@ struct DynamicParticle2d {
         return ( -_pcl._energy );
     }
 
-    static_particle_energy_eval_type staticParticleEnergyEval() const {
+    static_particle_energy_eval_type energyEval() const {
         return ( static_particle_energy_eval_type() );
+    }
+
+    void setEnergyEval( const static_particle_energy_eval_type& energyEval ) {
     }
 };
 
@@ -187,6 +194,11 @@ struct DynamicParticle2dFactory {
 
     dynamic_particle_type* operator()( double minEnergy, double temperature ) const {
         return ( new dynamic_particle_type( rng, minEnergy, temperature, param ) );
+    }
+    static_particle_energy_eval_type updateEnergyEval( const static_particle_energy_eval_type& current,
+                                                       const std::vector<double>& landscape ) const
+    {
+        return ( current );
     }
 };
 

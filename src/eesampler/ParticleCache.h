@@ -23,6 +23,10 @@ public:
     typedef ParticleCache<particle_type> cache_type;
     typedef ParticleCacheEnergiesProxy<particle_type> energies_proxy_type;
 
+
+    typedef typename Particle::pre_energy_type pre_energy_type;
+    typedef std::vector<pre_energy_type> pre_energy_vector_type;
+
 private:
     typedef std::vector<cascade_particle_type> particles_container_type;
 
@@ -112,6 +116,14 @@ public:
         return ( NULL );
     }
 
+    pre_energy_vector_type preEnergies() const {
+        pre_energy_vector_type res( size() );
+        for ( size_t ix = 0; ix < res.size(); ix++ ) {
+            res[ ix ] = _particles[ ix ].preEnergy();
+        }
+        return ( res );
+    }
+
     template<typename EnergyEval>
     energies_proxy_type energies( const EnergyEval& eval ) const
     {
@@ -124,10 +136,10 @@ class ParticleCacheEnergiesProxy {
 public:
     typedef Particle particle_type;
     typedef float energy_type;
+    typedef std::vector<energy_type> energy_vector_type;
     typedef CascadeParticle<particle_type> cascade_particle_type;
     typedef ParticleCache<particle_type> cache_type;
     typedef ParticleCacheEnergiesProxy<particle_type> energies_proxy_type;
-    typedef std::vector<energy_type> energy_vector_type;
 
 private:
     typedef size_t sequence_index;
@@ -192,7 +204,7 @@ protected:
     : _cache( cache )
     {
         for ( size_t ix = 0; ix < cache.size(); ix++ ) {
-            _energyMap.insert( std::make_pair( eval( cache[ ix ] ), ix ) );
+            _energyMap.insert( std::make_pair( eval( cache[ ix ].preEnergy() ), ix ) );
         }
     };
 
@@ -319,6 +331,7 @@ const typename ParticleCache<Particle>::cascade_particle_type*
 ParticleCache<Particle>::push(
     const cascade_particle_type& particle
 ){
+#if 0
     if ( !std::isfinite( particle.energy() ) ) {
         LOG_DEBUG2( "Particle energy E=" << particle.energy() << ": not finite, skipped" );
         return ( particleNotFound() );
@@ -326,6 +339,7 @@ ParticleCache<Particle>::push(
     if ( particle.energy() < 0 ) {
         LOG_DEBUG2( "Particle E=" << particle.energy() );
     }
+#endif
     if ( isFull() ) {
 #if 0
         if ( _pMonitor ) {

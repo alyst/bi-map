@@ -225,6 +225,13 @@ public:
         return ( *_movingParticle );
     }
 
+    const static_particle_energy_eval_type& energyEval() const {
+        return ( _movingParticle->energyEval() );
+    }
+    void setEnergyEval( const static_particle_energy_eval_type& energyEval ) {
+        return ( _movingParticle->setEnergyEval( energyEval ) );
+    }
+
     void setEnergyTransform( const EnergyTransform& energyTransform ) {
         _energyTransform = energyTransform;
         _movingParticle->setParams( _energyTransform.minEnergyThreshold, _energyTransform.temperature );
@@ -303,6 +310,7 @@ public:
     typedef TurbineConnector turbine_connector_type;
     typedef ParticleGenerator generator_type;
     typedef typename TurbineConnector::jump_request_status_type jump_request_status_type;
+    typedef typename DynamicParticleFactory::static_particle_energy_eval_type particle_energy_eval_type;
     typedef typename super::factory_type factory_type;
     typedef typename super::cache_type cache_type;
     typedef typename super::cascade_particle_type cascade_particle_type;
@@ -352,6 +360,8 @@ public:
     using super::energyTransform;
     using super::movingParticle;
     using super::setMovingParticle;
+    using super::energyEval;
+    using super::setEnergyEval;
     using super::particleCache;
     using super::iteration;
 
@@ -401,7 +411,7 @@ ParticleTurbineBase<DynamicParticleFactory>::processJumpRequest(
         return ( optional_particle() );
     }
     else {
-        const energy_type donEnergy = pJumpParticle->energy();
+        const energy_type donEnergy = energyEval( pJumpParticle->preEnergy() );
 
         bool acceptJump = is_equienergy_jump_accepted( _rng, params.energy, params.acceptorETransform,
                                                         donEnergy, _energyTransform );
@@ -465,7 +475,7 @@ void ParticleTurbine<DynamicParticleFactory, ParticleGenerator, TurbineConnectio
             const cascade_particle_type& cpt = (*particleCache())[ particleCache()->size() - 1 ];
             // output last stored particle information
             LOG_INFO( "Turbine #" << super::index() << ": " << _iteration << " iteration(s) made, last particle E=" 
-                        << cpt.energy() << ":\n" << cpt.particle );
+                        << energyEval()( cpt.preEnergy() ) << ":\n" << cpt.particle );
         }
         else {
             LOG_INFO( "Turbine #" << super::index() << ": " << _iteration << " iteration(s) made, no particles cache" );
@@ -480,7 +490,7 @@ void ParticleTurbine<DynamicParticleFactory, ParticleGenerator, TurbineConnectio
                     "#" << jumpTurbineIx << ", "
                     "E=" << boost::format("%.2f") % movingParticle().energy() );
         // try to equi-energy jump
-        jump_request_status_type status = _conn.requestJump( index(), jumpTurbineIx, movingParticle().staticParticleEnergyEval(),
+        jump_request_status_type status = _conn.requestJump( index(), jumpTurbineIx, movingParticle().energyEval(),
                                                              EEJumpParams( energyTransform(), movingParticle().energy() ) );
         while ( !status.complete() ) {
             bool abortIteration = processExternalEvents( unit, true ); // process any incoming external events
@@ -489,7 +499,7 @@ void ParticleTurbine<DynamicParticleFactory, ParticleGenerator, TurbineConnectio
         if ( status.particle() ) {
             LOG_DEBUG1( "Turbine #" << super::index() << ": "
                         "EE jumping to particle "
-                        "E=" << boost::format( "%.2f" ) % status.particle()->energy() );
+                        "E=" << boost::format( "%.2f" ) % energyEval()( status.particle()->preEnergy() ) );
             setMovingParticle( *status.particle() );
             eeJumpDone = true;
         } else {
@@ -509,7 +519,7 @@ void ParticleTurbine<DynamicParticleFactory, ParticleGenerator, TurbineConnectio
         prob_t generationRate = dynamicGenerationRate( destinationIx );
         if ( generationRate > 0 && gsl_rng_uniform( _rng ) <= generationRate ) {
             const typename generator_type::particle_container_type generated =
-                (*_pGenerator)( _rng, particleCache()->energies( movingParticle().staticParticleEnergyEval() ) );
+                (*_pGenerator)( _rng, particleCache()->energies( movingParticle().energyEval() ) );
 #if 0
             if ( _pMonitor && turbineIx < _params.turbinesCount ) {
                 _pMonitor->notifyParticlesGenerated( index, generated.size() );

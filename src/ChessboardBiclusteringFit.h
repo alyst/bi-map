@@ -315,7 +315,7 @@ BOOST_CLASS_IMPLEMENTATION( ChessboardBiclusteringFit, object_serializable )
  *  Realization of static_particle_type concept.
  */
 struct StaticChessboardBiclustering {
-    typedef log_prob_t energy_type;
+    typedef StatsMetrics pre_energy_type;
     typedef ChessboardBiclusteringFit::block_counts_matrix_type block_counts_matrix_type;
 
     boost::shared_ptr<ChessboardBiclustering>       clustering;
@@ -337,8 +337,8 @@ struct StaticChessboardBiclustering {
     {
     }
 
-    energy_type energy() const {
-        return ( -metrics.totalLnP() );
+    const pre_energy_type& preEnergy() const {
+        return ( metrics );
     }
 
     template<class Archive>
@@ -365,11 +365,12 @@ BOOST_CLASS_TRACKING( StaticChessboardBiclustering, track_never )
 struct ChessboardBiclusteringEnergyEval {
     friend class boost::serialization::access;
 
+    typedef StatsMetrics pre_energy_type;
     typedef log_prob_t energy_type;
     typedef StaticChessboardBiclustering particle_type;
 
-    double operator()( const particle_type& p ) const {
-        return ( p.energy() );
+    energy_type operator()( const pre_energy_type& preEnergy ) const {
+        return ( -preEnergy.totalLnP() );
     }
 
     template<class Archive>
