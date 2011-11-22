@@ -257,6 +257,7 @@ void OPAData::resetIndexes()
     _baitToProbes.clear();
     for ( probe_index_t probeIx = 0; probeIx < _probes.size(); ++probeIx ) {
         OPAProbe& probe = _probes[ probeIx ];
+        probe._assayIndices.clear(); 
         _probeLabelMap[ probe.label() ] = &probe;
         if ( probe.baitIndex() != OBJECT_NA ) {
             _baitToProbes.insert( std::make_pair( probe.baitIndex(), probe.index() ) );
