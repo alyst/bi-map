@@ -191,7 +191,8 @@ public:
                           const BIMAPSampleCollectorParams& params );
 
     const BIMAPWalk& walk() const { return ( _walk ); }
-    bool storeSample( double time, turbine_ix_t originIx, const particle_type& particle );
+    bool storeSample( double time, turbine_ix_t originIx,
+                      const particle_type& particle, const particle_energy_eval_type& energyEval );
 };
 
 BIMAPWalk BIMAPSampler_run(

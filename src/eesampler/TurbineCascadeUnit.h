@@ -873,7 +873,8 @@ bool TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGener
     const particle_type&    particle
 ){
     if ( _pCollector ) {
-        bool collectorSaturated = _pCollector->storeSample( _timer.elapsed(), originIx, particle );
+        bool collectorSaturated = _pCollector->storeSample( _timer.elapsed(), originIx, particle,
+                                                            _turbines.begin()->second->movingParticle().energyEval() );
         if ( collectorSaturated && !_shuttingDown ) {
             LOG_DEBUG1( UNIT_LOG_PREFIX( *this ) << "sample collector is saturated, initiating shutdown" );
             _shuttingDown = true;

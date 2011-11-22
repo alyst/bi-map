@@ -236,7 +236,8 @@ struct Particle2dCollector {
     : samplesToCollect( samplesToCollect )
     {}
 
-    bool storeSample( double time, turbine_ix_t originIx, const StaticParticle2d& particle )
+    bool storeSample( double time, turbine_ix_t originIx, const StaticParticle2d& particle,
+                      const Particle2dEnergyEval& energyEval )
     {
         samples.push_back( particle );
         LOG_DEBUG1_IF( ( samples.size() % 100 == 0 ), samples.size() << " of " << samplesToCollect << " samples collected" );

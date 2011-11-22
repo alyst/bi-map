@@ -196,7 +196,9 @@ BIMAPSampleCollector::BIMAPSampleCollector(
 {
 }
 
-bool BIMAPSampleCollector::storeSample( double time, turbine_ix_t originIx, const particle_type& particle )
+bool BIMAPSampleCollector::storeSample( double time, turbine_ix_t originIx,
+                                        const particle_type& particle,
+                                        const particle_energy_eval_type& energyEval )
 {
     _walk.step( time, originIx, *particle.clustering, particle.metrics );
     if ( ( time > _lastSampleReportTime + _params.maxReportingDelay )
