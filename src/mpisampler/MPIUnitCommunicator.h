@@ -70,7 +70,7 @@ BOOST_MPI_SERIALIZATION_TRAITS( TurbineStatus )
 BOOST_IS_MPI_DATATYPE( TurbineStatus )
 
 /**
- *  Message of trubine status.
+ *  Message of turbine status.
  */
 struct TurbineStatusMessage {
     turbine_ix_t    turbineIx;
