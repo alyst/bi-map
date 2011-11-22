@@ -480,7 +480,7 @@ void ParticleTurbine<DynamicParticleFactory, ParticleGenerator, TurbineConnectio
                     "#" << jumpTurbineIx << ", "
                     "E=" << boost::format("%.2f") % movingParticle().energy() );
         // try to equi-energy jump
-        jump_request_status_type status = _conn.requestJump( index(), jumpTurbineIx, 
+        jump_request_status_type status = _conn.requestJump( index(), jumpTurbineIx, movingParticle().staticParticleEnergyEval(),
                                                              EEJumpParams( energyTransform(), movingParticle().energy() ) );
         while ( !status.complete() ) {
             bool abortIteration = processExternalEvents( unit, true ); // process any incoming external events

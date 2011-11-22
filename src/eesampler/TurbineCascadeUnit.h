@@ -439,10 +439,10 @@ public:
     }
 
     jump_request_status_type requestJump( turbine_ix_t initiatorIx, turbine_ix_t processorIx,
+                                          const static_particle_energy_eval_type& energyEval,
                                           const EEJumpParams& params ) {
         return ( jump_request_status_type( *this, initiatorIx, processorIx,
-                                           _unit._turbines.find( initiatorIx )->second->movingParticle().staticParticleEnergyEval(),
-                                           params ) );
+                                           energyEval, params ) );
     }
 
     template<class ParticleIterator>
