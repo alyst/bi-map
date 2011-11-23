@@ -688,6 +688,24 @@ void TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGener
     _iteration++;
 }
 
+template<typename ParticleEnergyEval>
+struct ParticleEnergyLess {
+    typedef ParticleEnergyEval particle_energy_eval_type;
+    typedef typename particle_energy_eval_type::particle_type particle_type;
+    typedef typename particle_type::pre_energy_type pre_energy_type;
+
+    ParticleEnergyEval energyEval;
+
+    ParticleEnergyLess( const particle_energy_eval_type& energyEval )
+    : energyEval( energyEval )
+    {}
+
+    bool operator()( const pre_energy_type& a, const pre_energy_type& b ) const
+    {
+        return ( energyEval( a ) < energyEval( b ) );
+    }
+};
+
 /**
  *  Initiates adjustments of the whole cascade energy ladder.
  *  Collects energies of the samples from all the turbines.
@@ -749,8 +767,11 @@ adjustCascadeEnergyLadder(
 
     particle_energy_eval_type newEnergyEval = turbine.energyEval();
     if ( preEnergyLandscape.count( 0 ) ) {
+        pre_energy_vector_type t = preEnergyLandscape[0];
+        std::sort( t.begin(), t.end(), ParticleEnergyLess<particle_energy_eval_type>( newEnergyEval ) );
+        t.resize( std::max( 1, (int)( t.size() * _params.turbineParams.eeLadderEnergyQuantile) ) );
         LOG_INFO( UNIT_LOG_PREFIX( *this ) << "Updating energy evaluator" );
-        newEnergyEval = _dynamicParticleFactory.updateEnergyEval( turbine.energyEval(), preEnergyLandscape[0] );
+        newEnergyEval = _dynamicParticleFactory.updateEnergyEval( turbine.energyEval(), t );
     }
 
     const particle_type& iniParticle = turbine.movingParticle();
