@@ -34,6 +34,11 @@ struct GibbsSamplerParams {
     size_t    meanObjectRank;
     size_t    meanProbeRank;
 
+    prob_t    llhObjectsTopoSD;
+    prob_t    llhObjectsConfSD;
+    prob_t    llhProbesTopoSD;
+    prob_t    llhProbesConfSD;
+
     GibbsSamplerParams();
 
     template<class Archive>

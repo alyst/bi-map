@@ -23,6 +23,10 @@ GibbsSamplerParams::GibbsSamplerParams()
     , signalRate( 0.1 )
     , meanObjectRank( 2 )
     , meanProbeRank( 2 )
+    , llhObjectsTopoSD( 0.5 )
+    , llhObjectsConfSD( 0.5 )
+    , llhProbesTopoSD( 0.25 )
+    , llhProbesConfSD( 0.5 )
 {
 }
 
