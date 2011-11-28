@@ -79,8 +79,9 @@ probability_vector_t ChessboardBiclusteringGibbsSampler::elementsPickupRates(
     size_t maxWrongSC = *std::max_element( wrongSCsum.begin(), wrongSCsum.end() );
     probability_vector_t res( wrongSCsum.size(), 1.0 );
     if ( maxWrongSC > 0 ) {
+        double multiplier = ( std::min( (double)maxWrongSC, MaxRateRatio ) - 1.0 );
         for ( size_t i = 0; i < res.size(); i++ ) {
-            res[ i ] = 1.0 + ( MaxRateRatio - 1.0 ) * wrongSCsum[ i ] / maxWrongSC;
+            res[ i ] = 1.0 + multiplier * sqrt( wrongSCsum[ i ] / maxWrongSC );
         }
     }
     return ( res );

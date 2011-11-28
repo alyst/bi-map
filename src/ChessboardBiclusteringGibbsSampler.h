@@ -104,10 +104,10 @@ public:
         _samplingTransform = transform;
     }
 
-    probability_vector_t elementsPickupRates( const ChessboardBiclusteringFit& clusFit, bool useObjects, double MaxRateRatio = 10.0 ) const;
+    probability_vector_t elementsPickupRates( const ChessboardBiclusteringFit& clusFit, bool useObjects, double MaxRateRatio = 4.0 ) const;
 
-    object_index_t randomObjectToModify( const ChessboardBiclusteringFit& clusFit, double MaxRateRatio = 10.0 ) const;
-    probe_index_t randomProbeToModify( const ChessboardBiclusteringFit& clusFit, double MaxRateRatio = 10.0 ) const;
+    object_index_t randomObjectToModify( const ChessboardBiclusteringFit& clusFit, double MaxRateRatio = 4.0 ) const;
+    probe_index_t randomProbeToModify( const ChessboardBiclusteringFit& clusFit, double MaxRateRatio = 4.0 ) const;
 
     log_prob_t doSamplingStep( ChessboardBiclusteringFit& clusFit );
 
