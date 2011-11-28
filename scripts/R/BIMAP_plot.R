@@ -130,8 +130,8 @@ BIMAP.block.plot <- function( proteins, samples,
     for ( cur_bait_ac in bait_acs ) {
         bait_samples <- subset( samples, bait_ac == cur_bait_ac )
         rowIx <- which( rev( proteins$protein_ac ) == cur_bait_ac )
-        for ( curSample in bait_samples$sample ) {
-            colIx <- which( samples$sample == curSample )
+        for ( curSample in bait_samples$col_id ) {
+            colIx <- which( samples$col_id == curSample )
             pushViewport( viewport( layout.pos.row = rowIx,
                                     layout.pos.col = colIx ) )
             panel.rect( 0.01, 0.01, 0.99, 0.99, 
