@@ -96,13 +96,11 @@ public:
         if ( !_noiseLnPdfValid || !_signalLnPdfValid ) evalMatrices();
     }
 
-    const lnprob_matrix_type& noiseLnPdf() const {
-        return ( _noiseLnPdf );
-    }
     const lnprob_matrix_type& signalLnPdf() const {
         return ( _signalLnPdf );
     }
 
+    log_prob_t signalLLH( const object_set_t& objects, const probe_bitset_t& probes ) const;
     log_prob_t noiseLLH( const object_set_t& objects, const probe_bitset_t& probes ) const;
 };
 

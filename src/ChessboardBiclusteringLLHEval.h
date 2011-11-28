@@ -67,6 +67,9 @@ public:
         log_prob_t operator()( signal_t signal ) const;
     };
 
+protected:
+    log_prob_t cellNoiseLLH( const noise_params_type& noiseParams, object_index_t objIx, const OPAProbe& probe ) const;
+
 public:
     typedef ChessboardBiclustering::const_block_iterator const_block_iterator;
 
@@ -104,7 +107,6 @@ public:
 #endif
     log_prob_t cellLLH( const signal_params_type& objectParams, object_index_t objIx, const OPAProbe& probe, signal_t signal ) const;
     log_prob_t cellLLH( object_index_t objIx, const OPAProbe& probe, signal_t signal ) const;
-    log_prob_t cellNoiseLLH( const noise_params_type& noiseParams, object_index_t objIx, const OPAProbe& probe ) const;
     log_prob_t cellsNoiseLLH( const noise_params_type& noiseParams, const object_set_t& objects, const probe_bitset_t& probes ) const;
 
     const ChessboardBiclustering& clustering() const {

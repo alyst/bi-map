@@ -52,23 +52,3 @@ log_prob_t CellsLLHEval::cellSignalLnPdf(
     LOG_DEBUG2( "Cell[S](" << objIx << "," << probeIx << ") pdf=" << res );
     return ( res );
 }
-
-/**
- *  Likelihood of block being in on or off state.
- */
-log_prob_t CellsLLHEval::BlockLLH(
-    const object_set_t&         objects,    /** objects of block */
-    const probe_bitset_t&       probes,     /** probes of block */
-    const lnprob_matrix_type&   lnPdf       /** matrix of log probabilities
-                                                for data cells (either noise or min signal) */
-){
-    double lnPdfSum = 0.0;
-
-    for ( object_set_t::const_iterator objIt = objects.begin(); objIt != objects.end(); ++objIt ) {
-        const object_index_t objIx = *objIt;
-        foreach_bit( probe_index_t, probeIx, probes ) {
-            lnPdfSum += lnPdf( objIx, probeIx );
-        }
-    }
-    return ( lnPdfSum );
-}
