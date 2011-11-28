@@ -32,7 +32,7 @@ bimap.walk <- BIMAP.mcmcwalk.load( file.path( results_path, 'tip49_walk.xml.bz2'
 # or execute BI-MAP
 
 # generate a dataframe of top n clustering models sorting according to their posterior probability
-bimap.best_clusterings.df <- BIMAP.mcmcwalk_biclusterings_order( bimap.walk, n = 10 )
+bimap.best_clusterings.df <- BIMAP.mcmcwalk.biclusterings_order( bimap.walk, n = 10 )
 # extract the model with max posterior probability
 bimap.best_clustering <- BIMAP.mcmcwalk.extract_biclustering( bimap.walk, bimap.best_clusterings.df[1,'clustering.serial'] )
 
