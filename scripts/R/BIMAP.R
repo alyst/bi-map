@@ -376,6 +376,7 @@ setClass( "BIMAPClustering",
 
 setClass( "BIMAPWalk",
     representation = representation( 
+        prob.weights = "data.frame",
         clusterings.walk = "data.frame",
         priors.walk = "data.frame",
         clusterings = "data.frame",

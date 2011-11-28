@@ -5,6 +5,10 @@
 #include "../BIMAPSampler.h"
 #include "MPIUnitCommunicator.h"
 
+BOOST_IS_MPI_DATATYPE( LLHPartitionWeights )
+BOOST_IS_MPI_DATATYPE( LLHWeights )
+BOOST_IS_MPI_DATATYPE( ChessboardBiclusteringEnergyEval )
+
 boost::optional<BIMAPWalk> MPI_BIMAPSampler_run(
     const BIMAPSamplerHelper&      helper,
     boost::mpi::communicator&       communicator,

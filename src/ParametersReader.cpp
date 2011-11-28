@@ -195,6 +195,15 @@ bool BIMAPParamsRead(
 
         ( "gibbs.priors_update_period", po::value<size_t>( &gibbsParams.priorsUpdatePeriod )->default_value( gibbsParams.priorsUpdatePeriod ),
             "period (# of cclustering sampling iterations) of priors updating sampling step" )
+
+        ( "gibbs.sd_scale.objects_topo_llh", po::value<prob_t>( &gibbsParams.llhObjectsTopoSD )->default_value( gibbsParams.llhObjectsTopoSD ),
+            "SD of objects topological LLH after scaling (in SDs of quantitative component LLH)" )
+        ( "gibbs.sd_scale.objects_exp_design_llh", po::value<prob_t>( &gibbsParams.llhObjectsConfSD )->default_value( gibbsParams.llhObjectsConfSD ),
+            "SD of objects experimental design LLH after scaling (in SDs of quantitative component LLH)" )
+        ( "gibbs.sd_scale.probes_topo_llh", po::value<prob_t>( &gibbsParams.llhProbesTopoSD )->default_value( gibbsParams.llhProbesTopoSD ),
+            "SD of probes topological LLH after scaling (in SDs of quantitative component LLH)" )
+        ( "gibbs.sd_scale.probes_exp_design_llh", po::value<prob_t>( &gibbsParams.llhProbesConfSD )->default_value( gibbsParams.llhProbesConfSD ),
+            "SD of probes experimental design LLH after scaling (in SDs of quantitative component LLH)" )
         ;
 
     po::options_description log_params_desc( "Logging parameters" );

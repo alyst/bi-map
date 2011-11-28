@@ -34,6 +34,11 @@ struct GibbsSamplerParams {
     size_t    meanObjectRank;
     size_t    meanProbeRank;
 
+    prob_t    llhObjectsTopoSD;
+    prob_t    llhObjectsConfSD;
+    prob_t    llhProbesTopoSD;
+    prob_t    llhProbesConfSD;
+
     GibbsSamplerParams();
 
     template<class Archive>
@@ -71,6 +76,7 @@ private:
     const ChessboardBiclusteringHyperPriors&   _hyperpriors;
     const GibbsSamplerParams&       _params;
 
+    ChessboardBiclusteringEnergyEval _energyEval;
     SamplingTransform               _samplingTransform;
 
     size_t                          _iteration;
@@ -81,9 +87,17 @@ public:
                    const PrecomputedData&   precomputed,
                    const ChessboardBiclusteringHyperPriors& hyperpriors, 
                    const GibbsSamplerParams& params,
+                   const ChessboardBiclusteringEnergyEval& energyEval,
                    const SamplingTransform& transform = SamplingTransform() );
 
     ChessboardBiclusteringGibbsHelper createGibbsHelper( const ChessboardBiclusteringFit& clusFit ) const;
+
+    const ChessboardBiclusteringEnergyEval& energyEval() const {
+        return ( _energyEval );
+    }
+    void setEnergyEval( const ChessboardBiclusteringEnergyEval& energyEval ) {
+        _energyEval = energyEval;
+    }
 
     void setTransform( const SamplingTransform& transform )
     {

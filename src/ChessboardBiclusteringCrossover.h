@@ -5,7 +5,7 @@
 #include "ChessboardBiclusteringFit.h"
 #include "ChessboardBiclusteringGibbsSampler.h"
 
-#include "eesampler/EnergyDisk.h"
+#include "eesampler/ParticleCache.h"
 
 class ChessboardBiclusteringCrossoverGenerator {
 public:
@@ -16,7 +16,7 @@ private:
     const PrecomputedData&          _precomputed;
     const ChessboardBiclusteringPriors&    _priors;
     mutable ChessboardBiclusteringGibbsSampler _sampler;
-    typedef EnergyDisk<particle_type> energy_disk_type;
+    typedef ParticleCache<particle_type>::energies_proxy_type particle_cache_type;
 
     void push_to_result( particle_container_type& res, const ChessboardBiclusteringFit& ptn ) const;
 
@@ -25,9 +25,11 @@ public:
                    const gsl_rng* rndNumGen,
                    const PrecomputedData& precomputed,
                    const ChessboardBiclusteringPriors& priors,
-                   const ChessboardBiclusteringHyperPriors& hyperpriors );
+                   const ChessboardBiclusteringHyperPriors& hyperpriors,
+                   const ChessboardBiclusteringEnergyEval& energyEval );
 
-    virtual particle_container_type operator()( const gsl_rng* rng, const energy_disk_type& disk ) const;
+    virtual particle_container_type operator()( const gsl_rng* rng, 
+                                                const particle_cache_type& cache ) const;
     virtual ~ChessboardBiclusteringCrossoverGenerator()
     {
     }

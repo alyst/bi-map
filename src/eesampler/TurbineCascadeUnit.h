@@ -89,13 +89,16 @@ struct TurbineEnergyLadder {
         ar & BOOST_SERIALIZATION_NVP( steps );
     }
 
-    static void AppendLandscape( energy_landscape_type& dest, const energy_landscape_type& src )
+    template<typename PreEnergyType>
+    static void AppendLandscape( std::map<size_t, std::vector<PreEnergyType> >& dest,
+                                 const std::map<size_t, std::vector<PreEnergyType> >& src )
     {
+        typedef std::map<size_t, std::vector<PreEnergyType> > pre_energy_landscape_type;
         // merge local and external landscapes
-        for ( energy_landscape_type::const_iterator sit = src.begin();
+        for ( typename pre_energy_landscape_type::const_iterator sit = src.begin();
               sit != src.end(); ++sit
         ){
-            energy_landscape_type::iterator dit = dest.find( sit->first );
+            typename pre_energy_landscape_type::iterator dit = dest.find( sit->first );
             if ( dit != dest.end() ) {
                 dit->second.insert( dit->second.end(),
                                     sit->second.begin(), sit->second.end() );
@@ -116,28 +119,35 @@ public:
 /**
  *  Do-nothing implementation of UnitCommunicator concept.
  **/
-template<class Particle>
+template<class ParticleEnergyEval>
 struct DummyUnitCommunicator {
-    typedef Particle particle_type;
+    typedef ParticleEnergyEval energy_eval_type;
+    typedef typename energy_eval_type::particle_type particle_type;
+
+    typedef typename particle_type::pre_energy_type pre_energy_type;
+    typedef std::vector<pre_energy_type> pre_energy_vector_type;
+    typedef std::map<size_t, pre_energy_vector_type> pre_energy_landscape_type;
+
     typedef boost::timer timer_type;
     typedef TurbineEnergyLadder::energy_landscape_type energy_landscape_type;
 
     struct DummyLandscapeRequestStatus {
         bool complete() const { return ( true ); }
-        energy_landscape_type energyLandscape() const {
-            return ( energy_landscape_type() );
+        pre_energy_landscape_type energyLandscape() const {
+            return ( pre_energy_landscape_type() );
         }
     };
 
     typedef DummyLandscapeRequestStatus landscape_request_status_type;
-    typedef DummyTurbineConnection<Particle> turbine_connection_type;
+    typedef DummyTurbineConnection<energy_eval_type> turbine_connection_type;
 
     template<class CascadeUnit>
     void sendUnitStatus( const CascadeUnit& unit ) {};
     template<class CascadeUnit>
     void broadcastUnitStatuses( const CascadeUnit& unit ) {};
     void broadcastShutdown( turbine_ix_t originIx ) {};
-    void broadcastEnergyLadder( turbine_ix_t originIx, const TurbineEnergyLadder& ladder, const particle_type& iniParticle ) {};
+    void broadcastEnergyLadder( turbine_ix_t originIx, const TurbineEnergyLadder& ladder,
+                                const energy_eval_type& energyEval, const particle_type& iniParticle ) {};
     template<class CascadeUnit>
     bool processExternalEvents( CascadeUnit& unit, bool wait ) { return ( false ); };
     template<class CascadeUnit>
@@ -157,8 +167,8 @@ struct DummyUnitCommunicator {
     messaging between parallel units (using e.g. MPI).
  */
 template<class ParticleCollector, class DynamicParticleFactory, 
-         class ParticleGenerator = SunkenParticleGenerator<typename DynamicParticleFactory::static_particle_type>, 
-         class UnitCommunicator = DummyUnitCommunicator<typename DynamicParticleFactory::static_particle_type> >
+         class ParticleGenerator = SunkenParticleGenerator<typename DynamicParticleFactory::static_particle_energy_eval_type>, 
+         class UnitCommunicator = DummyUnitCommunicator<typename DynamicParticleFactory::static_particle_energy_eval_type> >
 class TurbineCascadeUnit {
 public:
     typedef boost::dynamic_bitset<> units_mask_type;
@@ -180,9 +190,17 @@ public:
     typedef boost::dynamic_bitset<>  turbine_ix_set_type;
     typedef GenericTurbineConnector connector_type;
     typedef ParticleTurbine<factory_type, generator_type, connector_type> turbine_type;
-    typedef typename turbine_type::energy_vector_type energy_vector_type;
-    typedef typename turbine_type::energy_landscape_type energy_landscape_type;
+
     typedef typename connector_type::jump_request_status_type jump_request_status_type;
+
+    typedef typename DynamicParticleFactory::static_particle_energy_eval_type particle_energy_eval_type;
+    typedef typename particle_energy_eval_type::energy_type energy_type;
+    typedef std::vector<energy_type> energy_vector_type;
+    typedef std::map<size_t, energy_vector_type> energy_landscape_type;
+
+    typedef typename particle_type::pre_energy_type pre_energy_type;
+    typedef std::vector<pre_energy_type> pre_energy_vector_type;
+    typedef std::map<size_t, pre_energy_vector_type> pre_energy_landscape_type;
 
     typedef TurbineCascadeUnit<collector_type, factory_type, generator_type, communicator_type> cascade_unit_type;
 
@@ -248,7 +266,9 @@ public:
     void processTurbineCreated( turbine_ix_t turbineIx );
     void processBurnInOver();
     void adjustCascadeEnergyLadder( turbine_ix_t turbineIx );
-    void adjustUnitEnergyLadder( turbine_ix_t originIx, const TurbineEnergyLadder& ladder, const particle_type& iniParticle );
+    void adjustUnitEnergyLadder( turbine_ix_t originIx, const TurbineEnergyLadder& ladder,
+                                 const particle_energy_eval_type& energyEval,
+                                 const particle_type& iniParticle );
     bool sampleParticle( turbine_ix_t turbineIx, const particle_type& particle );
 
     bool storesSamples() const {
@@ -283,18 +303,18 @@ public:
     double elapsed() const {
         return ( _timer.elapsed() );
     }
-    energy_landscape_type localEnergyLandscape() const;
+    pre_energy_landscape_type localEnergyLandscape() const;
 };
 
 template<class ParticleCollector, class DynamicParticleFactory, class ParticleGenerator>
 TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGenerator, 
-                   DummyUnitCommunicator<typename DynamicParticleFactory::static_particle_type> >*
+                   DummyUnitCommunicator<typename DynamicParticleFactory::static_particle_energy_eval_type> >*
 CreateSingleUnitCascade( const TurbineCascadeParams& params, const gsl_rng* rng, 
                          const DynamicParticleFactory& dynParticleFactory, 
                          const ParticleGenerator* pGenerator, ParticleCollector& pCollector )
 {
     return ( new TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGenerator, 
-                                DummyUnitCommunicator<typename DynamicParticleFactory::static_particle_type> >( 0, params,
+                                DummyUnitCommunicator<typename DynamicParticleFactory::static_particle_energy_eval_type> >( 0, params,
                                  createTurbineCascadeStructure( params.levelsCount, params.turbinesCount, 1 ),
                                  rng, dynParticleFactory, pGenerator, &pCollector ) );
 }
@@ -318,6 +338,7 @@ GenericTurbineConnector
 private:
     typedef TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGenerator, UnitCommunicator> cascade_unit_type;
     typedef ParticleTurbineBase<factory_type> base_turbine_type;
+    typedef typename base_turbine_type::static_particle_energy_eval_type static_particle_energy_eval_type;
     typedef typename cascade_unit_type::turbine_ix_set_type turbine_ix_set_type;
     typedef typename communicator_type::turbine_connection_type connection_type;
     typedef typename connection_type::jump_request_status_type external_jump_request_status_type;
@@ -341,19 +362,21 @@ public:
             return ( _external ? _external->particle() : _particle );
         }
 
-        GenericJumpRequestStatus( connector_type& conn, turbine_ix_t initiatorIx, turbine_ix_t processorIx, const EEJumpParams& params )
+        GenericJumpRequestStatus( connector_type& conn, turbine_ix_t initiatorIx, turbine_ix_t processorIx,
+                                  const static_particle_energy_eval_type& energyEval,
+                                  const EEJumpParams& params )
         : _params( params )
         {
             typename turbine_container_type::const_iterator tit = conn._unit._turbines.find( processorIx );
             if ( tit != conn._unit._turbines.end() ) {
                 // try local ee-jump
-                _particle = tit->second->processJumpRequest( _params, false );
+                _particle = tit->second->processJumpRequest( _params, energyEval, false );
             }
             else {
                 typename connection_container_type::iterator cit = conn._unit._connections.find( processorIx );
                 if ( cit != conn._unit._connections.end() ) {
                     // create external request
-                    _external.reset( cit->second->requestJump( initiatorIx, params ) );
+                    _external.reset( cit->second->requestJump( initiatorIx, energyEval, params ) );
                 }
                 else {
                     THROW_RUNTIME_ERROR( "Turbine #" << processorIx << " not found in unit or its connections" );
@@ -434,8 +457,11 @@ public:
         }
     }
 
-    jump_request_status_type requestJump( turbine_ix_t initiatorIx, turbine_ix_t processorIx, const EEJumpParams& params ) {
-        return ( jump_request_status_type( *this, initiatorIx, processorIx, params ) );
+    jump_request_status_type requestJump( turbine_ix_t initiatorIx, turbine_ix_t processorIx,
+                                          const static_particle_energy_eval_type& energyEval,
+                                          const EEJumpParams& params ) {
+        return ( jump_request_status_type( *this, initiatorIx, processorIx,
+                                           energyEval, params ) );
     }
 
     template<class ParticleIterator>
@@ -446,7 +472,7 @@ public:
         typename turbine_container_type::iterator ltit = _unit._turbines.find( destinationIx );
         if ( ltit != _unit._turbines.end() ) {
             BOOST_ASSERT( ltit->second->level() >= _nodeInfo.level );
-            return ( ltit->second->energyDisk()->push_many( particlesBegin, particlesEnd,
+            return ( ltit->second->particleCache()->push_many( particlesBegin, particlesEnd,
                                                             _unit._timer.elapsed(), _unit._iteration ) );
         }
         typename connection_container_type::iterator ctit = _unit._connections.find( destinationIx );
@@ -662,6 +688,24 @@ void TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGener
     _iteration++;
 }
 
+template<typename ParticleEnergyEval>
+struct ParticleEnergyLess {
+    typedef ParticleEnergyEval particle_energy_eval_type;
+    typedef typename particle_energy_eval_type::particle_type particle_type;
+    typedef typename particle_type::pre_energy_type pre_energy_type;
+
+    ParticleEnergyEval energyEval;
+
+    ParticleEnergyLess( const particle_energy_eval_type& energyEval )
+    : energyEval( energyEval )
+    {}
+
+    bool operator()( const pre_energy_type& a, const pre_energy_type& b ) const
+    {
+        return ( energyEval( a ) < energyEval( b ) );
+    }
+};
+
 /**
  *  Initiates adjustments of the whole cascade energy ladder.
  *  Collects energies of the samples from all the turbines.
@@ -677,7 +721,7 @@ adjustCascadeEnergyLadder(
     LOG_INFO( UNIT_LOG_PREFIX( *this ) << "leading turbine #" << turbineIx << ": "
               << turbine.iteration() << " iterations done, starting ladder adjustment" );
 
-    energy_landscape_type globalEnergyLandscape = localEnergyLandscape();
+    pre_energy_landscape_type preEnergyLandscape = localEnergyLandscape();
     if ( _pUnitComm ) {
         // send energy landscape request
         LOG_INFO( UNIT_LOG_PREFIX( *this ) << "turbine #" << turbineIx << " requesting energy landscape" );
@@ -696,31 +740,46 @@ adjustCascadeEnergyLadder(
             if ( _shuttingDown ) return;
         }
         // merge local and external landscapes
-        TurbineEnergyLadder::AppendLandscape( globalEnergyLandscape, status.energyLandscape() );
+        TurbineEnergyLadder::AppendLandscape( preEnergyLandscape, status.energyLandscape() );
     }
-    // sort energies in landscape
-    for ( typename energy_landscape_type::iterator lit = globalEnergyLandscape.begin();
-          lit != globalEnergyLandscape.end(); ++lit
+    // convert to energies and sort
+    energy_landscape_type energyLandscape;
+    for ( typename pre_energy_landscape_type::iterator lit = preEnergyLandscape.begin();
+          lit != preEnergyLandscape.end(); ++lit
     ){
-        std::sort( lit->second.begin(), lit->second.end() );
-        LOG_INFO( UNIT_LOG_PREFIX( *this ) << " landscape level #" << lit->first << ": " << lit->second.size() 
-                    << " energy values in range [" << ( lit->second.size() > 0 ? lit->second.front() : std::numeric_limits<energy_type>::quiet_NaN() )
-                    << ", " << ( lit->second.size() > 0 ? lit->second.back() : std::numeric_limits<energy_type>::quiet_NaN() ) << "]" );
+        energy_vector_type levelLandscape;
+        for ( size_t i = 0; i < lit->second.size(); i++ ) {
+            levelLandscape.push_back( turbine.energyEval()( lit->second[i] ) );
+        }
+        std::sort( levelLandscape.begin(), levelLandscape.end() );
+        energyLandscape[ lit->first ] = levelLandscape;
+        LOG_INFO( UNIT_LOG_PREFIX( *this ) << " landscape level #" << lit->first << ": " << levelLandscape.size() 
+                    << " energy values in range [" << ( levelLandscape.size() > 0 ? levelLandscape.front() : std::numeric_limits<energy_type>::quiet_NaN() )
+                    << ", " << ( levelLandscape.size() > 0 ? levelLandscape.back() : std::numeric_limits<energy_type>::quiet_NaN() ) << "]" );
     }
-    if ( globalEnergyLandscape.size() == 0 ) {
+    if ( energyLandscape.size() == 0 ) {
         LOG_WARN( UNIT_LOG_PREFIX( *this ) << "skipping energy ladder formation, landscape is empty" );
         return;
     }
 
     // build energy ladder steps
-    TurbineEnergyLadder ladder( _params, globalEnergyLandscape );
+    TurbineEnergyLadder ladder( _params, energyLandscape );
+
+    particle_energy_eval_type newEnergyEval = turbine.energyEval();
+    if ( preEnergyLandscape.count( 0 ) ) {
+        pre_energy_vector_type t = preEnergyLandscape[0];
+        std::sort( t.begin(), t.end(), ParticleEnergyLess<particle_energy_eval_type>( newEnergyEval ) );
+        t.resize( std::max( 1, (int)( t.size() * _params.turbineParams.eeLadderEnergyQuantile) ) );
+        LOG_INFO( UNIT_LOG_PREFIX( *this ) << "Updating energy evaluator" );
+        newEnergyEval = _dynamicParticleFactory.updateEnergyEval( turbine.energyEval(), t );
+    }
 
     const particle_type& iniParticle = turbine.movingParticle();
-    adjustUnitEnergyLadder( turbineIx, ladder, iniParticle );
+    adjustUnitEnergyLadder( turbineIx, ladder, newEnergyEval, iniParticle );
     if ( _pUnitComm ) {
         LOG_DEBUG1( UNIT_LOG_PREFIX( *this ) << "broadcasting adjusted ladder" );
         // broadcast adjusted turbine params to all units
-        _pUnitComm->broadcastEnergyLadder( turbineIx, ladder, iniParticle );
+        _pUnitComm->broadcastEnergyLadder( turbineIx, ladder, newEnergyEval, iniParticle );
     }
 }
 
@@ -762,15 +821,15 @@ void TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGener
 }
 
 template<class ParticleCollector, class DynamicParticleFactory, class ParticleGenerator, class UnitCommunicator>
-typename TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGenerator, UnitCommunicator>::energy_landscape_type
+typename TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGenerator, UnitCommunicator>::pre_energy_landscape_type
 TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGenerator, UnitCommunicator>::localEnergyLandscape() const
 {
-    energy_landscape_type energyLandscape;
+    pre_energy_landscape_type energyLandscape;
 
     for ( typename turbine_container_type::const_iterator it = _turbines.begin(); it != _turbines.end(); ++it ) {
-        energy_vector_type turbineEnergies = it->second->energyDisk()->particleEnergies();
+        pre_energy_vector_type turbineEnergies = it->second->particleCache()->preEnergies();
         if ( !turbineEnergies.empty() ) {
-            typename energy_landscape_type::iterator lit = energyLandscape.find( it->second->level() );
+            typename pre_energy_landscape_type::iterator lit = energyLandscape.find( it->second->level() );
             if ( lit == energyLandscape.end() ) {
                 energyLandscape[ it->second->level() ] = turbineEnergies;
             } else {
@@ -788,6 +847,7 @@ template<class ParticleCollector, class DynamicParticleFactory, class ParticleGe
 void TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGenerator, UnitCommunicator>::adjustUnitEnergyLadder(
     turbine_ix_t                originIx,       /** turbine initiated adjustment */
     const TurbineEnergyLadder&  ladder,         /** adjusted energy transforms */
+    const particle_energy_eval_type& energyEval,
     const particle_type&        iniParticle     /** particle to initialize new turbines */
 ){
     LOG_DEBUG1( UNIT_LOG_PREFIX( *this ) << "adjusting energy ladder" );
@@ -802,6 +862,7 @@ void TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGener
             ){
                 newETransform.minEnergyThreshold = adjTurbine.energyTransform().minEnergyThreshold;
             }
+            adjTurbine.setEnergyEval( energyEval );
             adjTurbine.setEnergyTransform( newETransform );
             LOG_INFO( UNIT_LOG_PREFIX( *this ) << "adjusted turbine #" << adjTurbine.index()
                           << " params: E_min=" << newETransform.minEnergyThreshold
@@ -822,6 +883,7 @@ void TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGener
             BOOST_ASSERT( pNewTurbine->index() == nodeProps.turbineIx );
             BOOST_ASSERT( _turbines.find( nodeProps.turbineIx ) != _turbines.end() );
             pNewTurbine->setMovingParticle( iniParticle );
+            pNewTurbine->setEnergyEval( energyEval );
         }
     }
 }
@@ -832,7 +894,8 @@ bool TurbineCascadeUnit<ParticleCollector, DynamicParticleFactory, ParticleGener
     const particle_type&    particle
 ){
     if ( _pCollector ) {
-        bool collectorSaturated = _pCollector->storeSample( _timer.elapsed(), originIx, particle );
+        bool collectorSaturated = _pCollector->storeSample( _timer.elapsed(), originIx, particle,
+                                                            _turbines.begin()->second->movingParticle().energyEval() );
         if ( collectorSaturated && !_shuttingDown ) {
             LOG_DEBUG1( UNIT_LOG_PREFIX( *this ) << "sample collector is saturated, initiating shutdown" );
             _shuttingDown = true;

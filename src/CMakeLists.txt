@@ -36,7 +36,7 @@ set( BIMAP_Sources
      "math/logmath.cpp"
      "math/Distributions.cpp"
      "math/PitmanYorProcess.cpp"
-     "eesampler/EnergyDisk.cpp"
+     "eesampler/ParticleCache.cpp"
      "eesampler/Turbine.cpp"
      "eesampler/TurbineCascadeUnit.cpp"
 )

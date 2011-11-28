@@ -21,7 +21,7 @@ boost::optional<BIMAPWalk> MPI_BIMAPSampler_run(
 ){
     typedef TurbineCascadeUnit<BIMAPSampleCollector,
                                DynamicChessboardBiclusteringFactory, ChessboardBiclusteringCrossoverGenerator,
-                               MPIUnitCommunicator<StaticChessboardBiclustering> > equi_energy_sampler_type;
+                               MPIUnitCommunicator<ChessboardBiclusteringEnergyEval> > equi_energy_sampler_type;
 
     boost::scoped_ptr<BIMAPSampleCollector> collector;
     if ( ccIndexing != NULL && collectorParams != NULL ) {
@@ -47,7 +47,7 @@ boost::optional<BIMAPWalk> MPI_BIMAPSampler_run(
     mpi::broadcast( comm, cascadeStructure, collectorRank );
 
 
-    typedef MPIUnitCommunicator<StaticChessboardBiclustering> unit_communicator_type;
+    typedef MPIUnitCommunicator<ChessboardBiclusteringEnergyEval> unit_communicator_type;
     unit_communicator_type unitComm( comm, collectorRank );
 
     equi_energy_sampler_type eeSampler(

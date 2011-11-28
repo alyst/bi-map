@@ -109,6 +109,8 @@
 #define R_SLOT_OBJECTS_SUBPARTITIONS        "objects.subpartitions"
 #define R_SLOT_PROBES_SUBPARTITIONS         "probes.subpartitions"
 
+#define R_SLOT_PROB_WEIGHTS                 "prob.weights"
+
 #define R_COLUMN_COMPONENT_INDEX            "component.index"
 #define R_COLUMN_SUBPARTITION_SERIAL        "subpartition.serial"
 
@@ -149,8 +151,16 @@
 #define R_COLUMN_STEP                       "step"
 #define R_COLUMN_TIME                       "time"
 #define R_COLUMN_TURBINE                    "turbine"
-#define R_COLUMN_LLH                        "llh"
 #define R_COLUMN_LPP                        "lpp"
+#define R_COLUMN_LPP_BLOCKS                 "lpp.blocks"
+#define R_COLUMN_LPP_OBJECTS_PTN            "lpp.objects.ptn"
+#define R_COLUMN_LPP_PROBES_PTN             "lpp.probes.ptn"
+#define R_COLUMN_LLH                        "llh"
+#define R_COLUMN_LLH_QUANT                  "llh.quantitative"
+#define R_COLUMN_LLH_OBJECTS_TOPO           "llh.objects.topological"
+#define R_COLUMN_LLH_OBJECTS_EXP_DESIGN     "llh.objects.exp_design"
+#define R_COLUMN_LLH_PROBES_TOPO            "llh.probes.topological"
+#define R_COLUMN_LLH_PROBES_EXP_DESIGN      "llh.probes.exp_design"
 #define R_COLUMN_BASELINE_SIGNAL            "baseline.signal"
 #define R_COLUMN_BASELINE_SIGNAL_SIGMA      "baseline.signal.sigma"
 #define R_SLOT_NOISE_SIGNAL                 "noise.signal"
@@ -450,11 +460,18 @@ SEXP ConvertBIMAPWalkToRObject(
         Rcpp::IntegerVector clusSerialVec( walk.stepsCount() );
         Rcpp::NumericVector timeVec( walk.stepsCount() );
         Rcpp::NumericVector llhVec( walk.stepsCount() );
+        Rcpp::NumericVector llhQuantVec( walk.stepsCount() );
+        Rcpp::NumericVector llhObjsTopoVec( walk.stepsCount() );
+        Rcpp::NumericVector llhObjsExpDesignVec( walk.stepsCount() );
+        Rcpp::NumericVector llhProbesTopoVec( walk.stepsCount() );
+        Rcpp::NumericVector llhProbesExpDesignVec( walk.stepsCount() );
         Rcpp::NumericVector lppVec( walk.stepsCount() );
+        Rcpp::NumericVector lppBlocksVec( walk.stepsCount() );
+        Rcpp::NumericVector lppObjsPtnVec( walk.stepsCount() );
+        Rcpp::NumericVector lppProbesPtnVec( walk.stepsCount() );
         Rcpp::NumericVector baselinePeak( walk.stepsCount() );
         Rcpp::NumericVector baselineShape( walk.stepsCount() );
         Rcpp::NumericVector trueMissRate( walk.stepsCount() );
-
 
         int     elmIx = 0;
         for ( BIMAPWalk::const_step_iterator stepIt = walk.stepsBegin(); stepIt != walk.stepsEnd(); ++stepIt ){
@@ -462,8 +479,18 @@ SEXP ConvertBIMAPWalkToRObject(
 
             stepVec[ elmIx ] = elmIx;
             turbineVec[ elmIx ] = stepIt->turbineIx;
-            llhVec[ elmIx ] = stepIt->llh;
-            lppVec[ elmIx ] = stepIt->lpp;
+
+            llhVec[ elmIx ] = stepIt->metrics.llh( walk.probWeights() );
+            llhQuantVec[ elmIx ] = stepIt->metrics.llhObjs.quant;
+            llhObjsTopoVec[ elmIx ] = stepIt->metrics.llhObjs.topo;
+            llhObjsExpDesignVec[ elmIx ] = stepIt->metrics.llhObjs.conf;
+            llhProbesTopoVec[ elmIx ] = stepIt->metrics.llhProbes.topo;
+            llhProbesExpDesignVec[ elmIx ] = stepIt->metrics.llhProbes.conf;
+
+            lppVec[ elmIx ] = stepIt->metrics.lpp();
+            lppBlocksVec[ elmIx ] = stepIt->metrics.lppBlocks;
+            lppObjsPtnVec[ elmIx ] = stepIt->metrics.lppObjsPtn;
+            lppProbesPtnVec[ elmIx ] = stepIt->metrics.lppProbesPtn;
             timeVec[ elmIx ] = stepIt->time;
             clusSerialVec[ elmIx ] = clus.serial();
             baselinePeak[ elmIx ] = clus.baselineSignalParams().lnScRate();
@@ -476,13 +503,42 @@ SEXP ConvertBIMAPWalkToRObject(
                 Rcpp::Named( R_COLUMN_TIME, timeVec ),
                 Rcpp::Named( R_COLUMN_TURBINE, turbineVec ),
                 Rcpp::Named( R_COLUMN_CLUSTERING_SERIAL, clusSerialVec ),
+
                 Rcpp::Named( R_COLUMN_LLH, llhVec ),
+                Rcpp::Named( R_COLUMN_LLH_QUANT, llhQuantVec ),
+                Rcpp::Named( R_COLUMN_LLH_OBJECTS_TOPO, llhObjsTopoVec ),
+                Rcpp::Named( R_COLUMN_LLH_OBJECTS_EXP_DESIGN, llhObjsExpDesignVec ),
+                Rcpp::Named( R_COLUMN_LLH_PROBES_TOPO, llhProbesTopoVec ),
+                Rcpp::Named( R_COLUMN_LLH_PROBES_EXP_DESIGN, llhProbesExpDesignVec ),
+
                 Rcpp::Named( R_COLUMN_LPP, lppVec ),
+                Rcpp::Named( R_COLUMN_LPP_BLOCKS, lppBlocksVec ),
+                Rcpp::Named( R_COLUMN_LPP_OBJECTS_PTN, lppObjsPtnVec ),
+                Rcpp::Named( R_COLUMN_LPP_PROBES_PTN, lppProbesPtnVec ),
+
                 Rcpp::Named( R_COLUMN_BASELINE_PEAK, baselinePeak ),
                 Rcpp::Named( R_COLUMN_BASELINE_SHAPE, baselineShape ),
                 Rcpp::Named( R_COLUMN_TRUE_MISS_RATE, trueMissRate ),
                 Rcpp::Named( R_STRINGS_AS_FACTORS, false )
              );
+    }
+    {
+        Rprintf( "Exporting the weights of probability components...\n" );
+        Rcpp::CharacterVector weightNameVec( 4 );
+        Rcpp::NumericVector   valueVec( 4 );
+        weightNameVec[0] = R_COLUMN_LLH_OBJECTS_TOPO;
+        valueVec[0] =  walk.probWeights().objects.topo;
+        weightNameVec[1] = R_COLUMN_LLH_OBJECTS_EXP_DESIGN;
+        valueVec[1] =  walk.probWeights().objects.conf;
+        weightNameVec[2] = R_COLUMN_LLH_PROBES_TOPO;
+        valueVec[2] =  walk.probWeights().probes.topo;
+        weightNameVec[3] = R_COLUMN_LLH_PROBES_EXP_DESIGN;
+        valueVec[3] =  walk.probWeights().probes.conf;
+        rWalk.slot( R_SLOT_PROB_WEIGHTS ) = Rcpp::DataFrame::create(
+            Rcpp::Named( "name", weightNameVec ),
+            Rcpp::Named( "value", valueVec ),
+            Rcpp::Named( R_STRINGS_AS_FACTORS, false )
+        );
     }
     {
         Rprintf( "Exporting biclusterings structure...\n" );

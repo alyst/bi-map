@@ -15,6 +15,7 @@
 class DynamicChessboardBiclustering {
 public:
     typedef StaticChessboardBiclustering static_particle_type;
+    typedef ChessboardBiclusteringEnergyEval static_particle_energy_eval_type;
 
 private:
     const PrecomputedData&          _precomputed;
@@ -29,6 +30,7 @@ public:
                             const PrecomputedData& precomputed,
                             const ChessboardBiclusteringPriors& priors,
                             const ChessboardBiclusteringHyperPriors& hyperpriors,
+                            const ChessboardBiclusteringEnergyEval& energyEval,
                             const GibbsSamplerParams& params,
                             double minEnergy, double temperature )
     : _precomputed( precomputed )
@@ -36,6 +38,7 @@ public:
     , _hyperpriors( hyperpriors )
     , _params( params )
     , _sampler( rndNumGen, precomputed, hyperpriors, params,
+                energyEval,
                 SamplingTransform( -minEnergy, temperature ) )
     , _pClus( _precomputed, _priors )
     {
@@ -70,13 +73,21 @@ public:
 
     double energy() const
     {
-        return ( -_pClus.totalLnP() );
+        return ( _sampler.energyEval()( _pClus.metrics() ) );
     }
 
     void iterate()
     {
         _sampler.doSamplingStep( _pClus );
     }
+
+    const static_particle_energy_eval_type& energyEval() const {
+        return ( _sampler.energyEval() );
+    }
+    void setEnergyEval( const static_particle_energy_eval_type& energyEval ) {
+        _sampler.setEnergyEval( energyEval );
+    }
+
 };
 
 /**
@@ -85,6 +96,7 @@ public:
 struct DynamicChessboardBiclusteringFactory {
     typedef DynamicChessboardBiclustering dynamic_particle_type;
     typedef StaticChessboardBiclustering static_particle_type;
+    typedef ChessboardBiclusteringEnergyEval static_particle_energy_eval_type;
 
     const gsl_rng*                      rndNumGen;
     const PrecomputedData&              precomputed;
@@ -108,9 +120,12 @@ struct DynamicChessboardBiclusteringFactory {
     DynamicChessboardBiclustering* operator()( double minEnergy, double temperature ) const
     {
         return ( new DynamicChessboardBiclustering( rndNumGen, precomputed,
-                                             priors, hyperpriors, params, 
+                                             priors, hyperpriors,
+                                             ChessboardBiclusteringEnergyEval(), params, 
                                              minEnergy, temperature ) );
     }
+    ChessboardBiclusteringEnergyEval updateEnergyEval( const ChessboardBiclusteringEnergyEval& energyEval,
+        std::vector<StatsMetrics>& energyLandscape ) const;
 };
 
 /**
@@ -171,16 +186,18 @@ class BIMAPSampleCollector {
 private:
     BIMAPWalk                          _walk;
     const BIMAPSampleCollectorParams&  _params;
-    double                              _lastSampleReportTime;
+    double                             _lastSampleReportTime;
 
 public:
     typedef StaticChessboardBiclustering particle_type;
+    typedef ChessboardBiclusteringEnergyEval particle_energy_eval_type;
 
     BIMAPSampleCollector( ChessboardBiclusteringsIndexing& chessboardBiclusteringsIndexing,
-                           const BIMAPSampleCollectorParams& params );
+                          const BIMAPSampleCollectorParams& params );
 
     const BIMAPWalk& walk() const { return ( _walk ); }
-    bool storeSample( double time, turbine_ix_t originIx, const particle_type& particle );
+    bool storeSample( double time, turbine_ix_t originIx,
+                      const particle_type& particle, const particle_energy_eval_type& energyEval );
 };
 
 BIMAPWalk BIMAPSampler_run(

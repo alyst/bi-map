@@ -14,6 +14,7 @@
 
 #include "ChessboardBiclustering.h"
 #include "ChessboardBiclusteringsIndexing.h"
+#include "ChessboardBiclusteringMetrics.h"
 
 /**
     Sampling walk in the space of chessboard biclusterings
@@ -28,16 +29,17 @@ private:
     struct BIMAPStep {
         step_time_t                 time;
         size_t                      turbineIx;
-        log_prob_t                  llh;
-        log_prob_t                  lpp;
+        StatsMetrics                metrics;
         ChessboardBiclusteringIndexed      clustering;
 
-        BIMAPStep( step_time_t time, size_t turbineIx, const ChessboardBiclustering& clustering, log_prob_t llh, log_prob_t lpp, ChessboardBiclusteringsIndexing& indexing )
-        : time( time ), turbineIx( turbineIx ), llh( llh ), lpp( lpp ), clustering( indexing.index( clustering ) )
+        BIMAPStep( step_time_t time, size_t turbineIx, const ChessboardBiclustering& clustering,
+                   const StatsMetrics& metrics, ChessboardBiclusteringsIndexing& indexing )
+        : time( time ), turbineIx( turbineIx ), metrics( metrics ), clustering( indexing.index( clustering ) )
         {}
 
-        BIMAPStep( step_time_t time, size_t turbineIx, const ChessboardBiclusteringIndexed& clustering, log_prob_t llh, log_prob_t lpp )
-        : time( time ), turbineIx( turbineIx ), llh( llh ), lpp( lpp ), clustering( clustering )
+        BIMAPStep( step_time_t time, size_t turbineIx, const ChessboardBiclusteringIndexed& clustering,
+                   const StatsMetrics& metrics )
+        : time( time ), turbineIx( turbineIx ), metrics( metrics ), clustering( clustering )
         {}
     };
 
@@ -88,6 +90,7 @@ private:
     ChessboardBiclusteringsIndexing&   _chessboardBiclusteringsIndexing;        /** walker's indexer of biclusterings */
     StepsIndexing               _steps;
     PriorParamsStepsIndexing    _priorParamsSteps;
+    LLHWeights                  _probWeights;
 
     BOOST_SERIALIZATION_SPLIT_MEMBER();
 
@@ -100,8 +103,7 @@ private:
             ChessboardBiclusteringIndexed& cclus = const_cast<ChessboardBiclusteringIndexed&>( stepit->clustering );
             ar << boost::serialization::make_nvp( "time", stepit->time );
             ar << boost::serialization::make_nvp( "turbineIx", stepit->turbineIx );
-            ar << boost::serialization::make_nvp( "llh", stepit->llh );
-            ar << boost::serialization::make_nvp( "lpp", stepit->lpp );
+            ar << boost::serialization::make_nvp( "metrics", stepit->metrics );
             default_serial_t serial = cclus.serial();
             ar << boost::serialization::make_nvp( "chessboardBiclusteringSerial", serial );
             ar << boost::serialization::make_nvp( "clusteringData", cclus );
@@ -110,6 +112,7 @@ private:
             ar << boost::serialization::make_nvp( "objectsData", cclus._objectsData );
         }
         ar << boost::serialization::make_nvp( "priorParamSteps", _priorParamsSteps );
+        ar << boost::serialization::make_nvp( "probWeights", _probWeights );
     }
 
     template<class Archive>
@@ -124,10 +127,8 @@ private:
             ar >> BOOST_SERIALIZATION_NVP( time );
             size_t      turbineIx;
             ar >> BOOST_SERIALIZATION_NVP( turbineIx );
-            log_prob_t      llh;
-            ar >> BOOST_SERIALIZATION_NVP( llh );
-            log_prob_t      lpp;
-            ar >> BOOST_SERIALIZATION_NVP( lpp );
+            StatsMetrics metrics;
+            ar >> BOOST_SERIALIZATION_NVP( metrics );
             default_serial_t chessboardBiclusteringSerial;
             ar >> BOOST_SERIALIZATION_NVP( chessboardBiclusteringSerial );
             ChessboardBiclusteringsIndexing::const_serial_iterator pScaffoldIt = _chessboardBiclusteringsIndexing.iterator_to( chessboardBiclusteringSerial );
@@ -141,22 +142,24 @@ private:
             multiple_map_t      objectsData;
             ar >> BOOST_SERIALIZATION_NVP( objectsData );
 
-            _steps.get<0>().push_back( BIMAPStep( time, turbineIx, ChessboardBiclusteringIndexed( *pScaffoldIt, blocksData, objectsData, clusteringData ), llh, lpp ) );
+            _steps.get<0>().push_back( BIMAPStep( time, turbineIx, ChessboardBiclusteringIndexed( *pScaffoldIt, blocksData, objectsData, clusteringData ), metrics ) );
         }
         ar >> boost::serialization::make_nvp( "priorParamSteps", _priorParamsSteps );
+        ar >> boost::serialization::make_nvp( "probWeights", _probWeights );
     }
 
 protected:
     friend class BIMAPSampler;
 
 public:
-    BIMAPWalk( ChessboardBiclusteringsIndexing& chessboardBiclusteringsIndexing );
+    BIMAPWalk( ChessboardBiclusteringsIndexing& chessboardBiclusteringsIndexing,
+               const LLHWeights& probWeights = LLHWeights() );
 
     typedef StepsIndexing::const_iterator const_step_iterator;
     typedef PriorParamsStepsIndexing::const_iterator const_priors_step_iterator;
 
-    void step( step_time_t time, size_t turbineIx, const ChessboardBiclustering& clu, log_prob_t llh, log_prob_t lpp ) {
-        _steps.get<0>().push_back( BIMAPStep( time, turbineIx, clu, llh, lpp, _chessboardBiclusteringsIndexing ) );
+    void step( step_time_t time, size_t turbineIx, const ChessboardBiclustering& clu, const StatsMetrics& metrics ) {
+        _steps.get<0>().push_back( BIMAPStep( time, turbineIx, clu, metrics, _chessboardBiclusteringsIndexing ) );
     }
     void step( step_time_t time, size_t turbineIx, const ChessboardBiclusteringDerivedPriors& priors ) {
         _priorParamsSteps.get<0>().push_back( BIMAPPriorParamsStep( time, turbineIx, priors ) );
@@ -167,6 +170,13 @@ public:
     }
     ChessboardBiclusteringsIndexing& indexing() {
         return ( _chessboardBiclusteringsIndexing );
+    }
+
+    const LLHWeights& probWeights() const {
+        return ( _probWeights );
+    }
+    void setProbWeights( const LLHWeights& weights ) {
+        _probWeights = weights;
     }
 
     size_t stepsCount() const {

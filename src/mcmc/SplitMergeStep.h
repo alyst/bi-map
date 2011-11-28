@@ -391,7 +391,7 @@ SplitMergeSamplingStep<Partition, PartitionStats, ParamsSampler>::sampleClusterI
     BOOST_ASSERT( ptn.clusterIndex( elmIx ) == cluIx );
     log_prob_t lnOddRatio = clusterAssignmentLOR( ptn, elmIx, cluIx, cluAltIx );
     log_prob_t adjLogRatio = samplingTransform.clampedDeltaLnP( lnOddRatio, 
-                                                                stats.lpp( ptn ) + stats.llh( ptn ) )
+                                                                stats.lpp( ptn ) + (log_prob_t)stats.llh( ptn ) )
                            / samplingTransform.temperature;
     sample_cluster_result res;
     // a / ( a + b ) = 1 / ( 1 + b/a )
@@ -510,6 +510,6 @@ template<class Partition, class PartitionStats, class ParamsSampler>
 log_prob_t SplitMergeSamplingStep<Partition, PartitionStats, ParamsSampler>::evalTotalLP(
     const partition_type&   ptn
 ) const {
-    return ( stats.llh( ptn ) + stats.lpp( ptn ) );
+    return ( (log_prob_t)stats.llh( ptn ) + stats.lpp( ptn ) );
 }
 

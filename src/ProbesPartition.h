@@ -285,19 +285,19 @@ struct FixedProbesPartitionStats {
      *  not concerning its relation to other clusters
      *  (co-occurence, block probes and abundances, object multipliers).
      */
-    log_prob_t probesLLH( const probe_bitset_t& probes, const params_type& params ) const;
+    LLHMetrics probesLLH( const probe_bitset_t& probes, const params_type& params ) const;
 
     /**
      *  Likelihood of modified projections clusters,
      *  (co-occurence of projections, relation to other clusters,
      *   block probes and abundances).
      */
-    log_prob_t llhDelta( const std::vector<ProbesPartition::elements_set_proxy_type>& newClusters,
+    LLHMetrics llhDelta( const std::vector<ProbesPartition::elements_set_proxy_type>& newClusters,
                 const std::vector<params_type>& newParams,
                 const ProbesPartition::cluster_index_set_type& oldIndexes ) const;
 
-    log_prob_t llh() const {
-        return ( clusFit.llh() );
+    LLHMetrics llh() const {
+        return ( clusFit.metrics().llhProbes );
     }
     log_prob_t paramsLPP( const params_type& params, const probe_bitset_t& clusterProbes, const probe_bitset_t& sampledProbes ) const;
 
@@ -322,11 +322,11 @@ struct ProbesPartitionStats {
                 const std::vector<params_type>& newParams,
                 const ProbesPartition::cluster_index_set_type& oldIndexes
     ) const {
-        return ( FixedProbesPartitionStats( ptn ).llhDelta( newClusters, newParams, oldIndexes ) );
+        return ( FixedProbesPartitionStats( ptn ).llhDelta( newClusters, newParams, oldIndexes )( weights ) );
     }
     log_prob_t llh( const ProbesPartition& ptn ) const {
         const ChessboardBiclusteringFit& clusFit = ptn;
-        return ( clusFit.llh() );
+        return ( clusFit.metrics().llhProbes( weights ) );
     }
     log_prob_t lpp( const ProbesPartition& ptn ) const {
         const ChessboardBiclusteringFit& clusFit = ptn;
@@ -344,12 +344,15 @@ struct ProbesPartitionStats {
     ProbesPartitionStats(
         const gsl_rng*                  rndNumGen,
         const OPAData&                  data,
-        const ChessboardBiclusteringPriors&    priors
-    ) : rndNumGen( rndNumGen ), data( data ), priors( priors )
+        const ChessboardBiclusteringPriors&    priors,
+        const LLHPartitionWeights&      weights
+    ) : rndNumGen( rndNumGen ), data( data )
+    , priors( priors ), weights( weights )
     {}
 
 private:
     const gsl_rng*                      rndNumGen;
     const OPAData&                      data;
-    const ChessboardBiclusteringPriors&        priors;
+    const ChessboardBiclusteringPriors& priors;
+    const LLHPartitionWeights&          weights; 
 };

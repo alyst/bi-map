@@ -288,7 +288,8 @@ TEST_F2( GslRngTestF, BIMAPSamplerRng, noise_prediction )
     crossClu.setObjectMultiple( 3, 1 );
 
     PrecomputedData    precomputed( data, precomputedDataParams, signalParams );
-    ChessboardBiclusteringGibbsSampler   sampler( rndGen, precomputed, hyperpriors, gibbsParams );
+    ChessboardBiclusteringGibbsSampler   sampler( rndGen, precomputed, hyperpriors,
+                                                  gibbsParams, ChessboardBiclusteringEnergyEval() );
     ChessboardBiclusteringFit clusFit( precomputed, priors, crossClu );
     ChessboardBiclusteringGibbsHelper gibbsHelper = sampler.createGibbsHelper( clusFit );
 

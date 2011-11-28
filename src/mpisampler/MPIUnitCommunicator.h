@@ -98,9 +98,11 @@ BOOST_IS_MPI_DATATYPE( TurbineStatusMessage )
  *  Body of equi-energy jump requesting message (MTAG_EEJumpRequest).
  *  Sent to hot turbine by connected cold turbine.
  */
+template<typename ParticleEnergyEval>
 struct EEJumpRequestMessage {
     turbine_ix_t    acceptorIx;     /** turbine requesting EE jump */
     turbine_ix_t    donorIx;        /** turbine to process EE jump and respond */
+    ParticleEnergyEval      energyEval;     /** evaluator of particle energies */
     EEJumpParams    params;         /** EE jump parameters */
 
     EEJumpRequestMessage()
@@ -110,8 +112,10 @@ struct EEJumpRequestMessage {
     EEJumpRequestMessage(
         turbine_ix_t        acceptorIx,
         turbine_ix_t        donorIx,
+        const ParticleEnergyEval&   energyEval,
         const EEJumpParams& params
-    ) : acceptorIx( acceptorIx ), donorIx( donorIx ), params( params )
+    ) : acceptorIx( acceptorIx ), donorIx( donorIx )
+      , energyEval( energyEval ), params( params )
     {}
 
     template<class Archive>
@@ -119,33 +123,37 @@ struct EEJumpRequestMessage {
     {
         ar & BOOST_SERIALIZATION_NVP( acceptorIx );
         ar & BOOST_SERIALIZATION_NVP( donorIx );
+        ar & BOOST_SERIALIZATION_NVP( energyEval );
         ar & BOOST_SERIALIZATION_NVP( params );
     }
 };
 
 BOOST_MPI_SERIALIZATION_TRAITS( EEJumpParams )
-BOOST_MPI_SERIALIZATION_TRAITS( EEJumpRequestMessage )
-
-BOOST_IS_MPI_DATATYPE( EEJumpRequestMessage )
+BOOST_MPI_SERIALIZATION_TRAITS_TEMPLATE( EEJumpRequestMessage, ParticleEnergyEval )
+BOOST_IS_MPI_DATATYPE_TEMPLATE( EEJumpRequestMessage, ParticleEnergyEval )
 
 /**
   *  Body of equi-energy jump response (MTAG_EEJumpResponse).
   *  Sent in response to MTAG_EEJumpRequest by hot turbine to cold one.
  **/
-template<class Particle>
-struct EEJumpResponseMessage: public EEJumpRequestMessage {
-    typedef Particle particle_type;
+template<typename ParticleEnergyEval>
+struct EEJumpResponseMessage: public EEJumpRequestMessage<ParticleEnergyEval> {
+    typedef ParticleEnergyEval particle_energy_eval_type;
+    typedef typename particle_energy_eval_type::particle_type particle_type;
     typedef CascadeParticle<particle_type> cascade_particle_type;
+    typedef EEJumpRequestMessage<ParticleEnergyEval> request_message_type;
 
     boost::optional<cascade_particle_type> result; /** EE jump result, not defined,
                                                         if EE jump not available for given turbine */
 
+    using request_message_type::donorIx;
+
     EEJumpResponseMessage() 
-    : EEJumpRequestMessage()
+    : request_message_type()
     {}
 
-    EEJumpResponseMessage( const EEJumpRequestMessage& request ) 
-    : EEJumpRequestMessage( request )
+    EEJumpResponseMessage( const request_message_type& request ) 
+    : request_message_type( request )
     {}
 
     operator bool() const {
@@ -155,7 +163,7 @@ struct EEJumpResponseMessage: public EEJumpRequestMessage {
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version)
     {
-        ar & boost::serialization::make_nvp( "request", boost::serialization::base_object<EEJumpRequestMessage>( *this ) );
+        ar & boost::serialization::make_nvp( "request", boost::serialization::base_object<request_message_type>( *this ) );
         ar & BOOST_SERIALIZATION_NVP( result );
     }
 };
@@ -237,20 +245,23 @@ receiveParticles(
     *  Updated EE energy ladder.
     *  Sent after any turbine has finished burning in to all units.
     */
-template<class Particle>
+template<class ParticleEnergyEval>
 struct EnergyLadderMessage {
-    typedef Particle particle_type;
+    typedef typename ParticleEnergyEval::particle_type particle_type;
+    typedef ParticleEnergyEval particle_energy_eval_type;
 
     turbine_ix_t            originIx;
     TurbineEnergyLadder     ladder;
 
-    particle_type           iniParticle;
+    particle_energy_eval_type   energyEval;
+    particle_type               iniParticle;
 
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version)
     {
         ar & BOOST_SERIALIZATION_NVP( originIx );
         ar & BOOST_SERIALIZATION_NVP( ladder );
+        ar & BOOST_SERIALIZATION_NVP( energyEval );
         ar & BOOST_SERIALIZATION_NVP( iniParticle );
     }
 };
@@ -265,16 +276,20 @@ class MPITurbineConnection;
 /**
  *  Implementation of IUnitCommunicator interface over MPI.
  */
-template<class Particle>
+template<typename ParticleEnergyEval>
 class MPIUnitCommunicator {
 public:
-    typedef Particle particle_type;
-    typedef MPIUnitCommunicator<Particle> communicator_type;
-    typedef MPITurbineConnection<Particle> turbine_connection_type;
+    typedef ParticleEnergyEval energy_eval_type;
+    typedef typename energy_eval_type::particle_type particle_type;
+    typedef MPIUnitCommunicator<ParticleEnergyEval> communicator_type;
+    typedef MPITurbineConnection<ParticleEnergyEval> turbine_connection_type;
     //typedef TurbineCascadeUnit<ParticleCollector, ParticleEnergyEval, DynamicParticleFactory, ParticleGenerator, communicator_type> cascade_unit_type;
     typedef boost::mpi::communicator mpi_communicator_type;
-    typedef TurbineEnergyLadder::energy_landscape_type energy_landscape_type;
     typedef boost::mpi::timer timer_type;
+
+    typedef typename particle_type::pre_energy_type pre_energy_type;
+    typedef std::vector<pre_energy_type> pre_energy_vector_type;
+    typedef std::map<size_t, pre_energy_vector_type> pre_energy_landscape_type;
 
 private:
     /**
@@ -283,15 +298,12 @@ private:
      *  transiently access the memory of response.
      */
     class MPIEnergyLandscapeRequestStorage: public MPIIBroadcastStorage<turbine_ix_t, false> {
-    public:
-        typedef TurbineEnergyLadder::energy_landscape_type energy_landscape_type;
-
     private:
         typedef MPIIBroadcastStorage<turbine_ix_t, false> super;
 
         super::ranks_mask_type              _waitingUnits;
-        energy_landscape_type               _cumulativeLandscape;
-        std::vector<energy_landscape_type>  _landscapes;
+        pre_energy_landscape_type           _cumulativeLandscape;
+        std::vector<pre_energy_landscape_type>  _landscapes;
         std::vector<mpi::request>           _landscapeResponseRequests;   /// MPI landscape response statuses
 #if defined(MPI_TIMEOUT_CONTROL)
         double                              _lastReported;
@@ -305,7 +317,7 @@ private:
         );
         ~MPIEnergyLandscapeRequestStorage();
         bool complete();
-        const energy_landscape_type& energyLandscape() const {
+        const pre_energy_landscape_type& energyLandscape() const {
             return ( _cumulativeLandscape );
         }
     };
@@ -319,7 +331,6 @@ public:
         boost::shared_ptr<MPIEnergyLandscapeRequestStorage> _p;
 
     public:
-        typedef TurbineEnergyLadder::energy_landscape_type energy_landscape_type;
         typedef typename MPIEnergyLandscapeRequestStorage::ranks_mask_type ranks_mask_type;
 
         MPIEnergyLandscapeRequestStatus( communicator_type& comm, turbine_ix_t senderIx )
@@ -329,7 +340,7 @@ public:
 #endif
         ) ) {};
         bool complete() { return ( _p->complete() ); }
-        const energy_landscape_type& energyLandscape() const { return ( _p->energyLandscape() ); }
+        const pre_energy_landscape_type& energyLandscape() const { return ( _p->energyLandscape() ); }
     };
 
     typedef MPIEnergyLandscapeRequestStatus landscape_request_status_type;
@@ -344,10 +355,11 @@ private:
     typedef boost::unordered_map<turbine_ix_t, TurbineStatus> turbine_status_map_type;
     typedef MPIIBroadcastStorage< std::vector<TurbineStatusMessage>, false > turbine_status_ibroadcast_type;
     typedef MPIISendStorage< std::vector<TurbineStatusMessage>, false > turbine_status_isend_type;
-    typedef MPIIBroadcastStorage< EnergyLadderMessage<Particle>, true > energy_ladder_status_ibroadcast_type;
-    typedef MPIISendStorage< EEJumpResponseMessage<particle_type>, true > jump_response_isend_request_type;
-    typedef MPIISendStorage< std::vector< ParticleMessage< particle_type > >, !is_particle_mpi_datatype::value > particle_isend_request_type;
-    typedef MPIISendStorage<energy_landscape_type, true> landscape_response_isend_request_type;
+    typedef EnergyLadderMessage<energy_eval_type> energy_ladder_message_type;
+    typedef MPIIBroadcastStorage< energy_ladder_message_type, true > energy_ladder_status_ibroadcast_type;
+    typedef MPIISendStorage< EEJumpResponseMessage<energy_eval_type>, true > jump_response_isend_request_type;
+    typedef MPIISendStorage< std::vector< ParticleMessage<particle_type> >, !is_particle_mpi_datatype::value > particle_isend_request_type;
+    typedef MPIISendStorage<pre_energy_landscape_type, true> landscape_response_isend_request_type;
     typedef boost::ptr_vector<particle_isend_request_type> particle_isend_request_container_type;
     typedef boost::ptr_vector<jump_response_isend_request_type> jump_response_isend_request_container_type;
     typedef boost::ptr_vector<landscape_response_isend_request_type> landscape_response_isend_request_container_type;
@@ -391,7 +403,8 @@ public:
     template<class CascadeUnit>
     void broadcastUnitStatuses( const CascadeUnit& unit );
     void broadcastShutdown( turbine_ix_t originIx );
-    void broadcastEnergyLadder( turbine_ix_t originIx, const TurbineEnergyLadder& ladder, const particle_type& iniParticle );
+    void broadcastEnergyLadder( turbine_ix_t originIx, const TurbineEnergyLadder& ladder,
+                                const energy_eval_type& energyEval, const particle_type& iniParticle );
     template<class CascadeUnit>
     bool processExternalEvents( CascadeUnit& unit, bool wait );
     template<class CascadeUnit>
@@ -410,19 +423,20 @@ public:
 /**
  *  Implementation of ITurbineConnection interface over MPI.
  */
-template<class Particle>
+template<typename ParticleEnergyEval>
 class MPITurbineConnection {
 public:
-    typedef MPIUnitCommunicator<Particle> communicator_type;
-    typedef MPITurbineConnection<Particle> connection_type;
+    typedef MPIUnitCommunicator<ParticleEnergyEval> communicator_type;
+    typedef MPITurbineConnection<ParticleEnergyEval> connection_type;
 
     //typedef typename communicator_type::cascade_unit_type cascade_unit_type;
-    typedef Particle particle_type;
+    typedef ParticleEnergyEval particle_energy_eval_type;
+    typedef typename particle_energy_eval_type::particle_type particle_type;
     typedef typename communicator_type::mpi_communicator_type mpi_communicator_type;
     typedef CascadeParticle<particle_type> cascade_particle_type;
-    typedef EEJumpResponseMessage<particle_type> jump_response_message_type;
+    typedef EEJumpResponseMessage<particle_energy_eval_type> jump_response_message_type;
 
-    friend class MPIUnitCommunicator<Particle>;
+    friend class MPIUnitCommunicator<ParticleEnergyEval>;
 
     class MPIJumpRequestStatus;
     friend class MPIJumpRequestStatus;
@@ -433,13 +447,15 @@ private:
      */
     class MPIJumpRequestStorage: boost::noncopyable {
     private:
-        EEJumpRequestMessage        _request;
+        typedef EEJumpRequestMessage<ParticleEnergyEval> request_message_type;
+        request_message_type        _request;
         jump_response_message_type  _response;
         mpi::request                _jumpResponseRequest;   /// MPI jump response status
 
     public:
-        MPIJumpRequestStorage( connection_type& conn, turbine_ix_t initiatorIx, const EEJumpParams& params )
-        : _request( initiatorIx, conn.externalTurbineIx(), params )
+        MPIJumpRequestStorage( connection_type& conn, turbine_ix_t initiatorIx,
+                               const ParticleEnergyEval& energyEval, const EEJumpParams& params )
+        : _request( initiatorIx, conn.externalTurbineIx(), energyEval, params )
         , _jumpResponseRequest( mpi::request( conn._comm.communicator().irecv( conn.externalUnitRank(), MTAG_EEJumpResponse, _response ) ) )
         {
             LOG_DEBUG1( "MPIJumpRequestStorage::ctor() from #" << initiatorIx << " to " << conn.externalTurbineIx() );
@@ -469,8 +485,10 @@ public:
     private:
         boost::shared_ptr<MPIJumpRequestStorage> _p;
     public:
-        MPIJumpRequestStatus( connection_type& conn, turbine_ix_t initiatorIx, const EEJumpParams& params )
-        : _p( new MPIJumpRequestStorage( conn, initiatorIx, params ) )
+        MPIJumpRequestStatus( connection_type& conn, turbine_ix_t initiatorIx,
+                              const particle_energy_eval_type& energyEval,
+                              const EEJumpParams& params )
+        : _p( new MPIJumpRequestStorage( conn, initiatorIx, energyEval, params ) )
         {}
         bool complete() { return ( _p->complete() ); }
         const boost::optional<cascade_particle_type> particle() const { return ( _p->particle() ); }
@@ -502,8 +520,11 @@ public:
         return ( externalTurbineStatus() ? externalTurbineStatus()->prisonersCount : 0 );
     }
 
-    jump_request_status_type requestJump( turbine_ix_t initiatorIx, const EEJumpParams& params ) {
-        return ( jump_request_status_type( *this, initiatorIx, params ) );
+    jump_request_status_type requestJump( turbine_ix_t initiatorIx,
+                                          const particle_energy_eval_type& energyEval,
+                                          const EEJumpParams& params
+    ){
+        return ( jump_request_status_type( *this, initiatorIx, energyEval, params ) );
     }
 
     template<class ParticleIterator>
@@ -667,7 +688,7 @@ bool MPIUnitCommunicator<Particle>::processIncomingMessage(
             LOG_DEBUG2( "#" << rank() << ": got energy landscape request from unit #" << msgStatus.source() );
             turbine_ix_t originIx;
             _comm.recv( msgStatus.source(), msgStatus.tag(), originIx );
-            typename cascade_unit_type::energy_landscape_type localLandscape = unit.localEnergyLandscape();
+            pre_energy_landscape_type localLandscape = unit.localEnergyLandscape();
             LOG_DEBUG2( "#" << rank() << ": sending " << localLandscape.size() << " particle energies to turbine #" << originIx );
             _landscapeResponseISendRequests.push_back( new landscape_response_isend_request_type( _comm, msgStatus.source(), 
                                                                                                   MTAG_EnergyLandscapeResponse, localLandscape
@@ -685,9 +706,9 @@ bool MPIUnitCommunicator<Particle>::processIncomingMessage(
         case MTAG_AdjustEnergyLadder:
         {
             LOG_DEBUG1( "#" << rank() << ": got energy ladder adjustment" );
-            EnergyLadderMessage<particle_type> msg;
+            energy_ladder_message_type msg;
             _comm.recv( msgStatus.source(), msgStatus.tag(), msg );
-            unit.adjustUnitEnergyLadder( msg.originIx, msg.ladder, msg.iniParticle );
+            unit.adjustUnitEnergyLadder( msg.originIx, msg.ladder, msg.energyEval, msg.iniParticle );
         }
         break;
 
@@ -703,16 +724,16 @@ bool MPIUnitCommunicator<Particle>::processIncomingMessage(
     return ( res );
 }
 
-template<class Particle>
+template<typename ParticleEnergyEval>
 template<class CascadeUnit>
-void MPIUnitCommunicator<Particle>::processJumpRequest(
+void MPIUnitCommunicator<ParticleEnergyEval>::processJumpRequest(
     const CascadeUnit&    unit,
     const mpi::status&    msgStatus
 ){
     typedef CascadeUnit cascade_unit_type;
-    EEJumpRequestMessage request;
+    EEJumpRequestMessage<energy_eval_type>  request;
     _comm.recv( msgStatus.source(), MTAG_EEJumpRequest, request );
-    EEJumpResponseMessage<particle_type>   response( request );
+    EEJumpResponseMessage<energy_eval_type> response( request );
     typename cascade_unit_type::const_turbine_iterator donorIt = unit.turbines().find( request.donorIx );
     // process jump request in appropriate turbines of the unit
     if ( donorIt == unit.turbines().end() ) {
@@ -720,7 +741,7 @@ void MPIUnitCommunicator<Particle>::processJumpRequest(
         //throw std::runtime_error( "Connected turbine is not created yet in given unit" );
     }
     else {
-        response.result = donorIt->second->processJumpRequest( request.params, false );
+        response.result = donorIt->second->processJumpRequest( request.params, request.energyEval, false );
     }
     _jumpResponseISendRequests.push_back( new jump_response_isend_request_type( _comm, msgStatus.source(), MTAG_EEJumpResponse, response ) );
 }
@@ -728,9 +749,9 @@ void MPIUnitCommunicator<Particle>::processJumpRequest(
 /**
  *  Updates local cache of external turbines statuses.
  */
-template<class Particle>
+template<typename ParticleEnergyEval>
 template<class CascadeUnit>
-void MPIUnitCommunicator<Particle>::updateExternalStatuses(
+void MPIUnitCommunicator<ParticleEnergyEval>::updateExternalStatuses(
     CascadeUnit&        unit,
     const mpi::status&  msgStatus
 ){
@@ -756,24 +777,26 @@ void MPIUnitCommunicator<Particle>::updateExternalStatuses(
     }
 }
 
-template<class Particle>
-void MPIUnitCommunicator<Particle>::broadcastEnergyLadder(
+template<typename ParticleEnergyEval>
+void MPIUnitCommunicator<ParticleEnergyEval>::broadcastEnergyLadder(
     turbine_ix_t                originIx,
     const TurbineEnergyLadder&  ladder,
+    const energy_eval_type&     energyEval, 
     const particle_type&        iniParticle
 ){
-    EnergyLadderMessage<particle_type> msg;
+    energy_ladder_message_type msg;
     msg.originIx = originIx;
     msg.ladder = ladder;
+    msg.energyEval = energyEval;
     msg.iniParticle = iniParticle;
 
     if ( _energyLadderIBroadcastRequest ) _energyLadderIBroadcastRequest.reset();
     _energyLadderIBroadcastRequest.reset( new energy_ladder_status_ibroadcast_type( _comm, MTAG_AdjustEnergyLadder, msg ) );
 }
 
-template<class Particle>
+template<typename ParticleEnergyEval>
 template<class CascadeUnit>
-void MPIUnitCommunicator<Particle>::sendUnitStatus(
+void MPIUnitCommunicator<ParticleEnergyEval>::sendUnitStatus(
     const CascadeUnit&  unit
 ){
     if ( _comm.rank() == _sampleCollectorRank ) {
@@ -791,9 +814,9 @@ void MPIUnitCommunicator<Particle>::sendUnitStatus(
     _unitStatusISend.reset( new turbine_status_isend_type( _comm, _sampleCollectorRank, MTAG_TurbineStatuses, msgs ) );
 }
 
-template<class Particle>
+template<typename ParticleEnergyEval>
 template<class CascadeUnit>
-void MPIUnitCommunicator<Particle>::broadcastUnitStatuses(
+void MPIUnitCommunicator<ParticleEnergyEval>::broadcastUnitStatuses(
     const CascadeUnit&  unit
 ){
     typedef CascadeUnit cascade_unit_type;
@@ -813,8 +836,8 @@ void MPIUnitCommunicator<Particle>::broadcastUnitStatuses(
     _unitStatusesIBroadcast.reset( new turbine_status_ibroadcast_type( _comm, MTAG_TurbineStatuses, msgs ) );
 }
 
-template<class Particle>
-void MPIUnitCommunicator<Particle>::broadcastShutdown(
+template<typename ParticleEnergyEval>
+void MPIUnitCommunicator<ParticleEnergyEval>::broadcastShutdown(
     turbine_ix_t originIx
 ){
     for ( int i = 0; i < _comm.size(); i++ ) {
@@ -825,9 +848,9 @@ void MPIUnitCommunicator<Particle>::broadcastShutdown(
     }
 }
 
-template<class Particle>
+template<typename ParticleEnergyEval>
 template<class ParticlesIterator>
-void MPIUnitCommunicator<Particle>::sendParticles(
+void MPIUnitCommunicator<ParticleEnergyEval>::sendParticles(
     int                         destinationRank,
     int                         tag,
     turbine_ix_t                destinationTurbineIx,
@@ -835,7 +858,7 @@ void MPIUnitCommunicator<Particle>::sendParticles(
     const ParticlesIterator&    particlesBegin,
     const ParticlesIterator&    particlesEnd
 ){
-    typedef ParticleMessage<Particle> particle_message_type;
+    typedef ParticleMessage<particle_type> particle_message_type;
     std::vector<particle_message_type> msgs( particlesEnd - particlesBegin );
     LOG_DEBUG1( "#" << rank() << ": sending " << msgs.size() << " particles from turbine #" << originTurbineIx 
                 << " to turbine #" << destinationTurbineIx << " in unit #" << destinationRank << ", tag " << tag );
@@ -846,8 +869,8 @@ void MPIUnitCommunicator<Particle>::sendParticles(
                                                                        msgs ) );
 }
 
-template<class Particle>
-void MPIUnitCommunicator<Particle>::sendSample(
+template<typename ParticleEnergyEval>
+void MPIUnitCommunicator<ParticleEnergyEval>::sendSample(
     turbine_ix_t            originIx,
     const particle_type&    sample
 ){
@@ -856,8 +879,8 @@ void MPIUnitCommunicator<Particle>::sendSample(
     }
 }
 
-template<class Particle>
-boost::optional<TurbineStatus> MPIUnitCommunicator<Particle>::lastTurbineStatus(
+template<typename ParticleEnergyEval>
+boost::optional<TurbineStatus> MPIUnitCommunicator<ParticleEnergyEval>::lastTurbineStatus(
     turbine_ix_t    turbineIx
 ) const {
     turbine_status_map_type::const_iterator sit = _externalTurbineStatuses.find( turbineIx );
@@ -868,8 +891,8 @@ boost::optional<TurbineStatus> MPIUnitCommunicator<Particle>::lastTurbineStatus(
     return ( res );
 }
 
-template<class Particle>
-MPIUnitCommunicator<Particle>::MPIEnergyLandscapeRequestStorage::MPIEnergyLandscapeRequestStorage(
+template<typename ParticleEnergyEval>
+MPIUnitCommunicator<ParticleEnergyEval>::MPIEnergyLandscapeRequestStorage::MPIEnergyLandscapeRequestStorage(
     communicator_type&  comm,
     turbine_ix_t        senderIx
 #if defined(MPI_TIMEOUT_CONTROL)
@@ -892,8 +915,8 @@ MPIUnitCommunicator<Particle>::MPIEnergyLandscapeRequestStorage::MPIEnergyLandsc
     }
 }
 
-template<class Particle>
-MPIUnitCommunicator<Particle>::MPIEnergyLandscapeRequestStorage::~MPIEnergyLandscapeRequestStorage()
+template<typename ParticleEnergyEval>
+MPIUnitCommunicator<ParticleEnergyEval>::MPIEnergyLandscapeRequestStorage::~MPIEnergyLandscapeRequestStorage()
 {
     LOG_DEBUG2( "MPIEnergyLandscapeRequestStorage::dtor()" );
     foreach_bit( size_t, i, _waitingUnits ) {
@@ -902,8 +925,8 @@ MPIUnitCommunicator<Particle>::MPIEnergyLandscapeRequestStorage::~MPIEnergyLands
     LOG_DEBUG2( "All landscape requests are shut down" );
 }
 
-template<class Particle>
-bool MPIUnitCommunicator<Particle>::MPIEnergyLandscapeRequestStorage::complete()
+template<typename ParticleEnergyEval>
+bool MPIUnitCommunicator<ParticleEnergyEval>::MPIEnergyLandscapeRequestStorage::complete()
 {
     LOG_DEBUG2( "#" << _comm.rank() << ": testing landscape status" );
     if ( !super::complete() )   return ( false );

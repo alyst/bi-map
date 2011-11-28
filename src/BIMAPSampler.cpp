@@ -1,7 +1,9 @@
+#include <boost/format.hpp>
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics.hpp>
+
 #include "dynamic_bitset_utils.h"
 #include "math/Permutation.h"
-
-#include <boost/format.hpp>
 
 #include "ChessboardBiclusteringFitInternal.h"
 
@@ -41,7 +43,7 @@ BIMAPSamplerHelper::BIMAPSamplerHelper(
   , params( samplerParams )
   , rndNumGen( CreateRndNumGen( rndNumGenSeed ) )
   , dynamicCrossCluFactory( rndNumGen, precomputed, priors, hyperpriors, params )
-  , crossoverGenerator( rndNumGen, precomputed, priors, hyperpriors )
+  , crossoverGenerator( rndNumGen, precomputed, priors, hyperpriors, ChessboardBiclusteringEnergyEval() )
 {
 }
 
@@ -177,18 +179,20 @@ ChessboardBiclustering BIMAPSamplerHelper::trivialClustering() const
 }
 
 void BIMAPSamplerHelper::generateMissingProbeSignals(
-    ChessboardBiclustering&            clus,
+    ChessboardBiclustering&     clus,
     object_clundex_t            objCluIx,
     probe_clundex_t             probeCluIx
 ) const {
     ChessboardBiclusteringFit fit( precomputed, priors, clus );
-    ChessboardBiclusteringGibbsHelper helper( rndNumGen, fit, SamplingTransform(), 0 );
+    ChessboardBiclusteringGibbsHelper helper( rndNumGen, fit,
+                                              ChessboardBiclusteringEnergyEval(),
+                                              SamplingTransform() );
     clus.setBlockSignal( objCluIx, probeCluIx,
                            helper.initialSignal( objCluIx, probeCluIx, NULL ).value ); 
 }
 
 BIMAPSampleCollector::BIMAPSampleCollector(
-    ChessboardBiclusteringsIndexing&           chessboardBiclusteringsIndexing,
+    ChessboardBiclusteringsIndexing&   chessboardBiclusteringsIndexing,
     const BIMAPSampleCollectorParams&  params
 ) : _walk( chessboardBiclusteringsIndexing )
   , _params( params )
@@ -196,10 +200,15 @@ BIMAPSampleCollector::BIMAPSampleCollector(
 {
 }
 
-bool BIMAPSampleCollector::storeSample( double time, turbine_ix_t originIx, const particle_type& particle )
+bool BIMAPSampleCollector::storeSample( double time, turbine_ix_t originIx,
+                                        const particle_type& particle,
+                                        const particle_energy_eval_type& energyEval )
 {
-    _walk.step( time, originIx, *particle.clustering,
-                particle.llh, particle.lpp );
+    if ( _walk.stepsCount() == 0 ) {
+        // initialize llh weights
+        _walk.setProbWeights( energyEval.weights );
+    }
+    _walk.step( time, originIx, *particle.clustering, particle.metrics );
     if ( ( time > _lastSampleReportTime + _params.maxReportingDelay )
       || ( ( _walk.stepsCount() % _params.reportingPeriod ) == 0 )
     ){
@@ -212,13 +221,65 @@ bool BIMAPSampleCollector::storeSample( double time, turbine_ix_t originIx, cons
     return ( _walk.stepsCount() >= _params.walkSamples );
 }
 
+ChessboardBiclusteringEnergyEval DynamicChessboardBiclusteringFactory::updateEnergyEval(
+    const ChessboardBiclusteringEnergyEval& energyEval,
+    std::vector<StatsMetrics>& energyLandscape
+) const {
+    typedef boost::accumulators::accumulator_set<log_prob_t, boost::accumulators::stats<
+                boost::accumulators::tag::variance(boost::accumulators::lazy)> > lscape_stats_accum;
+    lscape_stats_accum llhQuantStats;
+    lscape_stats_accum llhObjectsTopoStats;
+    lscape_stats_accum llhObjectsConfStats;
+    lscape_stats_accum llhProbesTopoStats;
+    lscape_stats_accum llhProbesConfStats;
+    for ( size_t i = 0; i < energyLandscape.size(); i++ ) {
+        const StatsMetrics& metrics = energyLandscape[i];
+        llhQuantStats( metrics.llhObjs.quant );
+        llhObjectsTopoStats( metrics.llhObjs.topo );
+        llhObjectsConfStats( metrics.llhObjs.conf );
+        llhProbesTopoStats( metrics.llhProbes.topo );
+        llhProbesConfStats( metrics.llhProbes.conf );
+    }
+    log_prob_t llhQuantSD = sqrt( boost::accumulators::variance( llhQuantStats ) );
+    log_prob_t llhObjectsTopoSD = sqrt( boost::accumulators::variance( llhObjectsTopoStats ) );
+    log_prob_t llhObjectsConfSD = sqrt( boost::accumulators::variance( llhObjectsConfStats ) );
+    log_prob_t llhProbesTopoSD = sqrt( boost::accumulators::variance( llhProbesTopoStats ) );
+    log_prob_t llhProbesConfSD = sqrt( boost::accumulators::variance( llhProbesConfStats ) );
+    LOG_INFO( "LLH SD: quant=" << boost::format( "%.3f" ) % llhQuantSD <<
+              " topo[o]=" << boost::format( "%.3f" ) % llhObjectsTopoSD <<
+              " conf[o]=" << boost::format( "%.3f" ) % llhObjectsConfSD <<
+              " topo[p]=" << boost::format( "%.3f" ) % llhProbesTopoSD <<
+              " conf[p]=" << boost::format( "%.3f" ) % llhProbesConfSD );
+    ChessboardBiclusteringEnergyEval newEval = energyEval;
+    if ( is_finite( llhQuantSD ) &&  llhQuantSD > 0 ) {
+        if ( is_finite( llhObjectsTopoSD ) && llhObjectsTopoSD > 0 ) {
+            newEval.weights.objects.topo = params.llhObjectsTopoSD * llhQuantSD / llhObjectsTopoSD;
+        }
+        if ( is_finite( llhObjectsConfSD ) && llhObjectsConfSD > 0 ) {
+            newEval.weights.objects.conf = params.llhObjectsConfSD * llhQuantSD / llhObjectsConfSD;
+        }
+        if ( is_finite( llhProbesTopoSD ) && llhProbesTopoSD > 0 ) {
+            newEval.weights.probes.topo = params.llhProbesTopoSD * llhQuantSD / llhProbesTopoSD;
+        }
+        if ( is_finite( llhProbesConfSD ) && llhProbesConfSD > 0 ) {
+            newEval.weights.probes.conf = params.llhProbesConfSD * llhQuantSD / llhProbesConfSD;
+        }
+    }
+    LOG_INFO( "LLH Weights: " <<
+              " topo[o]=" << boost::format( "%.3f" ) % newEval.weights.objects.topo <<
+              " conf[o]=" << boost::format( "%.3f" ) % newEval.weights.objects.conf <<
+              " topo[p]=" << boost::format( "%.3f" ) % newEval.weights.probes.topo  <<
+              " conf[p]=" << boost::format( "%.3f" ) % newEval.weights.probes.conf );
+    return ( newEval );
+}
+
 BIMAPWalk BIMAPSampler_run(
     const BIMAPSamplerHelper&  helper,
-    ChessboardBiclusteringsIndexing&   chessboardBiclusteringsIndexing,
-    const GibbsSamplerParams&   gibbsSamplerParams,
-    const TurbineCascadeParams& eeCascadeParams,
-    const BIMAPSampleCollectorParams&  collectorParams,
-    const ChessboardBiclustering&      iniClus,
+    ChessboardBiclusteringsIndexing&    chessboardBiclusteringsIndexing,
+    const GibbsSamplerParams&           gibbsSamplerParams,
+    const TurbineCascadeParams&         eeCascadeParams,
+    const BIMAPSampleCollectorParams&   collectorParams,
+    const ChessboardBiclustering&       iniClus,
     const TurbineCascadeExecutionMonitor*   pMon
 ){
     typedef TurbineCascadeUnit<BIMAPSampleCollector, DynamicChessboardBiclusteringFactory, ChessboardBiclusteringCrossoverGenerator> equi_energy_sampler_type;

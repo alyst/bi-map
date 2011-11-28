@@ -48,6 +48,9 @@ struct Particle2dDistrParam {
 };
 
 struct StaticParticle2d : public Particle2d {
+    typedef double pre_energy_type;
+    typedef double energy_type;
+
     double      _energy;
 
     StaticParticle2d()
@@ -60,7 +63,7 @@ struct StaticParticle2d : public Particle2d {
     ) : Particle2d( particle ), _energy( energy )
     {}
 
-    double energy() const {
+    double preEnergy() const {
         return ( _energy );
     }
 
@@ -101,8 +104,23 @@ struct Particle2dEval {
     }
 };
 
+struct Particle2dEnergyEval {
+    typedef StaticParticle2d particle_type;
+    typedef double energy_type;
+
+    energy_type operator()( const double preEnergy ) const {
+        return ( preEnergy );
+    }
+
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version)
+    {
+    }
+};
+
 struct DynamicParticle2d {
     typedef Particle2d particle_type;
+    typedef Particle2dEnergyEval static_particle_energy_eval_type;
 
     const Particle2dEval eval;
     const gsl_rng*  rng;
@@ -152,11 +170,19 @@ struct DynamicParticle2d {
         }
         return ( -_pcl._energy );
     }
+
+    static_particle_energy_eval_type energyEval() const {
+        return ( static_particle_energy_eval_type() );
+    }
+
+    void setEnergyEval( const static_particle_energy_eval_type& energyEval ) {
+    }
 };
 
 struct DynamicParticle2dFactory {
     typedef DynamicParticle2d dynamic_particle_type;
-    typedef StaticParticle2d static_particle_type;
+    typedef Particle2dEnergyEval static_particle_energy_eval_type;
+    typedef Particle2dEnergyEval::particle_type static_particle_type;
 
     const gsl_rng* rng;
     const Particle2dDistrParam param;
@@ -168,6 +194,11 @@ struct DynamicParticle2dFactory {
 
     dynamic_particle_type* operator()( double minEnergy, double temperature ) const {
         return ( new dynamic_particle_type( rng, minEnergy, temperature, param ) );
+    }
+    static_particle_energy_eval_type updateEnergyEval( const static_particle_energy_eval_type& current,
+                                                       const std::vector<double>& landscape ) const
+    {
+        return ( current );
     }
 };
 
@@ -205,7 +236,8 @@ struct Particle2dCollector {
     : samplesToCollect( samplesToCollect )
     {}
 
-    bool storeSample( double time, turbine_ix_t originIx, const StaticParticle2d& particle )
+    bool storeSample( double time, turbine_ix_t originIx, const StaticParticle2d& particle,
+                      const Particle2dEnergyEval& energyEval )
     {
         samples.push_back( particle );
         LOG_DEBUG1_IF( ( samples.size() % 100 == 0 ), samples.size() << " of " << samplesToCollect << " samples collected" );
@@ -215,20 +247,21 @@ struct Particle2dCollector {
 
 class Particle2dInterpolationGenerator {
 private:
-    typedef EnergyDisk<StaticParticle2d> energy_disk_type;
+    typedef ParticleCache<StaticParticle2d>::energies_proxy_type particle_cache_type;
 
 public:
     typedef std::vector<StaticParticle2d> particle_container_type;
 
-    particle_container_type operator()( const gsl_rng* rng, const energy_disk_type& disk ) const
+    particle_container_type operator()( const gsl_rng* rng,
+                                        const particle_cache_type& cache ) const
     {
         particle_container_type res;
-        if ( disk.size() < 2 )                   return ( res );
-        size_t ix1 = gsl_rng_uniform_int( rng, disk.size()-1 );
-        size_t ix2 = gsl_rng_uniform_int( rng, disk.size()-2 );
+        if ( cache.size() < 2 )                   return ( res );
+        size_t ix1 = gsl_rng_uniform_int( rng, cache.size()-1 );
+        size_t ix2 = gsl_rng_uniform_int( rng, cache.size()-2 );
         if ( ix2 == ix1 ) ix2++;
-        const Particle2d& pt1 = disk.nthParticle( ix1 )->particle;
-        const Particle2d& pt2 = disk.nthParticle( ix2 )->particle;
+        const Particle2d& pt1 = cache.nthParticle( ix1 )->particle;
+        const Particle2d& pt2 = cache.nthParticle( ix2 )->particle;
         const double k = gsl_rng_uniform( rng );
 
         Particle2d lerp1;

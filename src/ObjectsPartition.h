@@ -324,26 +324,26 @@ struct FixedObjectsPartitionStats {
      *  Likelihood of object parameters in the partition
      *  (multiplier, cluster).
      */
-    log_prob_t objectLLH( object_index_t objIx, const params_type& params ) const;
+    LLHMetrics objectLLH( object_index_t objIx, const params_type& params ) const;
 
     /**
      *  Likelihood of objects cluster in the partition,
      *  not concerning its relation to other clusters
-     *  (co-occurence, block probes and abundances, object multipliers).
+     *  (co-occurrence, block probes and abundances, object multipliers).
      */
-    log_prob_t objectsLLH( const object_set_t& objs, const params_type& params ) const;
+    LLHMetrics objectsLLH( const object_set_t& objs, const params_type& params ) const;
 
     /**
      *  Likelihood of modified objects clusters,
-     *  (co-occurence of objects, relation to other clusters,
+     *  (co-occurrence of objects, relation to other clusters,
      *   block probes and abundances, object multipliers).
      */
-    log_prob_t llhDelta( const std::vector<ObjectsPartition::elements_set_proxy_type>& newClusters,
+    LLHMetrics llhDelta( const std::vector<ObjectsPartition::elements_set_proxy_type>& newClusters,
                 const std::vector<params_type>& newParams,
                 const ObjectsPartition::cluster_index_set_type& oldIndexes ) const;
 
-    log_prob_t llh() const {
-        return ( clusFit.llh() );
+    LLHMetrics llh() const {
+        return ( clusFit.metrics().llhObjs );
     }
     log_prob_t paramsLPP( const params_type& params, const object_set_t& clusterObjects, const object_set_t& sampledObjects ) const;
 
@@ -365,17 +365,17 @@ struct ObjectsPartitionStats {
 
     log_prob_t objectLLH( const ObjectsPartition& clus, object_index_t objIx, const params_type& params ) const
     {
-        return ( FixedObjectsPartitionStats( clus ).objectLLH( objIx, params ) );
+        return ( FixedObjectsPartitionStats( clus ).objectLLH( objIx, params )( weights ) );
     }
     log_prob_t llhDelta( const ObjectsPartition& ptn,
                 const std::vector<ObjectsPartition::elements_set_proxy_type>& newClusters,
                 const std::vector<params_type>& newParams,
                 const ObjectsPartition::cluster_index_set_type& oldIndexes
     ) const {
-        return ( FixedObjectsPartitionStats( ptn ).llhDelta( newClusters, newParams, oldIndexes ) );
+        return ( FixedObjectsPartitionStats( ptn ).llhDelta( newClusters, newParams, oldIndexes )( weights ) );
     }
     log_prob_t llh( const ObjectsPartition& ptn ) const {
-        return ( ((const ChessboardBiclusteringFit&)ptn).llh() );
+        return ( ((const ChessboardBiclusteringFit&)ptn).metrics().llhObjs( weights ) );
     }
     log_prob_t lpp( const ObjectsPartition& ptn ) const {
         return ( ((const ChessboardBiclusteringFit&)ptn).lpp() );
@@ -393,12 +393,15 @@ struct ObjectsPartitionStats {
     ObjectsPartitionStats(
         const gsl_rng*                  rndNumGen,
         const OPAData&                  data,
-        const ChessboardBiclusteringPriors&    priors
-    ) : rndNumGen( rndNumGen ), data( data ), priors( priors )
+        const ChessboardBiclusteringPriors&    priors,
+        const LLHPartitionWeights&      weights
+    ) : rndNumGen( rndNumGen ), data( data )
+    , priors( priors ), weights( weights )
     {}
 
 private:
     const gsl_rng*                      rndNumGen;
     const OPAData&                      data;
-    const ChessboardBiclusteringPriors&        priors;
+    const ChessboardBiclusteringPriors& priors;
+    const LLHPartitionWeights&          weights; 
 };

@@ -37,7 +37,7 @@ ObjectsPartitionEx::cluster_index_type ObjectsPartitionEx::exchangeElements(
     return ( res );
 }
 
-log_prob_t FixedObjectsPartitionStats::objectLLH(
+LLHMetrics FixedObjectsPartitionStats::objectLLH(
     object_index_t          objIx,
     const params_type&      params
 ) const {
@@ -45,38 +45,41 @@ log_prob_t FixedObjectsPartitionStats::objectLLH(
     return ( objectsLLH( objs, params ) );
 }
 
-log_prob_t FixedObjectsPartitionStats::objectsLLH(
+LLHMetrics FixedObjectsPartitionStats::objectsLLH(
     const object_set_t&     objs,
     const params_type&      params
 ) const {
-    double llh = 0;
+    LLHMetrics llh;
 
+    // quantitative component
+    llh.quant = 0;
     ChessboardBiclusteringLLHEval eval = LLHEval( clusFit );
     // enabled cells
     foreach_bit( probe_clundex_t, probeCluIx, params.blocksMask ) {
         const ProbesCluster&   cluster = clusFit.probesCluster( probeCluIx );
         BOOST_ASSERT( !is_unset( params.probeSignal[ probeCluIx ] ) );
-        llh += eval.cellsDataLLH( objs, cluster.items(), params.probeSignal[ probeCluIx ],
-                                  params.objectMultiple );
-        BOOST_ASSERT( is_finite( llh ) );
+        llh.quant += eval.cellsDataLLH( objs, cluster.items(), params.probeSignal[ probeCluIx ],
+                                        params.objectMultiple );
+        BOOST_ASSERT( is_finite( llh.quant ) );
     }
 
     // disabled cells
     probe_bitset_t notMask = ~params.blocksMask;
     const DataSignalNoiseCache& snCache = clusFit.signalNoiseCache();
     foreach_bit( probe_clundex_t, probeCluIx, notMask ) {
-        llh += snCache.noiseLLH( objs, clusFit.probesCluster( probeCluIx ).items() );
-        BOOST_ASSERT( is_finite( llh ) );
+        llh.quant += snCache.noiseLLH( objs, clusFit.probesCluster( probeCluIx ).items() );
+        BOOST_ASSERT( is_finite( llh.quant ) );
     }
 
+    // other components
     ChessboardBiclusteringStructureLLHEval structEval = StructureLLHEval( clusFit );
-    llh += structEval.objectsClusterMismatchLLH( objs );
-    llh += structEval.probeClustersPerObjectClusterLLH( clusFit.boundProbesClusters( objs ).size() );
+    llh.topo = structEval.objectsClusterMismatchLLH( objs );
+    llh.conf = structEval.probeClustersPerObjectClusterLLH( clusFit.boundProbesClusters( objs ).size() );
 
     return ( llh );
 }
 
-log_prob_t FixedObjectsPartitionStats::llhDelta(
+LLHMetrics FixedObjectsPartitionStats::llhDelta(
     const std::vector<ObjectsPartition::elements_set_proxy_type>& newClusters,    /** new clusters */
     const std::vector<params_type>&                     newParams,      /** params of new clusters */
     const ObjectsPartition::cluster_index_set_type&     oldIndexes      /** indicies of clusters,
@@ -87,7 +90,7 @@ log_prob_t FixedObjectsPartitionStats::llhDelta(
     BOOST_ASSERT( newClusters.size() == newParams.size() );
 
     // calculate llh
-    double llh = 0;
+    LLHMetrics llh( 0 );
     for ( size_t i = 0; i < newClusters.size(); i++ ) {
         // new cluster's internal LLH
         llh += objectsLLH( newClusters[i], newParams[i] );
@@ -128,8 +131,8 @@ log_prob_t FixedObjectsPartitionStats::llhDelta(
         if ( curClusCount != boundObjClusNew.size() ) {
             LOG_DEBUG3( "Detected change of bound objects clusters in probes cluster #" << *scit
                         << ": from " << curClusCount << " to " << boundObjClusNew.size() );
-            llh += structEval.objectClustersPerProbeClusterLLH( boundObjClusNew.size() )
-                 - structEval.objectClustersPerProbeClusterLLH( clusFit.boundObjectsClusters( *scit ).size() );
+            llh.conf += structEval.objectClustersPerProbeClusterLLH( boundObjClusNew.size() )
+                     - structEval.objectClustersPerProbeClusterLLH( clusFit.boundObjectsClusters( *scit ).size() );
         }
     }
     return ( llh );
@@ -269,8 +272,8 @@ log_prob_t ObjectsParamsSampler::transitionLP(
         bool enabledAfter = cluAfter.isEnabled();
         if ( enabledBefore != enabledAfter ) {
             // block probe transition probability
-            ChessboardBiclusteringGibbsHelper::BlockEnablementDataLLHCached llhBefore( helperBefore.clusteringFit(), cluIx, probeCluIx );
-            ChessboardBiclusteringGibbsHelper::BlockEnablementDataLLHCached llhAfter( helperAfter.clusteringFit(), cluIx, probeCluIx );
+            ChessboardBiclusteringGibbsHelper::BlockEnablementDataLLHCached llhBefore( helperBefore.energyEval(), helperBefore.clusteringFit(), cluIx, probeCluIx );
+            ChessboardBiclusteringGibbsHelper::BlockEnablementDataLLHCached llhAfter( helperAfter.energyEval(), helperAfter.clusteringFit(), cluIx, probeCluIx );
             BernoulliDistribution prior = priorEval.blockEnablementPrior();
             log_prob_t  lnOddsRatio = prior( enabledAfter ) - prior( enabledBefore )
                                     + llhAfter( enabledAfter ) - llhBefore( enabledBefore );

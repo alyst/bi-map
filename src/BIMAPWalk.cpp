@@ -1,11 +1,11 @@
 #include "BIMAPWalk.h"
 
 BIMAPWalk::BIMAPWalk(
-    ChessboardBiclusteringsIndexing&  chessboardBiclusteringsIndexing
-)
-: _chessboardBiclusteringsIndexing( chessboardBiclusteringsIndexing )
+    ChessboardBiclusteringsIndexing&  chessboardBiclusteringsIndexing,
+    const LLHWeights&                 probWeights
+) : _chessboardBiclusteringsIndexing( chessboardBiclusteringsIndexing )
+  , _probWeights( probWeights )
 {
-
 }
 
 bool BIMAPWalk::check() const

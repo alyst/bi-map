@@ -63,9 +63,10 @@ struct EEJumpParams {
  *  Dummy implementation of TurbineConnection concept.
  *  TurbineConnection is an adapter for communication between colder and hotter turbines.
  */
-template<class Particle>
+template<class ParticleEnergyEval>
 struct DummyTurbineConnection {
-    typedef Particle particle_type;
+    typedef ParticleEnergyEval energy_eval_type;
+    typedef typename energy_eval_type::particle_type particle_type;
 
     /**
      *  Equi-energy jump request status.
@@ -80,7 +81,9 @@ struct DummyTurbineConnection {
 
     size_t level() const { return ( 0 ); }
     size_t prisonersCount() const { return ( 0 ); }
-    jump_request_status_type requestJump( turbine_ix_t initiatorIx, const EEJumpParams& params ) {
+    jump_request_status_type requestJump( turbine_ix_t initiatorIx,
+                                          const energy_eval_type& eval,
+                                          const EEJumpParams& params ) {
         return ( jump_request_status_type() );
     }
     template<class ParticleIterator>

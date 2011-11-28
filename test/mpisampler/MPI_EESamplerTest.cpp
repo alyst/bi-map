@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
                                                      Particle2d( 0.1, 0.1 ), 0.5, 
                                                      100,
                                                      2, 2 );
-    typedef MPIUnitCommunicator<StaticParticle2d> particle2d_unit_communicator;
+    typedef MPIUnitCommunicator<Particle2dEnergyEval> particle2d_unit_communicator;
     typedef TurbineCascadeUnit<Particle2dCollector, DynamicParticle2dFactory, Particle2dInterpolationGenerator,
                                particle2d_unit_communicator> particle2d_cascade_unit;
     typedef particle2d_cascade_unit test_turbine_cascade;

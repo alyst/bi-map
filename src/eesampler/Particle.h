@@ -12,9 +12,9 @@ typedef size_t turbine_ix_t;
 
 #define TURBINE_NA  ((turbine_ix_t)(-1))
 
-typedef  size_t particle_serial_t;
+typedef size_t particle_serial_t;
 
-typedef float energy_type;
+typedef double energy_type;
 
 enum ParticleEventType {
     Sampled,
@@ -46,6 +46,8 @@ public:
     virtual IParticle* clone() const = 0;
     virtual ~IParticle() {};
 
+    virtual pre_energy_type preEnergy() const;
+
     virtual void serialize(boost::mpi::packed_iarchive& ar, const unsigned int version) = 0;
     virtual void serialize(boost::mpi::packed_oarchive& ar, const unsigned int version) = 0;
 };
@@ -57,7 +59,7 @@ public:
 template<class Particle>
 struct CascadeParticle {
     typedef Particle particle_type;
-    typedef ::energy_type energy_type;
+    typedef typename Particle::pre_energy_type pre_energy_type;
     typedef CascadeParticle<particle_type> cascade_particle_type;
 
     /// sampler-unique serial # of particle
@@ -75,17 +77,12 @@ struct CascadeParticle {
     {
     }
 
-    friend bool operator<( const cascade_particle_type& a, const cascade_particle_type& b )
-    {
-        return ( a.particle.energy() < b.particle.energy() );
-    }
-
     operator const particle_type&() const {
         return ( particle );
     }
 
-    const energy_type energy() const {
-        return ( particle.energy() );
+    const pre_energy_type& preEnergy() const {
+        return ( particle.preEnergy() );
     }
 
     template<class Archive>
