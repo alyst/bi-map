@@ -66,10 +66,7 @@ probability_vector_t ChessboardBiclusteringGibbsSampler::elementsPickupRates(
             for ( object_set_t::const_iterator oit = objs.begin(); oit != objs.end(); ++oit ) {
                 foreach_bit( probe_index_t, probeIx, probes ) {
                     const assay_container_t& assays = clus.data().probe( probeIx ).assayIndexes();
-                    size_t scSum = 0;
-                    for ( int i = 0; i < assays.size(); i++ ) {
-                        scSum += clus.data().measurement( *oit, assays[ i ] );
-                    }
+                    size_t scSum = clus.data().measurementSum( *oit, probeIx ).sc;
                     if ( scSum == 0 && isCCEnabled ) {
                         wrongSCsum[ useObjects ? *oit : probeIx ]++;
                     } else if ( scSum > 0 && !isCCEnabled ) {
