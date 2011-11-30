@@ -64,6 +64,19 @@ BIMAP.msdata.import <- function( ms_data, protein_info, msrun.multipliers = NULL
     if ( !is.null( pc_column ) ) {
         measurements.df$pc <- as.integer( ms_data_noglob[, pc_column ] )
     }
+    # remove measurements duplicates -- only one per msrun-prey pair is allowed
+    mes_pkeys <- list( measurements.df$msrun, measurements.df$prey_ac )
+    measurements.df.x <- data.frame(
+        msrun = as.vector( tapply( measurements.df$msrun, mes_pkeys, function( x ) x[1] ) ),
+        prey_ac= as.vector( tapply( measurements.df$prey_ac, mes_pkeys, function( x ) x[1] ) ),
+        sc = as.vector( tapply( measurements.df$sc, mes_pkeys, max ) ),
+        stringsAsFactors = FALSE
+    )
+    if ( !is.null( pc_column ) ) {
+        measurements.df.x$pc <- as.vector( tapply( measurements.df$pc, mes_pkeys, max ) )
+    }
+    # remove non-measurements
+    measurements.df <- subset( measurements.df.x, sc > 0 )
     samples.colnames <- unique( c( sample_column, bait_column,
                                    intersect( colnames(ms_data_noglob),
                                               sample_extra_columns ) ) )
