@@ -116,6 +116,36 @@ BIMAP.msdata.import <- function( ms_data, protein_info, msrun.multipliers = NULL
                     proteins = proteins.df ) )
 }
 
+#' Calculated MS runs multipliers based on total spectral counts.
+#' MS run multiplier is a sum of protein spectra divided
+#' by a mean of such sum across all technical replicates of the same sample.
+#' @param ms_data MS data dataframe with SC
+#' @param sample_column column for ID of biological sample
+#' @param msrun_column column for ID of technical replicate
+#' @param prey_column column for protein AC code.
+#'        If MS data contains multiple entries for the protein, the maximal SC is used.
+#' @param sc_column column for spectral counts
+#' @returnType vector
+#' @return multipliers vector with the names being MS run IDs
+#' @author Alexey Stukalov
+#' @export
+BIMAP.msrun.multipliers <- function( ms_data, sample_column = 'sample', msrun_column = 'msrun',
+                                              prey_column = 'prey_ac', sc_column = 'sc' )
+{
+    res <- ddply( ms_data, sample_column, function( sample_data ) {
+        res <- ddply( sample_data, msrun_column, function( msrun_data ) {
+                sc_data <- tapply( msrun_data[,sc_column], msrun_data[,prey_column], max )
+                data.frame( sc.sum = sum( sc_data ),
+                            stringsAsFactors = FALSE )
+        } )
+        res$multiplier <- res$sc.sum / mean( res$sc.sum )
+        return ( res )
+    } )
+    t <- res$multiplier
+    names( t ) <- res$msrun
+    return ( t )
+}
+
 #' Saves AP-MS data into single .xml file that could be read by BIMAP-sampler --input_file
 #' @param filename name of output file
 #' @author Alexey Stukalov
