@@ -828,8 +828,7 @@ BIMAP.mcmcwalk.interactors_frame <- function( bimap.walk, protein.ac, protein.in
 #' @return 
 #' @author astukalov
 #' @export
-BIMAP.mcmcwalk.extract_stable_clusters <- function( bimap.walk,
-        ms_data, sample_col = 'sample', prey_col = 'prey_ac',
+BIMAP.mcmcwalk.extract_stable_clusters <- function( bimap.walk, bimap.data,
         min.avg.nsample = 3, min.size = 2,
         min.included.freq = 0.95, size.weight = 0.2 )
 {
@@ -839,8 +838,9 @@ BIMAP.mcmcwalk.extract_stable_clusters <- function( bimap.walk,
                   size.weight * ( good.clusters.info$size - min.size )
     #print( good.clusters.info )
     good.clusters <- subset( bimap.walk@objects.clusters, objects.cluster.serial %in% good.clusters.info$objects.cluster.serial )
-    avg.nsamples <- ddply( unique( merge( good.clusters, ms_data, by.x = 'object', by.y = prey_col )
-                            [ c( 'objects.cluster.serial', 'object', sample_col ) ] ), .( objects.cluster.serial ), function( clu_ms_data ) {
+    avg.nsamples <- ddply( unique( merge( good.clusters, merge( bimap.data$measurements, bimap.data$exp_design ),
+                                          by.x = 'object', by.y = 'prey_ac' )
+                            [ c( 'objects.cluster.serial', 'object', 'sample' ) ] ), .( objects.cluster.serial ), function( clu_ms_data ) {
                 data.frame( avg.nsample = min( table( clu_ms_data$object ) ),
                         stringsAsFactors = TRUE )
             } )
