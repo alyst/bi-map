@@ -188,9 +188,9 @@ BIMAP.msdata.load <- function(
 #' @author Alexey Stukalov
 BIMAP.msdata.save <- function( bimap.data, 
     data_path = NULL, filename = NULL,
-    format = c( 'OPAData', 'CSV' )
+    format = c( 'OPA', 'CSV' )
 ){
-    if ( format == 'OPAData'){
+    if ( format == 'OPA' ){
         return ( .Call( "OPADataSave", filename,
                 bimap.data$proteins, bimap.data$samples, bimap.data$msruns,
                 bimap.data$measurements ) )
