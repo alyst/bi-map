@@ -577,13 +577,19 @@ BIMAP.mcmcwalk.clusters_size <- function( walk, entities = c( 'objects','probes'
 # prepare pivot table of signal means and SDs
 BIMAP.signal_stats <- function( signals.frame )
 {
+    fix.array <- function( arr ) {
+        res <- as.matrix( arr )
+        dimnames( res ) <- dimnames( arr )[1:2]
+        return ( res )
+    }
     # prepare pivot table of signal means and SDs
-    signals.pivot.mean <- daply( signals.frame,
+    signals.pivot.mean <- fix.array( daply( signals.frame,# .drop_o = FALSE,
         .(proteins.cluster, samples.cluster ),
-        function( rows ) mean( rows$signal ) )
-    signals.pivot.sd <- daply( signals.frame,
+        function( rows ) mean( rows$signal ) ) )
+    
+    signals.pivot.sd <- fix.array( daply( signals.frame,# .drop_o = FALSE,
         .(proteins.cluster, samples.cluster ),
-        function( rows ) sd( rows$signal ) )
+        function( rows ) sd( rows$signal ) ) )
     return ( c( list( signals.mean = signals.pivot.mean,
                       signals.sd = signals.pivot.sd ) ) )
 }
