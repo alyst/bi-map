@@ -631,6 +631,8 @@ BIMAP.mcmcwalk.extract_biclustering <- function( bimap.walk, bimapId,
     nBlocks <- nrow( blocks )
     if ( nBlocks == 0 ) {
         stop( paste("No on-blocks found in clustering ID=", bimapId ) )
+    } else {
+        message( nBlocks, ' on-blocks found of ', length( ocIds ), 'x', length( pcIds ), ' possible' )
     }
     colnames( blocks ) <- c( 'proteins.cluster', 'samples.cluster' )
     blocks$proteins.cluster <- as.character( blocks$proteins.cluster )
