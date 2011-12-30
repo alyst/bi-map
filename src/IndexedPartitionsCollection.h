@@ -68,8 +68,8 @@ private:
     void classifyParts();
     void indexPartitionsComposition();
     void countSubpartitions();
-    void countElementPairsAvgCooccurrencePerPart();
-    void countPartsInclusion();
+    void countElementPairsAvgCooccurrencePerPart( bool onlyUnused );
+    void countPartsInclusion( bool onlyUnused );
 
 public:
     IndexedPartitionsCollection( BIMAPWalk& walk )
@@ -220,16 +220,18 @@ struct is_element_contaned {
  *  Requires countParts() to be called before.
  */
 template<class Part>
-void IndexedPartitionsCollection<Part>::countPartsInclusion()
-{
-    typedef boost::filter_iterator<is_element_contaned<Part>, typename part_indexing::const_serial_iterator> filtered_part_iterator;
+void IndexedPartitionsCollection<Part>::countPartsInclusion(
+    bool onlyUnused /** i count inclusion only for sets not being a part of any partition */
+){
+    typedef boost::filter_iterator<is_element_contaned<Part>,
+                       typename part_indexing::const_serial_iterator> filtered_part_iterator;
 
     const part_indexing& partsColl = extractor_type::PartsIndexing( _walk );
 
-    for ( typename part_indexing::const_serial_iterator pit = partsColl.serialMap().begin();
-          pit != partsColl.serialMap().end(); ++pit
-    ){
-        part_stats_map_type::iterator psit = _partStats.find( (*pit)->serial() );
+    for ( part_stats_map_type::iterator psit = _partStats.begin(); psit != _partStats.end(); ++psit ) {
+        if ( onlyUnused && psit->second.nsteps > 0 ) continue;
+        const_part_in_index_iterator pit = partsColl.serialMap().find( psit->first );
+        if ( pit == partsColl.serialMap().end() ) throw std::runtime_error( "Part not found" );
         size_t& nStepsIncluded = psit->second.nstepsIncluded;
         nStepsIncluded = 0;
 
@@ -247,16 +249,16 @@ void IndexedPartitionsCollection<Part>::countPartsInclusion()
 }
 
 template<class Part>
-void IndexedPartitionsCollection<Part>::countElementPairsAvgCooccurrencePerPart()
-{
+void IndexedPartitionsCollection<Part>::countElementPairsAvgCooccurrencePerPart(
+    bool onlyUnused /** i count inclusion only for sets not being a part of any partition */
+){
     const part_indexing& partsColl = extractor_type::PartsIndexing( _walk );
     part_prob_map partAvgFreqMap( partsColl.size() );
 
-    for ( typename part_indexing::const_value_iterator pit = partsColl.valueMap().begin();
-          pit != partsColl.valueMap().end(); ++pit
-    ){
-        part_stats_map_type::iterator psit = _partStats.find( (*pit)->serial() );
-        if ( psit == _partStats.end() ) throw std::runtime_error( "Part not found" );
+    for ( part_stats_map_type::iterator psit = _partStats.begin(); psit != _partStats.end(); ++psit ) {
+        if ( onlyUnused && psit->second.nsteps > 0 ) continue;
+        const_part_in_index_iterator pit = partsColl.serialMap().find( psit->first );
+        if ( pit == partsColl.serialMap().end() ) throw std::runtime_error( "Part not found" );
         size_t cooccurSum = 0;
         const const_elem_iterator elEnd = extractor_type::ElementsEnd( (*pit)->value() );
         for ( const_elem_iterator e1it = extractor_type::ElementsBegin( (*pit)->value() );
@@ -438,8 +440,8 @@ void IndexedPartitionsCollection<Part>::init(
     countPartitions();
     countParts();
     countElementPairs();
-    countElementPairsAvgCooccurrencePerPart();
-    countPartsInclusion();
+    countElementPairsAvgCooccurrencePerPart( false );
+    countPartsInclusion( false );
     _components = coOccurenceSingleLinkageClusters( independenceThreshold );
     classifyParts();
     _subptnIndexes.resize( _components.size() );
