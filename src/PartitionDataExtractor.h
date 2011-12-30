@@ -42,6 +42,8 @@ struct PartitionDataExtractor
     static bool IsEmpty( const elements_container& set );
     static bool IsSubset( const elements_container& superset, const elements_container& subset );
     static bool Contains( const elements_container& set, element_type elem );
+    static bool IsIntersecting( const elements_container& a, const elements_container& b );
+    static elements_container Intersect( const elements_container& a, const elements_container& b );
 
     /**
      *  Splits divisible (A) by divisor (B) into A&B and A/B.
@@ -139,6 +141,20 @@ struct PartitionDataExtractor<ObjectsCluster>
     static bool Contains( const elements_container& set, const element_type& elem )
     {
         return ( set.count( elem ) > 0 );
+    }
+    static bool IsIntersecting( const elements_container& a, const elements_container& b )
+    {
+        for ( elements_container::const_iterator it = a.begin(); it != a.end(); ++it ) {
+            if ( b.count( *it ) > 0 ) return ( true );
+        }
+        return ( false );
+    }
+    static elements_container Intersect( const elements_container& a, const elements_container& b )
+    {
+        elements_container res;
+        std::set_intersection( a.begin(), a.end(), b.begin(), b.end(),
+                               std::inserter( res, res.begin() ) );
+        return ( res );
     }
 
     static std::pair<elements_container, elements_container> Split( const elements_container& divisible,
@@ -241,6 +257,14 @@ struct PartitionDataExtractor<ProbesCluster>
     static bool Contains( const elements_container& set, const element_type& elem )
     {
         return ( set.test( elem ) );
+    }
+    static bool IsIntersecting( const elements_container& a, const elements_container& b )
+    {
+        return ( a.intersects( b ) );
+    }
+    static elements_container Intersect( const elements_container& a, const elements_container& b )
+    {
+        return ( a & b );
     }
     static std::pair<elements_container, elements_container> Split( const elements_container& divisible,
                                                                     const elements_container& divisor )
