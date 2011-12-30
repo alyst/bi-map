@@ -46,6 +46,12 @@ public:
                         const component_map& componentsMap, 
                         const boost::ptr_vector<component_counts_map>& countsMap );
 
+    PartitionIndependentComponentsPDF& operator=( const PartitionIndependentComponentsPDF& t )
+    {
+        _ptnComponentsMap = t._ptnComponentsMap;
+        _ptnComponentsFreq = t._ptnComponentsFreq;
+    }
+
     const serial_vector_type& subpartitions( serial_type ptnSerial ) const {
         component_map::const_iterator ptnIt = _ptnComponentsMap.find( ptnSerial );
         return ( ptnIt != _ptnComponentsMap.end() ? ptnIt->second : _empty );

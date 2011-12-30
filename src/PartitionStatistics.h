@@ -53,6 +53,11 @@ public:
     template<typename Part>
     PartitionPartsPDF( const IndexedPartitionsCollection<Part>& ptnColl );
 
+    PartitionPartsPDF& operator=( const PartitionPartsPDF& t )
+    {
+        _ptnPartsFreq = t._ptnPartsFreq;
+    }
+
     log_prob_t lnPdf( partition_serial ptnSerial ) const {
         return ( _ptnPartsFreq.find( ptnSerial )->second );
     }

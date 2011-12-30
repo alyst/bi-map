@@ -284,6 +284,8 @@ public:
 
     OPAData( bool mapBaitsToObjects = true, size_t objectsUniverseSize = 25000 );
 
+    OPAData& operator=( const OPAData& t );
+
     bool isMapBaitsToObjects() const {
         return ( _mapBaitsToObjects );
     }

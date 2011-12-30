@@ -39,6 +39,19 @@ OPAData::OPAData( bool mapBaitsToObjects,
 {
 }
 
+OPAData& OPAData::operator=(const OPAData& t)
+{
+    _mapBaitsToObjects = t._mapBaitsToObjects;
+    _probes = t._probes;
+    _objects = t._objects;
+    _assays = t._assays;
+    _matrix = t._matrix;
+    resetIndexes();
+    _matrixModified = true;
+    updateMatrixDependent();
+    return ( *this );
+}
+
 /**
  *  Gets baits of given set of probes.
  */
