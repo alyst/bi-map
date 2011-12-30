@@ -70,6 +70,10 @@ private:
     void countSubpartitions();
     void countElementPairsAvgCooccurrencePerPart( bool onlyUnused );
     void countPartsInclusion( bool onlyUnused );
+    void generateNeighboursIntersections( const gsl_rng* rng, const elements_container& clot,
+                                          size_t maxIsections, size_t isectionTrials );
+    void generateIntersectionsWithinClots( const gsl_rng* rng,  size_t clotThreshold,
+                                           size_t maxIsections, size_t isectionTrials );
 
 public:
     IndexedPartitionsCollection( BIMAPWalk& walk )
@@ -106,7 +110,7 @@ public:
         return ( extractor_type::PartsIndexing( _walk ).entity( partSerial )->value() );
     }
 
-    void init( size_t independenceThreshold );
+    void init( const gsl_rng* rng, size_t independenceThreshold, size_t clotThreshold );
 
     const ptn_composition_map& partitionCompositionMap() const {
         return ( _ptnComposition );
@@ -210,6 +214,25 @@ struct is_element_contaned {
     bool operator()( const set_type& set ) const
     {
         return ( extractor_type::Contains( set->value(), _elem ) );
+    }
+};
+
+template<class Part>
+struct is_intersecting {
+    typedef PartitionDataExtractor<Part> extractor_type;
+    typedef typename extractor_type::elements_container elements_container;
+    typedef typename extractor_type::element_type element_type;
+    typedef typename extractor_type::const_part_in_index_iterator::value_type set_type;
+
+    elements_container    _set;
+
+    is_intersecting( const elements_container& set )
+    : _set( set )
+    {}
+
+    bool operator()( const set_type& indexedSet ) const
+    {
+        return ( extractor_type::IsIntersecting( indexedSet->value(), _set ) );
     }
 };
 
@@ -434,8 +457,75 @@ void IndexedPartitionsCollection<Part>::countSubpartitions()
 }
 
 template<class Part>
+void IndexedPartitionsCollection<Part>::generateNeighboursIntersections(
+    const gsl_rng* rng, 
+    const elements_container& clot,
+    size_t maxIsections,
+    size_t isectionTrials
+){
+    typedef boost::filter_iterator<is_intersecting<Part>, typename part_indexing::const_serial_iterator> filtered_part_iterator;
+
+    std::vector<part_serial> isectingSets;
+
+    const part_indexing& partsColl = extractor_type::PartsIndexing( _walk );
+    is_intersecting<Part> intersectsClot( clot );
+    filtered_part_iterator fpitEnd( intersectsClot, partsColl.serialMap().end(), partsColl.serialMap().end() );
+
+    for ( filtered_part_iterator fpit( intersectsClot, partsColl.serialMap().begin(), partsColl.serialMap().end() );
+          fpit != fpitEnd; ++fpit
+    ){
+        isectingSets.push_back( (*fpit)->serial() );
+    }
+    if ( isectingSets.size() < 2 ) return; // trivial cases -- already in indexing
+
+    maxIsections = std::min( maxIsections, isectingSets.size() );
+    std::vector<part_serial>    trialSet( maxIsections, 0 );
+    for ( size_t n = 0; n < isectionTrials; ++n ) {
+        // random shuffled subset of isectingSets
+        gsl_ran_choose( rng, trialSet.data(), trialSet.size(),
+                        isectingSets.data(), isectingSets.size(),
+                        sizeof( part_serial ) );
+        gsl_ran_shuffle( rng, trialSet.data(), trialSet.size(),
+                         sizeof( part_serial ) );
+        // put to indexing all non-trivial intersections
+        elements_container isection;
+        for ( size_t i = 0; i < trialSet.size(); i++ ) {
+            const elements_container& set = ( *partsColl.serialMap().find( isectingSets[i] ) )->value();
+            isection = i == 0 ? set : extractor_type::Intersect( isection, set );
+            if ( i > 0 ) {
+                if ( isection.size() > 1 ) {
+                    // put intersection into indexing
+                    typename const_part_in_index_iterator::value_type part = extractor_type::PartsIndexing( _walk ).index( isection );
+                    _partStats.insert( std::make_pair( part->serial(), 
+                                                        PartStats( extractor_type::Size( part->value() ),
+                                                                   0 ) ) );
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+}
+
+template<class Part>
+void IndexedPartitionsCollection<Part>::generateIntersectionsWithinClots(
+    const gsl_rng* rng, 
+    size_t clotThreshold,
+    size_t maxIsections,
+    size_t isectionTrials
+){
+    std::vector<elements_container> clots = coOccurenceSingleLinkageClusters( clotThreshold );
+    for ( size_t i = 0; i < clots.size(); i++ ) {
+        generateNeighboursIntersections( rng, clots[i], maxIsections, isectionTrials );
+    }
+    // update inclusion statistics for newly generated clusters
+}
+
+template<class Part>
 void IndexedPartitionsCollection<Part>::init(
-    size_t independenceThreshold
+    const gsl_rng*  rng,
+    size_t          independenceThreshold,
+    size_t          clotThreshold
 ){
     countPartitions();
     countParts();
@@ -443,6 +533,11 @@ void IndexedPartitionsCollection<Part>::init(
     countElementPairsAvgCooccurrencePerPart( false );
     countPartsInclusion( false );
     _components = coOccurenceSingleLinkageClusters( independenceThreshold );
+    if ( rng && std::isfinite( clotThreshold ) ) {
+        generateIntersectionsWithinClots( rng, clotThreshold, 20, 20 );
+        countPartsInclusion( true );
+        countElementPairsAvgCooccurrencePerPart( true );
+    }
     classifyParts();
     _subptnIndexes.resize( _components.size() );
     indexPartitionsComposition();

@@ -254,9 +254,9 @@ TEST( BIMAPSampler, objects_partition )
     }
     EXPECT_GT( (double)proprerClusterings / walk.stepsCount(), 0.75 );
 
-    ChessboardBiclusteringsPDFEval   pdfAdj( walk, 0.25, 0.25 );
-    EXPECT_EQ( pdfAdj.objectComponents().size(), 2 );
-    EXPECT_EQ( pdfAdj.probeComponents().size(), 1 );
+    boost::scoped_ptr<ChessboardBiclusteringsPDFEval>   pdfAdj( ChessboardBiclusteringsPDFEval::Create( walk, helper.rndNumGen, 0.25, 0.25, 0.9 ) );
+    EXPECT_EQ( pdfAdj->objectComponents().size(), 2 );
+    EXPECT_EQ( pdfAdj->probeComponents().size(), 1 );
 }
 
 TEST_F2( GslRngTestF, BIMAPSamplerRng, noise_prediction )
@@ -520,13 +520,13 @@ protein 1-1 1-2 1-3 1-4   2-1   2-2   2-3   2-4 3-1 3-2 3-3 3-4   4-1   4-2   4-
     LOG_INFO( "Signal: " << meanSignal / walk.stepsCount() );
     LOG_INFO( "Signal sigma: " << meanSignalSigma / walk.priorParamsStepsCount() );
 
-    ChessboardBiclusteringsPDFEval   pdfAdj( walk, 0.25, 0.25 );
-    EXPECT_EQ( 2, pdfAdj.objectComponents().size() );
-    EXPECT_EQ( 2, pdfAdj.objectComponents()[0].size() );
-    if ( pdfAdj.objectComponents().size() >= 2 ) EXPECT_EQ( 2, pdfAdj.objectComponents()[1].size() );
-    EXPECT_EQ( 2, pdfAdj.probeComponents().size() );
-    EXPECT_EQ( 2, pdfAdj.probeComponents()[0].count() );
-    if ( pdfAdj.probeComponents().size() >= 2 ) EXPECT_EQ( 2, pdfAdj.probeComponents()[1].count() );
+    boost::scoped_ptr<ChessboardBiclusteringsPDFEval>   pdfAdj( ChessboardBiclusteringsPDFEval::Create( walk, helper.rndNumGen, 0.25, 0.25, 0.9 ) );
+    EXPECT_EQ( 2, pdfAdj->objectComponents().size() );
+    EXPECT_EQ( 2, pdfAdj->objectComponents()[0].size() );
+    if ( pdfAdj->objectComponents().size() >= 2 ) EXPECT_EQ( 2, pdfAdj->objectComponents()[1].size() );
+    EXPECT_EQ( 2, pdfAdj->probeComponents().size() );
+    EXPECT_EQ( 2, pdfAdj->probeComponents()[0].count() );
+    if ( pdfAdj->probeComponents().size() >= 2 ) EXPECT_EQ( 2, pdfAdj->probeComponents()[1].count() );
 }
 
 TEST( BIMAPSampler, DISABLED_objects_n_probes_partition_2 )

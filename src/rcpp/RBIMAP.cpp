@@ -27,6 +27,7 @@
 
 #define BIMAP_PARAM_OBJECTS_COMPONENTS_THRESHOLD    "objects.components.threshold"
 #define BIMAP_PARAM_PROBES_COMPONENTS_THRESHOLD     "probes.components.threshold"
+#define BIMAP_PARAM_OBJECTS_CLOT_THRESHOLD          "objects.clot.threshold"
 
 #define BIMAP_PARAM_EESAMPLER_LEVELS_COUNT          "eesampler.levelsCount"
 #define BIMAP_PARAM_EESAMPLER_TURBINES_COUNT        "eesampler.turbinesCount"
@@ -1053,6 +1054,7 @@ RcppExport SEXP BIMAPWalkEval(
     bool                        createWalkRObject = true;
     double objectsComponentsThreshold = R_NaReal;
     double probesComponentsThreshold = R_NaReal;
+    double objectsClotThreshold = R_NaReal;
 
     {
         Rprintf( "Reading sampler and model parameters...\n" );
@@ -1113,6 +1115,8 @@ RcppExport SEXP BIMAPWalkEval(
 
         MaybeReadRParam( objectsComponentsThreshold, params, BIMAP_PARAM_OBJECTS_COMPONENTS_THRESHOLD );
         MaybeReadRParam( probesComponentsThreshold, params, BIMAP_PARAM_PROBES_COMPONENTS_THRESHOLD );
+
+        MaybeReadRParam( objectsClotThreshold, params, BIMAP_PARAM_OBJECTS_CLOT_THRESHOLD );
 
         priors.updateCachedDistributions();
 
@@ -1191,9 +1195,11 @@ RcppExport SEXP BIMAPWalkEval(
         Rprintf( "Detecting independent objects/probes components...\n" );
         if ( R_IsNA( objectsComponentsThreshold ) ) objectsComponentsThreshold = 0;
         if ( R_IsNA( probesComponentsThreshold ) ) probesComponentsThreshold = 0;
-        pdfAdjust.reset( new ChessboardBiclusteringsPDFEval( res, 
+        pdfAdjust.reset( ChessboardBiclusteringsPDFEval::Create( res,
+                                           helper.rndNumGen,
                                            objectsComponentsThreshold,
-                                           probesComponentsThreshold ) );
+                                           probesComponentsThreshold,
+                                           objectsClotThreshold ) );
     }
     objects_label_map_type  objects = data.objectsLabelMap();
     probes_label_map_type   probes = data.probesLabelMap();
@@ -1217,8 +1223,9 @@ RcppExport SEXP BIMAPWalkEval(
  */
 RcppExport SEXP BIMAPWalkLoad(
     SEXP filenameExp,                   /** @param[in] filenameExp walk filename, character string */
-    SEXP objectsComponentThresholdExp,  /** @param[in] objectsComponentThresholdExp threshold for defining independent objects' components, numeric */
-    SEXP probesComponentThresholdExp    /** @param[in] probesComponentThresholdExp  threshold for defining independent objects' components, numeric */
+    SEXP objectsComponentThresholdExp, /** @param[in] objectsComponentThresholdExp threshold for defining independent objects' components, numeric */
+    SEXP probesComponentThresholdExp,  /** @param[in] probesComponentThresholdExp  threshold for defining independent objects' components, numeric */
+    SEXP objectsClotThresholdExp        /** @param[in] objectsClotThresholdExp   threshold for defining "clots" of objects (highly co-occurring), numeric */
 ){
     BEGIN_RCPP
 
@@ -1247,6 +1254,7 @@ RcppExport SEXP BIMAPWalkLoad(
 
     double objectsComponentThreshold = Rcpp::as<double>( objectsComponentThresholdExp ); 
     double probesComponentThreshold = Rcpp::as<double>( probesComponentThresholdExp ); 
+    double objectsClotThreshold = Rcpp::as<double>( objectsClotThresholdExp ); 
     if ( !R_IsNA( objectsComponentThreshold ) || !R_IsNA( probesComponentThreshold ) ) {
         if ( pdfAdjust ) {
             Rprintf( "Deleting old PDF adjustment...\n" );
@@ -1254,11 +1262,16 @@ RcppExport SEXP BIMAPWalkLoad(
         }
         if ( R_IsNA( objectsComponentThreshold ) ) objectsComponentThreshold = 0;
         if ( R_IsNA( probesComponentThreshold ) ) probesComponentThreshold = 0;
+        if ( R_IsNA( objectsClotThreshold ) ) objectsClotThreshold = std::numeric_limits<prob_t>::quiet_NaN();
         Rprintf( "Calculating PDF adjustment with independent components threshold o=%f, s=%f...\n", 
                  objectsComponentThreshold, probesComponentThreshold );
-        pdfAdjust = new ChessboardBiclusteringsPDFEval( *walk, 
-                                                   objectsComponentThreshold,
-                                                   probesComponentThreshold );
+        gsl_rng* rng = gsl_rng_alloc(gsl_rng_default);
+        pdfAdjust = ChessboardBiclusteringsPDFEval::Create( *walk,
+                                           rng,
+                                           objectsComponentThreshold,
+                                           probesComponentThreshold,
+                                           objectsClotThreshold );
+        gsl_rng_free( rng );
     }
 
     //Rprintf( "Exporting walk to R...\n" );
