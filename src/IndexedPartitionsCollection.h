@@ -64,7 +64,7 @@ private:
     void countPartitions();
     void countParts();
     void countElementPairs();
-    void defineIndependentComponents( size_t threshold );
+    std::vector<elements_container> coOccurenceSingleLinkageClusters( size_t threshold ) const;
     void classifyParts();
     void indexPartitionsComposition();
     void countSubpartitions();
@@ -275,9 +275,10 @@ void IndexedPartitionsCollection<Part>::countElementPairsAvgCooccurrencePerPart(
  *  matrix and threshold
  */
 template<class Part>
-void IndexedPartitionsCollection<Part>::defineIndependentComponents(
+std::vector<typename IndexedPartitionsCollection<Part>::elements_container>
+IndexedPartitionsCollection<Part>::coOccurenceSingleLinkageClusters(
     size_t threshold    /** co-occurrence threshold to consider pair of elements independent */
-){
+) const {
     const size_t ClusterNotSet = (size_t)(-1);
 
     size_t  nextCluIx = 0;
@@ -333,10 +334,11 @@ void IndexedPartitionsCollection<Part>::defineIndependentComponents(
         }
     }
     // create clusters from element-to-cluster map
-    _components.resize( nextCluIx, extractor_type::EmptyElementsSet( _walk ) );
+    std::vector<elements_container> res( nextCluIx, extractor_type::EmptyElementsSet( _walk ) );
     for ( size_t elm1Ix = 0; elm1Ix < elmToCluster.size(); elm1Ix++ ) {
-        extractor_type::ElementInsert( _components[ elmToCluster[ elm1Ix ] ], elm1Ix );
+        extractor_type::ElementInsert( res[ elmToCluster[ elm1Ix ] ], elm1Ix );
     }
+    return ( res );
 }
 
 /**
@@ -438,7 +440,7 @@ void IndexedPartitionsCollection<Part>::init(
     countElementPairs();
     countElementPairsAvgCooccurrencePerPart();
     countPartsInclusion();
-    defineIndependentComponents( independenceThreshold );
+    _components = coOccurenceSingleLinkageClusters( independenceThreshold );
     classifyParts();
     _subptnIndexes.resize( _components.size() );
     indexPartitionsComposition();
