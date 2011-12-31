@@ -267,6 +267,7 @@ BIMAP.mcmcwalk.eval <- function(
     precomp.probe.freq.threshold = 0.6,
     objects.components.threshold = 0.1,
     probes.components.threshold = 0.1,
+    objects.clot.threshold = 0.9,
     log.particles.file = NULL,
     log.eeJumps.file = NULL
 ){
@@ -314,6 +315,7 @@ BIMAP.mcmcwalk.eval <- function(
         precomp.probe.freq.threshold = precomp.probe.freq.threshold,
         objects.components.threshold = objects.components.threshold,
         probes.components.threshold = probes.components.threshold,
+        objects.clot.threshold = objects.clot.threshold,
         log.particles.file = log.particles.file,
         log.eeJumps.file = log.eeJumps.file
     )
@@ -371,10 +373,13 @@ BIMAP.mcmcwalk.eval_MPI <- function(
 # optionally identifying independent components with given threshold
 BIMAP.mcmcwalk.load <- function ( filename, 
     objects.components.threshold = NA,
-    probes.components.threshold = NA )
+    probes.components.threshold = NA,
+	objects.clot.threshold = NA )
 {
     return ( .Call( "BIMAPWalkLoad", filename, 
-                    objects.components.threshold, probes.components.threshold ) )
+                    objects.components.threshold,
+                    probes.components.threshold,
+                    objects.clot.threshold ) )
 }
 
 setClass( "BIMAPCluster",

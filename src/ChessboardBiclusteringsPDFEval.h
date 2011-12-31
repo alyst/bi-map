@@ -122,10 +122,17 @@ private:
 
     ChessboardBiclusteringsPDFEval() {};
 
+protected:
+    ChessboardBiclusteringsPDFEval( const BIMAPWalk& walk,
+                                    const IndexedPartitionsCollection<ObjectsCluster>& objPtnColl,
+                                    const IndexedPartitionsCollection<ProbesCluster>& probesPtnColl );
+
 public:
-    ChessboardBiclusteringsPDFEval( BIMAPWalk& walk, 
-                               prob_t objects_threshold,
-                               prob_t probes_threshold );
+    static ChessboardBiclusteringsPDFEval* Create( BIMAPWalk&  walk,
+                                    gsl_rng*    rng,
+                                    prob_t      objects_threshold,
+                                    prob_t      probes_threshold,
+                                    prob_t      objects_clot_threshold );
 
     const std::vector<object_set_t>& objectComponents() const {
         return ( _objComponents );

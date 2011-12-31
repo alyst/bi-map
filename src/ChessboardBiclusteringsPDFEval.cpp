@@ -41,42 +41,54 @@ log_prob_t PartitionIndependentComponentsPDF::lnPdf(
     return ( res );
 }
 
+ChessboardBiclusteringsPDFEval::ChessboardBiclusteringsPDFEval(
+    const BIMAPWalk&  walk,    /** i random walk, the hidden effect is
+                                     addition new objects/probes clusters
+                                     to the their indices -- due to splitting of existing
+                                     clusters by the independent components
+                                */
+    const IndexedPartitionsCollection<ObjectsCluster>& objsPtnColl,
+    const IndexedPartitionsCollection<ProbesCluster>& probesPtnColl
+) : _objPtnIcPdf( walk.stepsCount(),
+                  objsPtnColl.partitionCompositionMap(),
+                  objsPtnColl.subpartitionCountsMaps() )
+  , _objComponents( objsPtnColl.components() )
+  , _objCluStats( objsPtnColl.partStats() )
+  , _objPtnPartsPdf( objsPtnColl )
+  , _probePtnIcPdf( walk.stepsCount(),
+                    probesPtnColl.partitionCompositionMap(),
+                    probesPtnColl.subpartitionCountsMaps() )
+  , _probeComponents( probesPtnColl.components() )
+  , _probeCluStats( probesPtnColl.partStats() )
+  , _probePtnPartsPdf( PartitionPartsPDF( probesPtnColl ) )
+{
+    evalCellsMaskFreqMap( walk );
+    evalBlocksFreqMap( walk );
+}
+
 /**
  *  Adjusts the probability density function of the models
  *  by identifying independent components in the partitions.
  */
-ChessboardBiclusteringsPDFEval::ChessboardBiclusteringsPDFEval
-(
+ChessboardBiclusteringsPDFEval* ChessboardBiclusteringsPDFEval::Create(
     BIMAPWalk&     walk,       /** i random walk, the hidden effect is
                                       addition new objects/probes clusters
                                       to the their indices -- due to splitting of existing
                                       clusters by the independent components
                                   */
+    gsl_rng*        rng,
     prob_t          objects_threshold, /** i frequency threshold for objects to be
                                              considered co-clustered */
-    prob_t          probes_threshold   /** i frequency threshold for probes to be
+    prob_t          probes_threshold,  /** i frequency threshold for probes to be
                                              considered co-clustered */
+    prob_t          objects_clot_threshold /** i frequency threshold for objects forming 'clots' */
 ){
     IndexedPartitionsCollection<ObjectsCluster> objPtnColl( walk );
-    objPtnColl.init( walk.stepsCount() * objects_threshold );
-    _objPtnIcPdf = PartitionIndependentComponentsPDF( walk.stepsCount(),
-                                        objPtnColl.partitionCompositionMap(),
-                                        objPtnColl.subpartitionCountsMaps() );
-    _objComponents = objPtnColl.components();
-    _objCluStats = objPtnColl.partStats();
-    _objPtnPartsPdf = PartitionPartsPDF( objPtnColl );
+    objPtnColl.init( rng, walk.stepsCount() * objects_threshold, walk.stepsCount() * objects_clot_threshold );
 
     IndexedPartitionsCollection<ProbesCluster> probePtnColl( walk );
-    probePtnColl.init( walk.stepsCount() * probes_threshold );
-    _probePtnIcPdf = PartitionIndependentComponentsPDF( walk.stepsCount(),
-                                          probePtnColl.partitionCompositionMap(),
-                                          probePtnColl.subpartitionCountsMaps() );
-    _probeComponents = probePtnColl.components();
-    _probeCluStats = probePtnColl.partStats();
-    _probePtnPartsPdf = PartitionPartsPDF( probePtnColl );
-
-    evalCellsMaskFreqMap( walk );
-    evalBlocksFreqMap( walk );
+    probePtnColl.init( NULL, walk.stepsCount() * probes_threshold, std::numeric_limits<prob_t>::quiet_NaN() );
+    return ( new ChessboardBiclusteringsPDFEval( walk, objPtnColl, probePtnColl ) );
 }
 
 /**

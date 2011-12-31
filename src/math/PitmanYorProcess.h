@@ -3,8 +3,8 @@
 #include "../BasicTypedefs.h"
 
 #include <vector>
+#include <set>
 #include <boost/numeric/ublas/storage.hpp>
-#include <boost/unordered_set.hpp>
 
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_sf_gamma.h>
@@ -17,7 +17,7 @@ public:
     typedef std::size_t size_type;
     typedef std::size_t cluster_index_type;
     typedef std::size_t sample_index_type;
-    typedef boost::unordered_set<sample_index_type> sample_set_type;
+    typedef std::set<sample_index_type> sample_set_type;
 
 private:
     typedef std::vector<cluster_index_type> sample_to_cluster_map;
