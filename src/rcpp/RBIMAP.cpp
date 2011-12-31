@@ -1263,8 +1263,13 @@ RcppExport SEXP BIMAPWalkLoad(
         if ( R_IsNA( objectsComponentThreshold ) ) objectsComponentThreshold = 0;
         if ( R_IsNA( probesComponentThreshold ) ) probesComponentThreshold = 0;
         if ( R_IsNA( objectsClotThreshold ) ) objectsClotThreshold = std::numeric_limits<prob_t>::quiet_NaN();
-        Rprintf( "Calculating PDF adjustment with independent components threshold o=%f, s=%f...\n", 
+        Rprintf( "Calculating PDF adjustment with independent components threshold o=%f, s=%f", 
                  objectsComponentThreshold, probesComponentThreshold );
+        if ( std::isfinite( objectsClotThreshold ) ) {
+            Rprintf( "\nand generating object clusters intersections with clot threshold o=%f", 
+                    objectsClotThreshold );
+        }
+        Rprintf( "...\n" );
         gsl_rng* rng = gsl_rng_alloc(gsl_rng_default);
         pdfAdjust = ChessboardBiclusteringsPDFEval::Create( *walk,
                                            rng,
