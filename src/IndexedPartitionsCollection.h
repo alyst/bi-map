@@ -70,9 +70,9 @@ private:
     void countSubpartitions();
     void countElementPairsAvgCooccurrencePerPart( bool onlyUnused );
     void countPartsInclusion( bool onlyUnused );
-    void generateNeighboursIntersections( const gsl_rng* rng, const elements_container& clot,
+    size_t generateNeighboursIntersections( const gsl_rng* rng, const elements_container& clot,
                                           size_t maxIsections, size_t isectionTrials );
-    void generateIntersectionsWithinClots( const gsl_rng* rng,  size_t clotThreshold,
+    size_t generateIntersectionsWithinClots( const gsl_rng* rng,  size_t clotThreshold,
                                            size_t maxIsections, size_t isectionTrials );
 
 public:
@@ -457,12 +457,14 @@ void IndexedPartitionsCollection<Part>::countSubpartitions()
 }
 
 template<class Part>
-void IndexedPartitionsCollection<Part>::generateNeighboursIntersections(
+size_t IndexedPartitionsCollection<Part>::generateNeighboursIntersections(
     const gsl_rng* rng, 
     const elements_container& clot,
     size_t maxIsections,
     size_t isectionTrials
 ){
+    size_t n_new_sets = 0;
+
     typedef boost::filter_iterator<is_intersecting<Part>, typename part_indexing::const_serial_iterator> filtered_part_iterator;
 
     std::vector<part_serial> isectingSets;
@@ -476,7 +478,7 @@ void IndexedPartitionsCollection<Part>::generateNeighboursIntersections(
     ){
         isectingSets.push_back( (*fpit)->serial() );
     }
-    if ( isectingSets.size() < 2 ) return; // trivial cases -- already in indexing
+    if ( isectingSets.size() < 2 ) return ( 0 ); // trivial cases -- already in indexing
 
     maxIsections = std::min( maxIsections, isectingSets.size() );
     std::vector<part_serial>    trialSet( maxIsections, 0 );
@@ -491,34 +493,44 @@ void IndexedPartitionsCollection<Part>::generateNeighboursIntersections(
         elements_container isection;
         for ( size_t i = 0; i < trialSet.size(); i++ ) {
             const elements_container& set = ( *partsColl.serialMap().find( isectingSets[i] ) )->value();
-            isection = i == 0 ? set : extractor_type::Intersect( isection, set );
-            if ( i > 0 ) {
+            if ( i == 0 ) {
+                isection = set; // initialize intersection
+            }
+            else {
+                isection = extractor_type::Intersect( isection, set );
                 if ( isection.size() > 1 ) {
                     // put intersection into indexing
                     typename const_part_in_index_iterator::value_type part = extractor_type::PartsIndexing( _walk ).index( isection );
-                    _partStats.insert( std::make_pair( part->serial(), 
-                                                        PartStats( extractor_type::Size( part->value() ),
-                                                                   0 ) ) );
+                    std::pair<part_stats_map_type::const_iterator, bool> res = 
+                        _partStats.insert( std::make_pair( part->serial(), 
+                                                           PartStats( extractor_type::Size( part->value() ),
+                                                           0 ) ) );
+                    if ( res.second ) n_new_sets++;
                 } else {
-                    break;
+                    break; // trivial cases
                 }
             }
         }
     }
+    return ( n_new_sets );
 }
 
 template<class Part>
-void IndexedPartitionsCollection<Part>::generateIntersectionsWithinClots(
+size_t IndexedPartitionsCollection<Part>::generateIntersectionsWithinClots(
     const gsl_rng* rng, 
     size_t clotThreshold,
     size_t maxIsections,
     size_t isectionTrials
 ){
+    size_t n_new_sets = 0;
     std::vector<elements_container> clots = coOccurenceSingleLinkageClusters( clotThreshold );
     for ( size_t i = 0; i < clots.size(); i++ ) {
-        generateNeighboursIntersections( rng, clots[i], maxIsections, isectionTrials );
+        n_new_sets += generateNeighboursIntersections( rng, clots[i], maxIsections, isectionTrials );
     }
     // update inclusion statistics for newly generated clusters
+    countPartsInclusion( true );
+    countElementPairsAvgCooccurrencePerPart( true );
+    return ( n_new_sets );
 }
 
 template<class Part>
@@ -534,9 +546,8 @@ void IndexedPartitionsCollection<Part>::init(
     countPartsInclusion( false );
     _components = coOccurenceSingleLinkageClusters( independenceThreshold );
     if ( rng && std::isfinite( clotThreshold ) ) {
-        generateIntersectionsWithinClots( rng, clotThreshold, 20, 20 );
-        countPartsInclusion( true );
-        countElementPairsAvgCooccurrencePerPart( true );
+        size_t n_new_sets = generateIntersectionsWithinClots( rng, clotThreshold, 20, 20 );
+        LOG_DEBUG1( n_new_sets << " new sets around clots generated" );
     }
     classifyParts();
     _subptnIndexes.resize( _components.size() );
