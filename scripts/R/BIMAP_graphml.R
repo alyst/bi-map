@@ -50,7 +50,7 @@ BIMAP.graphML.dataframe <- function( bimap.props,
                                  by.x = 'protein_ac', by.y = 'bait_ac',
                                  all.x = TRUE, all.y = FALSE )
     # merge sample cluster ids for those sample clusters that share bait
-    group_union <- '_'
+    group_union <- '__'
     message( 'Generating agg bait prey dataframe...' )
     agg_samples_bait_prey.clusters <- ddply( bait_prey.clusters, c( 'proteins.cluster', 'protein_ac' ), function( baits_cluster_data ) {
             samples.clusters.serials <- sort( unique( baits_cluster_data$samples.cluster ) )
@@ -61,8 +61,8 @@ BIMAP.graphML.dataframe <- function( bimap.props,
                         samples = paste( samples, collapse = group_union ),
                         stringsAsFactors = FALSE )
         })
-    gen_proteins_group_id <- function( proteins_cluster_serial ) paste( 'proteinsgrp', proteins_cluster_serial, sep = '' )
-    gen_samples_group_id <- function( samples_clusters_serials ) paste( 'samplesgrp', paste( samples_clusters_serials, collapse = group_union ), sep = '' )
+    gen_proteins_group_id <- function( proteins_cluster_serial ) paste( 'prot_grp', proteins_cluster_serial, sep = '_' )
+    gen_samples_group_id <- function( samples_clusters_serials ) paste( 'sample_grp', paste( samples_clusters_serials, collapse = group_union ), sep = '_' )
     #print(agg_samples_bait_prey.clusters)
     message( 'Generating nodes...' )
     nodes.df <- ddply( agg_samples_bait_prey.clusters, c( 'proteins.cluster' ), function( proteins_cluster_data ) {
