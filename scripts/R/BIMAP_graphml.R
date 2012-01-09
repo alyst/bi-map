@@ -222,14 +222,15 @@ BIMAP.graphML.dataframe <- function( bimap.props,
               nodes.df[ proteins_clu_node_mask, 'proteins_cluster' ], sep = '' )
     # add samples cluster information
     samples_clu_node_mask <- nodes.df$node_type %in% c( 'baits_cluster', 'samples_cluster' ) & !is.na( nodes.df$samples_clusters )
-    nodes.df[ samples_clu_node_mask, 'experiment_description' ] <- sapply( nodes.df[ samples_clu_node_mask, 'samples_clusters' ], function( samples_clusters ) {
-            samples_clusters_list <- unlist( strsplit( samples_clusters, group_union, fixed = TRUE ) )
-            samples_stats <- table( unlist( lapply( samples_clusters_list, function( sample_cluster ) {
-                    subset( bimap.props$samples.clusters, samples.cluster == sample_cluster )$sample
-                } ) ) )
-            intersect_samples <- names( samples_stats )[samples_stats == length( samples_clusters_list )]
+    nodes.df[ samples_clu_node_mask, 'experiment_description' ] <- sapply( nodes.df[ samples_clu_node_mask, 'samples_clusters' ],
+        function( samples_clusters_concat )
+        {
+            samples_clusters <- unlist( strsplit( samples_clusters_concat, group_union, fixed = TRUE ) )
+            samples_stats <- table( subset( bimap.props$samples.clusters, samples.cluster %in% samples_clusters )$sample )
+            # samples in the intersection of all current clusters
+            intersect_samples <- sort(names( samples_stats )[samples_stats == length( samples_clusters )])
             if ( !is.null(sample_label_col) ) {
-                intersect_samples <- sort( unique( sample.info[intersect_samples,sample_label_col] ) )
+                intersect_samples <- sort( unique( sample.info[intersect_samples, sample_label_col] ) )
             }
             return ( paste( intersect_samples, collapse = '\n' ) )
         } )
