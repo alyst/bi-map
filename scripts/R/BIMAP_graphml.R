@@ -196,13 +196,12 @@ BIMAP.graphML.dataframe <- function( bimap.props,
     # export protein columns
     exported_cols <- names( protein_export_cols )
     if ( is.null( exported_cols ) ) exported_cols <- protein_export_cols
+    nodes.df[,exported_cols] <- NA
     for ( col_ix in 1:length( protein_export_cols ) ) {
-        exported_col <- exported_cols[[ col_ix ]]
+        external_col <- exported_cols[[ col_ix ]]
         internal_col <- protein_export_cols[[ col_ix ]]
-        nodes.df[,exported_col] <- NA
-        nodes.df[ protein_node_mask, exported_col ] <-
+        nodes.df[ protein_node_mask, external_col ] <-
             protein.info[ nodes.df[ protein_node_mask, 'node_id' ], internal_col ]
-        
     }
     # add proteins cluster information
     proteins_clu_node_mask <- nodes.df$node_type == 'proteins_cluster'
