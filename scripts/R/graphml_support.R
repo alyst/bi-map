@@ -47,9 +47,11 @@ http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd" )
         return ( attrs.df )
     }
     # generate node attributes
+    message( 'Generating node attributes...' )
     newXMLCommentNode( 'Node attributes definitions', parent = graphMLRoot )
     nodeAttrs.df <- writeAttrNodes( 'node', nodes, setdiff( colnames( nodes ), c( source_col, target_col ) ) )
     print( nodeAttrs.df )
+    message( 'Generating edge attributes...' )
     newXMLCommentNode( 'Edge attributes definitions', parent = graphMLRoot )
     if ( nrow(edges) > 0 ) {
         edgeAttrs.df <- writeAttrNodes( 'edge', edges, setdiff( colnames( edges ), c( source_col, target_col ) ) )
@@ -58,6 +60,7 @@ http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd" )
         warning( 'No edges' )
     }
     
+    message( 'Generating nodes...' )
     writeDataNode <- function( attr, data, parentNode ) {
         attr_val = data[ attr['name'] ]
         if ( length( attr_val ) > 1 ) {
@@ -77,18 +80,18 @@ http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd" )
                 nodeXmlNode <- newXMLNode( 'node', parent = parent_xml_node, attrs = list( id = node_id ) )
                 node_data <- nodes[ nodes[,node_col] == node_id, ]
                 if ( nrow( node_data ) > 1 ) {
-                    stop( 'Duplicate node id:', node_id )
+                    stop( 'Duplicate node id: ', node_id )
                 }
                 apply( nodeAttrs.df, 1, writeDataNode, node_data, nodeXmlNode )
                 # write subgraph
                 if ( !is.null( parent_col ) ) {
                     children_mask <- !is.na(nodes[,parent_col]) & (nodes[,parent_col] == node_id)
                     if ( sum( children_mask ) > 0 ) {
-                        print( paste('subgraph of', node_id) )
+                        message('Writing subgraph of node \"', node_id, '\"...' )
                         addAttributes( nodeXmlNode, "yfiles.foldertype" = "group" )
                         subnodes <- nodes[ children_mask, node_col ]
                         if ( node_id %in% subnodes ) {
-                            stop( node_id, ' is child of itself, stopping to avoid recursion')
+                            stop( '\"', node_id, '\" is child of itself, stopping to avoid recursion')
                         }
                         subgraphXmlNode <- newXMLNode( 'graph', parent = nodeXmlNode,
                                                        attrs = list( id = paste( node_id, '_subgraph', sep = '' ),
@@ -107,7 +110,6 @@ http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd" )
         rootNodes <- nodes[ , node_col ]
     }
     newXMLCommentNode( 'Graph', parent = graphMLRoot )
-    print( 'root nodes' )
     rootGraph <- newXMLNode( 'graph', parent = graphMLRoot,
                               attrs = list( id = 'root', 
                                   edgedefault = ifelse( directed, 'directed', 'undirected' ) ) )
@@ -115,6 +117,7 @@ http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd" )
     writeNodeSet( rootNodes, rootGraph )
 
     if ( !is.null(edges) && nrow( edges ) > 0 ) {
+        message( 'Generating edges...' )
         newXMLCommentNode( 'Edges', parent = rootGraph )
         apply( edges, 1, function( edge_data ) {
                 sourceNode <- edge_data[ source_col ]

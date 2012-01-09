@@ -51,7 +51,7 @@ BIMAP.graphML.dataframe <- function( bimap.props,
                                  all.x = TRUE, all.y = FALSE )
     # merge sample cluster ids for those sample clusters that share bait
     group_union <- '_'
-    print( 'Generating agg bait prey dataframe' )
+    message( 'Generating agg bait prey dataframe...' )
     agg_samples_bait_prey.clusters <- ddply( bait_prey.clusters, c( 'proteins.cluster', 'protein_ac' ), function( baits_cluster_data ) {
             samples.clusters.serials <- sort( unique( baits_cluster_data$samples.cluster ) )
             samples <- sort( unique( baits_cluster_data$sample ) )
@@ -64,7 +64,7 @@ BIMAP.graphML.dataframe <- function( bimap.props,
     gen_proteins_group_id <- function( proteins_cluster_serial ) paste( 'proteinsgrp', proteins_cluster_serial, sep = '' )
     gen_samples_group_id <- function( samples_clusters_serials ) paste( 'samplesgrp', paste( samples_clusters_serials, collapse = group_union ), sep = '' )
     #print(agg_samples_bait_prey.clusters)
-    print( 'Generating nodes' )
+    message( 'Generating nodes...' )
     nodes.df <- ddply( agg_samples_bait_prey.clusters, c( 'proteins.cluster' ), function( proteins_cluster_data ) {
             prot_clu_serial <- unique( proteins_cluster_data$proteins.cluster )
             prot_group_id <- gen_proteins_group_id( prot_clu_serial )
@@ -185,7 +185,7 @@ BIMAP.graphML.dataframe <- function( bimap.props,
 
     # add information
     # add protein information
-    print( "Adding protein information...")
+    message( "Adding protein information...")
     protein_node_mask <- nodes.df$node_type %in% c( 'bait', 'prey' ) &
                          nodes.df$node_id %in% rownames( protein.info )
     nodes.df$short_id <- NA
@@ -243,7 +243,7 @@ BIMAP.graphML.dataframe <- function( bimap.props,
     #print( nodes.df )
 
     # add edges for each BIMAP block
-    print( 'Generating edges' )
+    message( 'Generating edges...' )
     signal.max <- max( bimap.props$signals.mean, na.rm = TRUE )
     signal.min <- min( bimap.props$signals.mean, na.rm = TRUE )
 
@@ -294,7 +294,7 @@ BIMAP.graphML.dataframe <- function( bimap.props,
 
     # add edges for split-sample clusters
     if ( !is.null( samples_clusters_nodes.df) && nrow( samples_clusters_nodes.df ) > 0 ) {
-        print( 'Generating split-sample edges' )
+        message( 'Generating split-sample edges...' )
         split_sample_edges.df <- ddply( samples_clusters_nodes.df, c( 'node_id '), function( node_data ) {
             samples_cluster_serial <- node_data$samples_clusters
             split_nodes <- subset( nodes.df, grepl( paste(group_union, samples_cluster_serial, group_union, sep = '' ),
@@ -309,6 +309,7 @@ BIMAP.graphML.dataframe <- function( bimap.props,
         split_sample_edges.df$node_id <- NULL
         edges.df <- rbind( edges.df, split_sample_edges.df )
     }
+    message( 'BIMAP GraphML data.frame generation done' )
     return ( list( nodes = nodes.df, edges = edges.df ) )
 }
 
