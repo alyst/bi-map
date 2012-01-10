@@ -31,7 +31,11 @@ setClass( "PPIDataFrameCytoscapeFilesWriter",
         col_bait_ac = "character",
         col_prey_ac = "character",
         col_edge_type = "character",
-        directed_edges = "logical"
+        directed_edges = "logical",
+        node_acs = "character",
+        head_factor = "factor",
+        tail_factor = "factor",
+        edges_dataframes = "list"
     )
 )
 
@@ -63,6 +67,22 @@ setMethod( 'initialize', "PPIDataFrameCytoscapeFilesWriter",
             vizMapFile = vizmap_filename
         )
         .Object@directed_edges = directed_edges
+        # prepare internal structures
+        .Object@node_acs <- sort( union( unique( .Object@dataframe[,.Object@col_bait_ac] ),
+                                         unique( .Object@dataframe[,.Object@col_prey_ac] ) ) )
+        .Object@head_factor <- factor( .Object@dataframe[,col_bait_ac], levels = .Object@node_acs )
+        .Object@tail_factor <- factor( .Object@dataframe[,col_prey_ac], levels = .Object@node_acs )
+        # split dataframe into per-edge dataframes
+        if ( .Object@directed_edges ) {
+            edges.df <- .Object@dataframe
+        }
+        else {
+            # remove self-edges and edges to alphabetically preceding baits
+            edges.df <- .Object@dataframe[ !(.Object@tail_factor %in% .Object@head_factor )
+                                           | ( .Object@tail_factor > .Object@head_factor ), ]
+        }
+        print( nrow( edges.df ) )
+        .Object@edges_dataframes <- split( edges.df, do.call( 'paste', edges.df[,c(col_bait_ac,col_prey_ac)] ) )
         return ( .Object )
     }
 )
@@ -104,13 +124,11 @@ setMethod( "cytoWrite", signature( .Object = "PPIDataFrameCytoscapeFilesWriter",
                 cat( '\n', file = fileAndName$file, sep='' )
             }
         }
-        node_acs <- union( unique( .Object@dataframe[,.Object@col_bait_ac] ), 
-            unique( .Object@dataframe[,.Object@col_prey_ac] ) )
-        for ( node_ac in node_acs ) {
+        for ( node_ac in .Object@node_acs ) {
             # compose pairlist to pass to nodeAttribDescriptors (and calculate info per hyperedge)
-            head_rows <- .Object@dataframe[ .Object@dataframe[,.Object@col_bait_ac] == node_ac, ]
-            tail_rows <- .Object@dataframe[ .Object@dataframe[,.Object@col_prey_ac] == node_ac, ]
-            writeNodeAttrib( node_ac, head_rows, tail_rows )
+            writeNodeAttrib( node_ac,
+                             .Object@dataframe[ .Object@head_factor == node_ac, ],
+                             .Object@dataframe[ .Object@tail_factor == node_ac, ] )
         }
         close( fileAndName$file )
         
@@ -127,17 +145,9 @@ setMethod( "cytoWrite", signature( .Object = "PPIDataFrameCytoscapeFilesWriter",
         print( sprintf( "Edge attribute '%s', Class=%s", writable@label, writable@valueClass ) )
         # start edge attribute files
         fileAndName <- openCytoscapeAttributeFile( writable, .Object@filename_prefix, ext = 'eda' )
-        if ( .Object@directed_edges ) {
-            edges.df <- .Object@dataframe
-        }
-        else {
-            # remove self-edges and edges to alphabetically preceding baits
-            baits_ac <- unique( as.character( .Object@dataframe[, .Object@col_bait_ac ] ) )
-            edges.df <- .Object@dataframe[ !(.Object@col_prey_ac %in% baits_ac) | ( as.character( .Object@col_prey_ac ) > as.character( .Object@col_bait_ac ) ), ]
-        }
-        ddply( edges.df, c( .Object@col_bait_ac, .Object@col_prey_ac ), function( edge_rows ) {
-                head_ac <- edge_rows[,.Object@col_bait_ac]
-                tail_ac <- edge_rows[,.Object@col_prey_ac]
+        lapply( .Object@edges_dataframes, function( edge_rows ) {
+                head_ac <- edge_rows[1,.Object@col_bait_ac]
+                tail_ac <- edge_rows[1,.Object@col_prey_ac]
                 edgeValue <- writable@edgeValueFunc( head_ac, tail_ac, edge_rows )
                 if ( !is.null( edgeValue ) && !is.na( edgeValue ) ) {
                     cat( head_ac, " (pp) ", tail_ac, "=", edgeValue, file = fileAndName$file, sep='' )
