@@ -452,7 +452,6 @@ BIMAP.signals_matrix.bihclust <- function( bimap.props, signal.na.subst = -100 )
 #' @param bimap.props properties of BI-MAP model (extracted biclustering)
 #' @param bimap.data input data for BI-MAP method (AP-MS data)
 #' @param protein.info dataframe with extended protein information
-#' @param show.abundance.labels draw labels with estimated abundance for each on-block
 #' @param show.protein_ac show protein accession code at protein axis
 #' @param show.sample_id show sample IDs at samples/msruns axis
 #' @param show.msruns show invididual MS runs at samples axis
@@ -463,22 +462,11 @@ BIMAP.signals_matrix.bihclust <- function( bimap.props, signal.na.subst = -100 )
 #' @param protein_description_col name of protein description in protein.info (NULL turns off description)
 #' @param title title of the plot
 #' @param cell.func function to apply to cell data
-#' @param col color palette for the blocks
-#' @param cells.col color palette for the cells
-#' @param cells.off.alpha alpha level for cell values in off-blocks
-#' @param aspect height to width ratio of matrix
-#' @param bait.col color of the bait proteins
-#' @param grid.col color of blocks grid lines
-#' @param grid.lwd width of blocks grid lines
-#' @param grid.lty line type for blocks grid lines
-#' @param protein.label.width width of labels of protein axis
-#' @param sample.label.width width of labels of samples axis 
 #' @author Alexey Stukalov
 #' @see BIMAP.mcmcwalk.extract_biclustering(), BIMAP.msdata.load()
 #' @export
-BIMAP.plot <- function( bimap.props, bimap.data,
+BIMAP.plot_prepare <- function( bimap.props, bimap.data,
                         proteins.info = NULL,
-                        show.abundance.labels = TRUE, 
                         show.protein_ac = TRUE,
                         show.sample_id = TRUE, show.msruns = FALSE,
                         show.borders = FALSE,
@@ -488,16 +476,9 @@ BIMAP.plot <- function( bimap.props, bimap.data,
                         protein_description_col = NULL,
                         title = NULL,
                         cell.func = function( sc, pc, seqcov, seqlen ) {
-                              return ( log( sc / seqlen ) ) },
-                        col = colorRampPalette( c("blue","cyan","yellow") ),
-                        cells.col = colorRampPalette( c("blue","cyan","yellow") ),
-                        cells.off.alpha = 0.5,
-                        aspect = 1.0,
-                        bait.col = 'red',
-                        grid.col = 'darkgrey', grid.lwd = 2, grid.lty = 1,
-                        protein.label.width = 1.5, sample.label.width = protein.label.width,
-                        plot.samples = FALSE,
-                        extended.result = FALSE )
+                              return ( sc )#return ( log( sc / seqlen ) )
+                        },
+                        plot.samples = FALSE )
 {
     if ( show.measurements && !show.msruns ) {
         warning( "Measurements display only supported when show.msruns = TRUE, turning it on" )
@@ -513,6 +494,7 @@ BIMAP.plot <- function( bimap.props, bimap.data,
     proteins <- data.frame(
         protein_ac = bimap.props$proteins.clusters$protein_ac,
         short_label = bimap.props$proteins.clusters$protein_ac,
+        proteins.cluster = bimap.props$proteins.clusters$proteins.cluster,
         stringsAsFactors = FALSE
     )
     rownames( proteins ) <- proteins$protein_ac
@@ -604,32 +586,6 @@ BIMAP.plot <- function( bimap.props, bimap.data,
     signals.matrix.sd <- signals.matrix.sd[ proteins.clusters$serial, samples.clusters$serial ]
     bimap.matrix <- bimap.matrix[ proteins.clusters$serial, samples.clusters$serial ]
 
-    # plot dendrograms
-    legend = list()
-    if ( !is.null( signals.matrix.bihclust$samples.ordering$elements.dgram ) ) {
-        legend$top <- list( fun = dendrogramGrob.fixed, args = list( signals.matrix.bihclust$samples.ordering$elements.dgram, side='top' ) )
-    }
-    if ( !is.null( signals.matrix.bihclust$proteins.ordering$elements.dgram ) ) {
-        legend$right <- list( fun = dendrogramGrob.fixed, args = list( signals.matrix.bihclust$proteins.ordering$elements.dgram, side='right' ) )
-    }
-
-    axis.fixed <- function (side = c("top", "bottom", "left", "right"), scales, 
-        components, as.table, labels = c("default", "yes", "no"), 
-        ticks = c("default", "yes", "no"), ...) {
-        #panel.axis( side = side, at = components[side]$ticks$at, tck = components[side]$ticks$tck, draw.labels = FALSE, ... )
-        if ( side %in% c('right','top') && !is.logical(components[[side]]) ) {
-            #print( components[[side]] )
-            panel.axis( side = side,
-                        outside = TRUE,
-                        at = components[[side]]$labels$at, 
-                        labels = components[[side]]$labels$labels,
-                        rot = c( 90, 0 ),
-                        draw.labels = TRUE, ticks = FALSE )
-        }
-        axis.default( side, scales, components, as.table, 'no', 
-            ifelse( side == 'top', 'yes', ticks ), ... )
-    }
-
     # prepare cells matrix
     block.matrix <- matrix( NA, nrow = nrow( proteins ), ncol = nrow( samples ) )
     colnames(block.matrix) <- samples$col_id
@@ -664,6 +620,89 @@ BIMAP.plot <- function( bimap.props, bimap.data,
             }
         }
     }
+    blocks <- bimap.props$blocks
+    if ( show.borders ) {
+        blocks <- ddply( blocks, .( samples.cluster ), function( preys.clusters ) {
+            nested.clusters <- unique( preys.clusters$nested.preys.cluster )
+            colors <- rainbow( length( nested.clusters ) )
+            names( colors ) <- as.character( nested.clusters )
+            preys.clusters$nested.color <- colors[ as.character( preys.clusters$nested.preys.cluster ) ]
+            preys.clusters$pos <- sapply( preys.clusters$proteins.cluster, function(serial) {
+                which( proteins.clusters$serial == serial ) }
+            )
+            preys.clusters$nested.cluster.above <- lapply( preys.clusters$pos, function(cur.pos) {
+               subset( preys.clusters, pos == cur.pos - 1 )$nested.preys.cluster }
+            )
+            preys.clusters$nested.cluster.below <- lapply( preys.clusters$pos, function(cur.pos) {
+                subset( preys.clusters, pos == cur.pos + 1 )$nested.preys.cluster }
+            )
+            preys.clusters$border.above <- preys.clusters$nested.preys.cluster != preys.clusters$nested.cluster.above
+            preys.clusters$border.below <- preys.clusters$nested.preys.cluster != preys.clusters$nested.cluster.below
+            preys.clusters$border.above <- ifelse( is.na(preys.clusters$border.above ), TRUE, preys.clusters$border.above )
+            preys.clusters$border.below <- ifelse( is.na(preys.clusters$border.below ), TRUE, preys.clusters$border.below )
+            #print(preys.clusters)
+            return ( preys.clusters )
+        } )
+    }
+    res <- list( block.matrix = block.matrix,
+                 blocks = blocks,
+                 cells.on.matrix = cells.on.matrix,
+                 cells.off.matrix = cells.off.matrix,
+                 proteins = proteins,
+                 samples = samples,
+                 proteins.clusters = proteins.clusters,
+                 samples.clusters = samples.clusters,
+                 signals.matrix = signals.matrix,
+                 signals.matrix.sd = signals.matrix.sd,
+                 signals.matrix.bihclust = signals.matrix.bihclust
+          )
+    if ( plot.samples ) res$signals.subframe <- bimap.props$signals.subframe
+    return ( res )
+}
+
+#' Draws matrix representation of BI-MAP model
+#' @param bimap.props properties of BI-MAP model (extracted biclustering)
+#' @param bimap.data input data for BI-MAP method (AP-MS data)
+#' @param protein.info dataframe with extended protein information
+#' @param show.abundance.labels draw labels with estimated abundance for each on-block
+#' @param show.protein_ac show protein accession code at protein axis
+#' @param show.sample_id show sample IDs at samples/msruns axis
+#' @param show.msruns show invididual MS runs at samples axis
+#' @param show.borders draw borders around blocks (for NestedCluster results display)
+#' @param show.measurements draw individual per-protein AP/MS measurements
+#' @param sample_name_col name of sample name column
+#' @param protein_name_col name of protein name column in protein.info
+#' @param protein_description_col name of protein description in protein.info (NULL turns off description)
+#' @param title title of the plot
+#' @param cell.func function to apply to cell data
+#' @param col color palette for the blocks
+#' @param cells.col color palette for the cells
+#' @param cells.off.alpha alpha level for cell values in off-blocks
+#' @param aspect height to width ratio of matrix
+#' @param bait.col color of the bait proteins
+#' @param grid.col color of blocks grid lines
+#' @param grid.lwd width of blocks grid lines
+#' @param grid.lty line type for blocks grid lines
+#' @param protein.label.width width of labels of protein axis
+#' @param sample.label.width width of labels of samples axis 
+#' @author Alexey Stukalov
+#' @see BIMAP.mcmcwalk.extract_biclustering(), BIMAP.msdata.load()
+#' @export
+BIMAP.plot <- function( bimap.props, bimap.data,
+        show.abundance.labels = TRUE,
+        col = colorRampPalette( c("blue","cyan","yellow") ),
+        cells.col = colorRampPalette( c("blue","cyan","yellow") ),
+        cells.off.alpha = 0.5,
+        aspect = 1.0,
+        bait.col = 'red',
+        grid.col = 'darkgrey', grid.lwd = 2, grid.lty = 1,
+        protein.label.width = 1.5, sample.label.width = protein.label.width,
+        ... )
+{
+    message( 'Preparing for BI-MAP plotting...' )
+    args = list(...) 
+    bimap.plot_internal <- do.call( 'BIMAP.plot_prepare', c( list( bimap.props, bimap.data ), args ) )
+    message( 'Plotting BI-MAP...' )
 
     layout.widths = trellis.par.get('layout.widths')
     layout.widths$left.padding = 0
@@ -676,28 +715,52 @@ BIMAP.plot <- function( bimap.props, bimap.data,
     layout.heights$axis.top = sample.label.width
     layout.heights$axis.bottom = 0.5
 
-    print( 'Creating Plot Object...' )
-    res <- levelplot( t(block.matrix),
+    axis.fixed <- function (side = c("top", "bottom", "left", "right"), scales, 
+        components, as.table, labels = c("default", "yes", "no"), 
+        ticks = c("default", "yes", "no"), ...) {
+        #panel.axis( side = side, at = components[side]$ticks$at, tck = components[side]$ticks$tck, draw.labels = FALSE, ... )
+        if ( side %in% c('right','top') && !is.logical(components[[side]]) ) {
+            #print( components[[side]] )
+            panel.axis( side = side,
+                        outside = TRUE,
+                        at = components[[side]]$labels$at, 
+                        labels = components[[side]]$labels$labels,
+                        rot = c( 90, 0 ),
+                        draw.labels = TRUE, ticks = FALSE )
+        }
+        axis.default( side, scales, components, as.table, 'no', 
+            ifelse( side == 'top', 'yes', ticks ), ... )
+    }
+
+    # plot dendrograms
+    legend = list()
+    if ( !is.null( bimap_plot.internal$signals.matrix.bihclust$samples.ordering$elements.dgram ) ) {
+        legend$top <- list( fun = dendrogramGrob.fixed, args = list( bimap_plot.internal$signals.matrix.bihclust$samples.ordering$elements.dgram, side='top' ) )
+    }
+    if ( !is.null( bimap_plot.internal$signals.matrix.bihclust$proteins.ordering$elements.dgram ) ) {
+        legend$right <- list( fun = dendrogramGrob.fixed, args = list( bimap_plot.internal$signals.matrix.bihclust$proteins.ordering$elements.dgram, side='right' ) )
+    }
+
+    return ( with( bimap_plot.internal, {
+    levelplot( t(block.matrix),
        col.regions = col,
        colorkey = list( space='bottom' ),
        column.values = ( 1:nrow(block.matrix)-0.5 ),
        row.values = 1:ncol(block.matrix)-0.5,
        xlab = 'baits/samples', ylab = 'proteins',
        panel = function(x,y,z) {
-           print('Plotting levelplot...')
+           message('Blocks levelplot...')
            panel.levelplot( x,y,z, subscripts=1:length(x), 
                    col.regions = col, alpha.regions = ifelse( !is.null(cells.on.matrix), 0.3, 1.0 ),
-                   as.table = TRUE,
-                   border = NA,
+                   as.table = TRUE, border = NA,
 #                column.values = 1:nrow(block.matrix)-0.5, 
 #                row.values = 1:ncol(block.matrix )-0.5
            )
            if ( !is.null( cells.on.matrix ) ) {
+               message('On-cells levelplot...')
                panel.levelplot( x,y,t(cells.on.matrix), subscripts=1:length(x), 
                    col.regions = cells.col,
-                   as.table = TRUE,
-                   region = TRUE,
-                   border = NA,
+                   as.table = TRUE, region = TRUE, border = NA,
                    shrink = c( 0.2, 0.9 ),
     #               column.values = 1:nrow(block.matrix)-0.5, 
     #               row.values = 1:ncol(block.matrix )-0.5
@@ -706,12 +769,11 @@ BIMAP.plot <- function( bimap.props, bimap.data,
            if ( !is.null( cells.off.matrix ) &&
                 any( !is.na( cells.off.matrix  ) )
            ){
+               message('Off-cells levelplot...')
                panel.levelplot( x,y,t(cells.off.matrix), subscripts=1:length(x), 
                    col.regions = cells.col,
                    alpha.regions = cells.off.alpha,
-                   as.table = TRUE,
-                   region = TRUE,
-                   border = NA,
+                   as.table = TRUE, region = TRUE, border = NA,
                    shrink = c( 0.2, 0.9 ),
     #                column.values = 1:nrow(block.matrix)-0.5, 
     #                row.values = 1:ncol(block.matrix )-0.5
@@ -720,6 +782,7 @@ BIMAP.plot <- function( bimap.props, bimap.data,
            # borders between biclusters
            #print('refline')
            if ( !is.na( grid.col ) ) {
+               message('Gridlines...')
                panel.refline( h = cumsum(proteins.clusters[1:nrow(proteins.clusters)-1,'size']),
                               v = cumsum(samples.clusters[1:nrow(samples.clusters)-1,'size']),
                              lty = grid.lty, lwd = grid.lwd, col = grid.col )
@@ -728,39 +791,13 @@ BIMAP.plot <- function( bimap.props, bimap.data,
                          nrow = nrow( signals.matrix ), ncol = ncol( signals.matrix ),
                          widths = samples.clusters$size, 
                          heights = rev( proteins.clusters$size ) ) ) )
-           if ( nrow( bimap.props$blocks ) > 0 ) {
-               print('Plotting BI-MAP blocks...')
-               blocks <- bimap.props$blocks
-               if ( show.borders ) {
-                   blocks <- ddply( blocks, .( samples.cluster ), function( preys.clusters ) {
-                       nested.clusters <- unique( preys.clusters$nested.preys.cluster )
-                       colors <- rainbow( length( nested.clusters ) )
-                       names( colors ) <- as.character( nested.clusters )
-                       preys.clusters$nested.color <- colors[ as.character( preys.clusters$nested.preys.cluster ) ]
-                       preys.clusters$pos <- sapply( preys.clusters$proteins.cluster, function(serial) {
-                           which( proteins.clusters$serial == serial ) }
-                       )
-                       preys.clusters$nested.cluster.above <- lapply( preys.clusters$pos, function(cur.pos) {
-                           subset( preys.clusters, pos == cur.pos - 1 )$nested.preys.cluster }
-                       )
-                       preys.clusters$nested.cluster.below <- lapply( preys.clusters$pos, function(cur.pos) {
-                           subset( preys.clusters, pos == cur.pos + 1 )$nested.preys.cluster }
-                       )
-                       preys.clusters$border.above <- preys.clusters$nested.preys.cluster != preys.clusters$nested.cluster.above
-                       preys.clusters$border.below <- preys.clusters$nested.preys.cluster != preys.clusters$nested.cluster.below
-                       preys.clusters$border.above <- ifelse( is.na(preys.clusters$border.above ), TRUE, preys.clusters$border.above )
-                       preys.clusters$border.below <- ifelse( is.na(preys.clusters$border.below ), TRUE, preys.clusters$border.below )
-                       #print(preys.clusters)
-                       return ( preys.clusters )
-                   } )
-               }
-               if ( plot.samples ) signals.subframe <- bimap.props$signals.subframe
-               else signals.subframe <- NULL
+           if ( nrow( blocks ) > 0 ) {
+               message('Plotting BI-MAP blocks...')
                for ( blockIx in 1:nrow(blocks) ) {
                   blk <- blocks[blockIx, ]
                   protClu <- blk$proteins.cluster
                   sampleClu <- blk$samples.cluster
-                  cluster.proteins <- subset( proteins, protein_ac %in% subset( bimap.props$proteins.clusters, proteins.cluster == protClu )$protein_ac )
+                  cluster.proteins <- subset( proteins, proteins.cluster == protClu )
                   cluster.samples <- subset( samples, samples.cluster == sampleClu )
                   pushViewport( viewport( layout.pos.row = which( rev( rownames( signals.matrix ) ) == protClu ), 
                                           layout.pos.col = which( colnames( signals.matrix ) == sampleClu ) ) )
@@ -769,7 +806,8 @@ BIMAP.plot <- function( bimap.props, bimap.data,
                       protClu, sampleClu,
                       show.abundance.label = show.abundance.labels,
                       signals.matrix, signals.matrix.sd,
-                      signals.subframe, bait.col = bait.col,
+                      NULL, # TODO: signals.subframe
+                      bait.col = bait.col,
                       border.col = blk$nested.color,
                       border.above = is.logical(blk$border.above) & blk$border.above,
                       border.below = is.logical(blk$border.below) & blk$border.below
@@ -779,7 +817,7 @@ BIMAP.plot <- function( bimap.props, bimap.data,
           }
           popViewport()
        },
-       legend = legend,
+       #legend = legend,
        #scales = list( x = list( at = seq_len( colnames(signals.matrix) ), 
        #                         labels = colnames(signals.matrix) ) ),
        main = title,
@@ -790,7 +828,7 @@ BIMAP.plot <- function( bimap.props, bimap.data,
        par.settings = list( layout.widths = layout.widths, layout.heights = layout.heights ),
        xscale.components = function( lim, ... )
        {
-           print('Plotting X-axis...')
+           message('Plotting X-axis...')
            res <- xscale.components.default( lim, ...)
            res$num.limit = c(0, nrow(samples) )
            res$top <- levelplot.axis.components( samples, samples.clusters,
@@ -801,7 +839,7 @@ BIMAP.plot <- function( bimap.props, bimap.data,
        },
        yscale.components = function( lim, ... )
        {
-           print('Plotting Y-axis...')
+           message('Plotting Y-axis...')
            res <- yscale.components.default( lim, ...)
            res$num.limit = c(0, nrow(proteins) )
            res$left <- levelplot.axis.components( proteins, proteins.clusters,
@@ -810,13 +848,7 @@ BIMAP.plot <- function( bimap.props, bimap.data,
                             label_col = 'axis_label', small.ticks = 0.5, big.ticks = 5 )
            return ( res )
        } #)
-    )
-    if ( extended.result ) {
-        return ( c( list( plot = res ), signals.matrix.bihclust ) )
-    } else {
-        print( 'Plotting...')
-        print( res )
-    }
+    ) } ) )
 }
 
 #' Extracts BI-MAP model and plots it.

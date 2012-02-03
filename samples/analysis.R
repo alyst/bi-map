@@ -20,6 +20,7 @@ RBIMAP.libpath <- file.path( base_path, "build/release/src/rcpp" )
 source( file.path( bimap_scripts_path, "BIMAP.R" ) )
 source( file.path( bimap_scripts_path, "BIMAP_plot.R" ) )
 source( file.path( bimap_scripts_path, "BIMAP_graphml.R" ) )
+source( file.path( bimap_scripts_path, "BIMAP_xlsx.R" ) )
 
 # load AP-MS data
 bimap.data <- BIMAP.msdata.load( data_path, format = 'CSV' )
@@ -51,6 +52,19 @@ BIMAP.plot( bimap.best_clustering,
     aspect = 3.0
 )
 dev.off()
+
+# export to excel
+bimap.xlsx <- BIMAP.create_xlsx( bimap.best_clustering,
+    bimap.data, title = 'BI-MAP of TIP49',
+    #proteins.info = apms.proteins_info,
+    sample_name_col = 'condition',
+    protein_name_col = 'short_id',
+    protein_description_col = 'description',
+    show.abundance.labels = FALSE,
+    show.msruns = TRUE,
+    show.measurements = TRUE
+)
+saveWorkbook( bimap.xlsx, file.path( results_path, 'tip49_blocks.xlsx' ) )
 
 # construct BI-MAP network representation in GraphML format
 bimap.graphml <- BIMAP.graphML( bimap.best_clustering,
