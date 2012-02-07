@@ -210,6 +210,32 @@ BIMAP.msdata.save <- function( bimap.data,
     }
 }
 
+#' Appends extra information to BI-MAP input data structure
+#' @param bimap.data 
+#' @param protein.info (optional) extra protein information dataframe 
+#' @param sample.info (optional) extra samples information dataframe
+#' @param msrun.info (optional) extra MS runs information dataframe
+#' @author Alexey Stukalov
+BIMAP.msdata.extra_info <- function( bimap.data,
+                                     proteins.info = NULL,
+                                     samples.info = NULL,
+                                     msruns.info = NULL )
+{
+    if ( !is.null( proteins.info ) ) {
+        bimap.data$proteins <- cbind( bimap.data$proteins, proteins.info[ rownames( bimap.data$proteins ),
+                                      setdiff( colnames( proteins.info ), colnames( bimap.data$proteins ) ) ])
+    }
+    if ( !is.null( samples.info ) ) {
+        bimap.data$samples <- cbind( bimap.data$samples, samples.info[ rownames( bimap.data$samples ),
+                                      setdiff( colnames( samples.info ), colnames( bimap.data$samples ) ) ])
+    }
+    if ( !is.null( msruns.info ) ) {
+        bimap.data$msruns <- cbind( bimap.data$msruns, msruns.info[ rownames( bimap.data$msruns ),
+                                      setdiff( colnames( msruns.info ), colnames( bimap.data$msruns ) ) ])
+    }
+    return ( bimap.data )
+}
+
 #' Runs BIMAP method within R session
 #' @param protein_info 
 #' @param sample_info 
