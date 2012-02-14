@@ -261,29 +261,38 @@ BIMAP.graphML.dataframe <- function( bimap.props,
     edges.df <- ddply( bimap.props$blocks, c( 'proteins.cluster', 'samples.cluster' ), function( blk ) {
             # TODO: if directed, there could be a link from inner to outer node
             source_node <- subset( nodes.df, blk$samples.cluster == samples_clusters
-                                            & ( proteins_cluster != blk$proteins.cluster | is.na( proteins_cluster ) )
+                                            #& ( proteins_cluster != blk$proteins.cluster | is.na( proteins_cluster ) )
                                             & !is_partial )
-            target_node <- subset( nodes.df, !grepl( paste(group_union,blk$samples.cluster,group_union,sep=''),
-                                                     paste( group_union, samples_clusters, group_union, sep='') )
-                    & proteins_cluster == blk$proteins.cluster & !is_embedded )
+            target_node <- subset( nodes.df, proteins_cluster == blk$proteins.cluster & !is_embedded )
             if ( nrow( source_node ) == 1 && nrow( target_node ) == 1 ) {
                 ocId <- as.character( blk$proteins.cluster )
                 scId <- as.character( blk$samples.cluster )
                 #print( paste( '[', ocId, ',', blk_samples, ']' ) )
                 #print( bimap.props$signals.mean[ ocId, blk_samples ] )
                 #print( bimap.props$signals.sd[ ocId, blk_samples ] )
-                res <- data.frame( source_id = source_node$node_id, target_id = target_node$node_id,
-                            type = 'bimap_block',
-                            abundance = bimap.props$signals.mean[ ocId, scId ],
-                            abundance_sd = NA,
-                            intensity.scaled = (bimap.props$signals.mean[ ocId, scId ] - signal.min) / (signal.max - signal.min),
-                            stringsAsFactors = FALSE )
-                res$hex.intensity = format( as.hexmode( min.intensity + as.integer( (255-min.intensity) * res$intensity.scaled^hex.intensity.power ) ),
-                                            width=2, upper.case=TRUE)
-                if ( !is.null( bimap.props$signals.sd ) ) {
-                    res$abundance_sd = bimap.props$signals.sd[ ocId, scId ]
+                if ( ( !any( source_node$proteins_cluster == target_node$proteins_cluster, na.rm = TRUE )
+                     || any( source_node$is_partial & !target_node$is_partial, na.rm = TRUE ) )
+                  &&  !any( grepl( paste( group_union, blk$samples.cluster, group_union, sep=''),
+                                   paste( group_union, target_node$samples_clusters, group_union, sep='' ),
+                                          fixed = TRUE ) )
+                ){
+                    res <- data.frame( source_id = source_node$node_id, target_id = target_node$node_id,
+                                type = 'bimap_block',
+                                abundance = bimap.props$signals.mean[ ocId, scId ],
+                                abundance_sd = NA,
+                                intensity.scaled = (bimap.props$signals.mean[ ocId, scId ] - signal.min) / (signal.max - signal.min),
+                                stringsAsFactors = FALSE )
+                    res$hex.intensity = format( as.hexmode( min.intensity + as.integer( (255-min.intensity) * res$intensity.scaled^hex.intensity.power ) ),
+                                                width=2, upper.case=TRUE)
+                    if ( !is.null( bimap.props$signals.sd ) ) {
+                        res$abundance_sd = bimap.props$signals.sd[ ocId, scId ]
+                    }
+                    return( res )
+                } else {
+                    # don't create edge from the node to itself
+                    data.frame( source_id = list(), target_id = list(), type = list(),
+                                stringsAsFactors = FALSE )
                 }
-                return( res )
             } else {
                 if ( nrow( source_node ) > 1 ) {
                     warning( "Samples cluster #", blk$samples.cluster, ": ", nrow( source_node ), " source nodes" )
