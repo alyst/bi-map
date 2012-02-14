@@ -3,6 +3,19 @@ require( gplots )
 
 source( file.path( bimap_scripts_path, "BIMAP_plot.R" ) )
 
+#' Generate Excel sheet for biclustering
+#' @param bimap.props BI-MAP biclustering
+#' @param bimap.data input data for BI-MAP
+#' @param blocks.pal palette to use for on-blocks
+#' @param cells.pal palette to use for non-empty cells in off-blocks
+#' @param grid.col grid color
+#' @param bait.border.col grid color for detected baits
+#' @param col.width width of columns
+#' @param ... parameters for BIMAP.prepare_plot() 
+#' @returnType 
+#' @return XLSX object
+#' @author Alexey Stukalov
+#' @see BIMAP.plot_prepare(), BIMAP.plot()
 BIMAP.create_xlsx <- function( 
     bimap.props, bimap.data,
     blocks.pal = colorRamp( c("blue","cyan","yellow") ),
