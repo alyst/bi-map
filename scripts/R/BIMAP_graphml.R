@@ -8,17 +8,28 @@ require( plyr )
 source( file.path( bimap_scripts_path, "graphml_support.R" ) )
 
 BIMAP.graphML.dataframe <- function( bimap.props,
-    protein.info, sample.info, msrun.info,
-    protein_label_col = 'protein_ac',
-    protein_export_cols = c(),
-    sample_label_col = NULL,
+    bimap.data,
+    protein_export_cols = c( name = 'protein_ac' ),
+    sample_export_cols = c( name = 'sample' ),
     proteins_cluster_label_col = 'proteins.cluster',
     proteins_cluster_export_cols = c( 'avg.pairs.freq' ),
     min.intensity = 5, hex.intensity.power = 5
 ){
+    if ( is.null( names( protein_export_cols ) ) ) {
+        names( protein_export_cols ) <- protein_export_cols
+    }
+    protein_label_col <- ifelse( any( 'name' %in% names( protein_export_cols ) ),
+                                 protein_export_cols[[ 'name' ]], 'protein_ac' )
+    if ( is.null( names( sample_export_cols ) ) ) {
+        names( sample_export_cols ) <- sample_export_cols
+    }
+    message( 'Labeling protein nodes using: ', protein_label_col )
+    sample_label_col <- ifelse( any( 'name' %in% names( sample_export_cols ) ),
+                                 sample_export_cols[[ 'name' ]], 'sample' )
+    message( 'Labeling sample nodes using: ', sample_label_col )
+
     # add to sample clusters dataframe
-    rownames( sample.info ) <- sample.info$sample
-    bimap.props$samples.clusters$bait_ac <- sample.info[ bimap.props$samples.clusters$sample, 'bait_ac' ]
+    bimap.props$samples.clusters$bait_ac <- bimap.data$samples[ bimap.props$samples.clusters$sample, 'bait_ac' ]
     bimap.props$signal.max <- max( bimap.props$signals.mean, na.rm = TRUE )
     bimap.props$signal.min <- min( bimap.props$signals.mean, na.rm = TRUE )
 
@@ -34,15 +45,15 @@ BIMAP.graphML.dataframe <- function( bimap.props,
         bimap.props$proteins.clusters <- rbind( bimap.props$proteins.clusters,
                                                 fake_protein_clusters )
 		# fake protein information for baits that are not proteins
-        bait.info.template <- protein.info[ 1, , drop=FALSE ]
-        bait.protein.info <- do.call( 'rbind', lapply( alien.baits, function( bait_ac ) {
-            bait.info <- bait.info.template
-            bait.info[,intersect(colnames(protein.info),proteins_cluster_export_cols)] <- NA
-            bait.info[,protein_label_col] <- bait_ac
-            return ( bait.info )
+        bait.proteins.template <- bimap.data$proteins[ 1, , drop=FALSE ]
+        bait.proteins<- do.call( 'rbind', lapply( alien.baits, function( bait_ac ) {
+            res <- bait.proteins.template
+            res[,intersect(colnames(bimap.data$proteins),proteins_cluster_export_cols)] <- NA
+            res[,protein_label_col] <- bait_ac
+            return ( res )
         } ) )
-        rownames( bait.protein.info ) <- alien.baits
-        protein.info <- rbind( protein.info, bait.protein.info )
+        rownames( bait.proteins ) <- alien.baits
+        bimap.data$proteins <- rbind( bimap.data$proteins, bait.proteins )
     }
 
     # merge samples and proteins clusters via bait-prey
@@ -187,11 +198,11 @@ BIMAP.graphML.dataframe <- function( bimap.props,
     # add protein information
     message( "Adding protein information...")
     protein_node_mask <- nodes.df$node_type %in% c( 'bait', 'prey' ) &
-                         nodes.df$node_id %in% rownames( protein.info )
+                         nodes.df$node_id %in% rownames( bimap.data$proteins )
     nodes.df$short_id <- NA
     if ( !is.null( protein_label_col ) ) {
         nodes.df[ protein_node_mask, 'short_id' ] <-
-            as.character( protein.info[ nodes.df[ protein_node_mask, 'node_id' ], protein_label_col ] )
+            as.character( bimap.data$proteins[ nodes.df[ protein_node_mask, 'node_id' ], protein_label_col ] )
     }
     # export protein columns
     exported_cols <- names( protein_export_cols )
@@ -201,7 +212,7 @@ BIMAP.graphML.dataframe <- function( bimap.props,
         external_col <- exported_cols[[ col_ix ]]
         internal_col <- protein_export_cols[[ col_ix ]]
         nodes.df[ protein_node_mask, external_col ] <-
-            protein.info[ nodes.df[ protein_node_mask, 'node_id' ], internal_col ]
+            bimap.data$proteins[ nodes.df[ protein_node_mask, 'node_id' ], internal_col ]
     }
     # add proteins cluster information
     proteins_clu_node_mask <- nodes.df$node_type == 'proteins_cluster'
@@ -220,27 +231,27 @@ BIMAP.graphML.dataframe <- function( bimap.props,
     nodes.df[ proteins_clu_node_mask, 'experiment_description' ] <- paste( 'Proteins cluster #',
               nodes.df[ proteins_clu_node_mask, 'proteins_cluster' ], sep = '' )
     # add samples cluster information
-    samples_clu_node_mask <- nodes.df$node_type %in% c( 'baits_cluster', 'samples_cluster' ) & !is.na( nodes.df$samples_clusters )
-    nodes.df[ samples_clu_node_mask, 'experiment_description' ] <- sapply( nodes.df[ samples_clu_node_mask, 'samples_clusters' ],
-        function( samples_clusters_concat )
-        {
-            samples_clusters <- unlist( strsplit( samples_clusters_concat, group_union, fixed = TRUE ) )
-            samples_stats <- table( subset( bimap.props$samples.clusters, samples.cluster %in% samples_clusters )$sample )
-            # samples in the intersection of all current clusters
-            intersect_samples <- sort(names( samples_stats )[samples_stats == length( samples_clusters )])
-            if ( !is.null(sample_label_col) ) {
-                intersect_samples <- sort( unique( sample.info[intersect_samples, sample_label_col] ) )
-            }
-            return ( paste( intersect_samples, collapse = '\n' ) )
-        } )
-    nodes.df[ samples_clu_node_mask, 'short_id' ] <- nodes.df[ samples_clu_node_mask, 'experiment_description' ]
-    samples_bait_node_mask <- nodes.df$node_type == 'bait'
-    nodes.df[ samples_bait_node_mask, 'experiment_description' ] <- sapply( nodes.df[ samples_bait_node_mask, 'node_id' ], function( cur_bait_ac ) {
-            samples <- subset( sample.info, bait_ac == cur_bait_ac )
-            sample_labels <- sort( unique( samples[,ifelse( is.null(sample_label_col), 'sample', sample_label_col ) ] ) )
-            return ( paste( sample_labels, collapse = '\n' ) )
-        } )
-    #print( nodes.df )
+    if ( is.character( sample_label_col ) ) {
+        samples_clu_node_mask <- nodes.df$node_type %in% c( 'baits_cluster', 'samples_cluster' ) & !is.na( nodes.df$samples_clusters )
+        nodes.df[ samples_clu_node_mask, 'experiment_description' ] <- sapply( nodes.df[ samples_clu_node_mask, 'samples_clusters' ],
+            function( samples_clusters_concat )
+            {
+                samples_clusters <- unlist( strsplit( samples_clusters_concat, group_union, fixed = TRUE ) )
+                samples_stats <- table( subset( bimap.props$samples.clusters, samples.cluster %in% samples_clusters )$sample )
+                # samples in the intersection of all current clusters
+                intersect_samples <- names( samples_stats )[samples_stats == length( samples_clusters )]
+                intersect_samples <- sort( unique( bimap.data$samples[ intersect_samples, sample_label_col] ) )
+                return ( paste( intersect_samples, collapse = '\n' ) )
+            } )
+        nodes.df[ samples_clu_node_mask, 'short_id' ] <- nodes.df[ samples_clu_node_mask, 'experiment_description' ]
+        samples_bait_node_mask <- nodes.df$node_type == 'bait'
+        nodes.df[ samples_bait_node_mask, 'experiment_description' ] <- sapply( nodes.df[ samples_bait_node_mask, 'node_id' ], function( cur_bait_ac ) {
+                samples <- subset( bimap.data$samples, bait_ac == cur_bait_ac )
+                sample_labels <- sort( unique( samples[,sample_label_col] ) )
+                return ( paste( sample_labels, collapse = '\n' ) )
+            } )
+        #print( nodes.df[ samples_clu_node_mask,] )
+    }
 
     # add edges for each BIMAP block
     message( 'Generating edges...' )
@@ -314,30 +325,29 @@ BIMAP.graphML.dataframe <- function( bimap.props,
 }
 
 BIMAP.extract_graphML.dataframe <- function( bimap.walk, bimapId,
-    protein.info, sample.info, msrun.info,
+    bimap.data,
     onblock.threshold = 0.6, ...
 ){
     bimap.props <- BIMAP.extract_clustering( bimap.walk, bimapId, TRUE, 
         onblock.threshold = onblock.threshold )
-    BIMAP.graphML.dataframe( bimap.props, protein.info, sample.info, msrun.info, ... )
+    BIMAP.graphML.dataframe( bimap.props, bimap.data, ... )
 }
 
-BIMAP.graphML <- function( bimap.props,
-    protein.info, sample.info, msrun.info, ...
+BIMAP.graphML <- function( bimap.props, bimap.data, ...
 ){
-    dfs <- BIMAP.graphML.dataframe( bimap.props, protein.info, sample.info, msrun.info, ... )
+    dfs <- BIMAP.graphML.dataframe( bimap.props, bimap.data, ... )
     return ( generateGraphML( dfs$nodes, dfs$edges,
             node_col = 'node_id', parent_col = 'parent_node_id',
             source_col = 'source_id', target_col = 'target_id',
             directed = FALSE ) )
 }
 
-BIMAP.extract_graphML <- function( bimap.walk, bimapId, 
-    protein.info, sample.info, msrun.info,
+BIMAP.extract_graphML <- function( bimap.walk, bimapId,
+    bimap.data,
     onblock.threshold = 0.5,
     ...
 ){
-    dfs <- BIMAP.extract_graphML.dataframe( bimap.walk, bimapId, protein.info, sample.info, msrun.info, ... )
+    dfs <- BIMAP.extract_graphML.dataframe( bimap.walk, bimapId, bimap.data, ... )
     return ( generateGraphML( dfs$nodes, dfs$edges,
                     node_col = 'node_id', parent_col = 'parent_node_id',
                     source_col = 'source_id', target_col = 'target_id',

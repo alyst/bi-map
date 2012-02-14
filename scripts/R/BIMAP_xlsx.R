@@ -10,24 +10,25 @@ BIMAP.create_xlsx <- function(
     grid.col = 'black',
     bait.border.col = 'red',
     col.width = 5,
-    protein_extra_cols = c(),
-    sample_extra_cols = c(),
     ...
 ){
     message( 'Preparing for BI-MAP plotting...' )
     args = list(...)
-    args$protein_extra_cols = protein_extra_cols
     bimap.plot_internal <- do.call( 'BIMAP.plot_prepare', c( list( bimap.props, bimap.data ), args ) )
 
     message( 'Generating BI-MAP XLSX...' )
     bimap.workbook <- createWorkbook( type = 'xlsx' )
     wsh <- createSheet( bimap.workbook, title )
     with( bimap.plot_internal, {
-        prot_cols <- intersect( unique( c( 'short_label', 'protein_ac', 'description', protein_extra_cols ) ),
-                                colnames(proteins) )
+        #print( head( proteins ) )
+        #print( head( samples ) )
+        prot_cols <- c( 'protein_ac', 'name', 'description' )
+        prot_cols <- c( intersect( prot_cols, colnames( proteins ) ),
+                        setdiff( colnames( proteins ), c( prot_cols, 'proteins.cluster', 'short_label' ) ) )
         message( 'Protein info to output: ', paste( prot_cols, ' ' ) )
-        samp_cols <- intersect( unique( c( 'bait_short_label', 'bait_ac', 'sample', 'msrun', sample_extra_cols ) ),
-                                colnames(samples) )
+        samp_cols <- c( 'bait_short_label', 'bait_ac', 'sample', 'msrun' )
+        samp_cols <- c( intersect( samp_cols, colnames( samples ) ),
+                        setdiff( colnames( samples ), c( samp_cols, 'samples.cluster', 'short_label', 'col_id' ) ) )
         message( 'Samples info to output: ', paste( samp_cols, ' ' ) )
         row_offset <- length( samp_cols )
         col_offset <- length( prot_cols )

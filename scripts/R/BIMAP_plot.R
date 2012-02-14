@@ -451,26 +451,22 @@ BIMAP.signals_matrix.bihclust <- function( bimap.props, signal.na.subst = -100 )
 #' Draws matrix representation of BI-MAP model
 #' @param bimap.props properties of BI-MAP model (extracted biclustering)
 #' @param bimap.data input data for BI-MAP method (AP-MS data)
-#' @param protein.info dataframe with extended protein information
 #' @param show.msruns show invididual MS runs at samples axis
 #' @param show.borders draw borders around blocks (for NestedCluster results display)
 #' @param show.measurements draw individual per-protein AP/MS measurements
-#' @param sample_name_col name of sample name column
-#' @param protein_name_col name of protein name column in protein.info
-#' @param protein_extra_cols extra columns from protein.info to show
+#' @param sample_export_cols named list of sample columns to show
+#' @param protein_export_cols named list of protein columns to show
 #' @param title title of the plot
 #' @param cell.func function to apply to cell data
 #' @author Alexey Stukalov
 #' @see BIMAP.mcmcwalk.extract_biclustering(), BIMAP.msdata.load()
 #' @export
 BIMAP.plot_prepare <- function( bimap.props, bimap.data,
-                        proteins.info = NULL,
                         show.msruns = FALSE,
                         show.borders = FALSE,
                         show.measurements = FALSE,
-                        sample_name_col = NULL,
-                        protein_name_col = 'short_id',
-                        protein_extra_cols = NULL,
+                        sample_export_cols = NULL,
+                        protein_export_cols = NULL,
                         title = NULL,
                         cell.func = function( sc, pc, seqcov, seqlen ) {
                               return ( sc )#return ( log( sc / seqlen ) )
@@ -481,6 +477,8 @@ BIMAP.plot_prepare <- function( bimap.props, bimap.data,
         warning( "Measurements display only supported when show.msruns = TRUE, turning it on" )
         show.msruns <- TRUE
     }
+
+    message( 'Preparing proteins...' )
     proteins.clusters <- ddply( bimap.props$proteins.clusters, c( 'proteins.cluster' ), function( cluster ) {
             data.frame( size = nrow( cluster ),
                         stringsAsFactors = FALSE ) }
@@ -495,21 +493,22 @@ BIMAP.plot_prepare <- function( bimap.props, bimap.data,
     )
     proteins$short_label <- proteins$protein_ac
     rownames( proteins ) <- proteins$protein_ac
-    if ( !is.null(proteins.info) ) {
-        if ( protein_name_col %in% colnames( proteins.info ) ) {
-            proteins$protein_name <- proteins.info[ proteins$protein_ac, protein_name_col ]
-            proteins$short_label <- proteins$protein_name
+    if ( !is.null(protein_export_cols) ) {
+        if ( is.null( names( protein_export_cols ) ) ) names( protein_export_cols ) <- protein_export_cols
+        protein_export_cols <- protein_export_cols[ protein_export_cols %in% colnames( bimap.data$proteins )
+                                                  & !(names( protein_export_cols ) %in% colnames( proteins )) ]
+        if ( length( protein_export_cols ) > 0 ) {
+            proteins[, names( protein_export_cols ) ] <- bimap.data$proteins[ proteins$protein_ac, protein_export_cols ]
         }
-        protein_extra_cols <- setdiff( intersect( colnames( proteins.info ),
-                                       protein_extra_cols ), union( colnames( proteins ), protein_name_col ) )
-        if ( length( protein_extra_cols ) > 0 ) {
-            proteins[, protein_extra_cols ] <- proteins.info[ proteins$protein_ac, protein_extra_cols ]
-        }
+    }
+    if ( 'name' %in% colnames( proteins ) ) {
+        proteins$short_label <- proteins$name
     }
     bimap.props$proteins.clusters <- within( bimap.props$proteins.clusters, {
         protein_label <- proteins[ bimap.props$proteins.clusters$protein_ac, 'short_label' ]
     } )
 
+    message( 'Preparing samples/msruns...' )
     if ( show.msruns ) {
         # join sample clustering with msruns information 
         bimap.props$samples.clusters <- merge( bimap.props$samples.clusters, bimap.data$msruns, by = c( 'sample' ),
@@ -535,8 +534,26 @@ BIMAP.plot_prepare <- function( bimap.props, bimap.data,
         samples$col_id <- samples$sample
     }
     rownames( samples ) <- samples$col_id
-    if ( !is.null( sample_name_col ) ) {
-        samples$sample_name <- bimap.data$samples[ bimap.props$samples.clusters$sample, sample_name_col ]
+    if ( !is.null(sample_export_cols) ) {
+        if ( is.null( names( sample_export_cols ) ) ) names( sample_export_cols ) <- sample_export_cols
+        msrun_export_cols <- sample_export_cols
+        sample_export_cols <- intersect( colnames( bimap.data$samples ),
+                                         sample_export_cols[ !names( sample_export_cols ) %in% colnames( samples ) ] )
+        sample_export_cols <- sample_export_cols[ sample_export_cols %in% colnames( bimap.data$samples )
+                                                & !(names( sample_export_cols ) %in% colnames( samples ) ) ]
+        if ( length( sample_export_cols ) > 0 ) {
+            samples[, names( sample_export_cols ) ] <- bimap.data$samples[ samples$sample, sample_export_cols ]
+        }
+        if ( show.msruns ) {
+            msrun_export_cols <- msrun_export_cols[ msrun_export_cols %in% colnames( bimap.data$msruns )
+                                                  & !(names( msrun_export_cols ) %in% colnames( samples ) ) ]
+            if ( length( msrun_export_cols ) > 0 ) {
+                samples[, names( msrun_export_cols ) ] <- bimap.data$msruns[ samples$msrun, msrun_export_cols ]
+            }
+        }
+    }
+    if ( 'name' %in% colnames( samples ) ) {
+        samples$short_label <- samples$name
     }
     samples$bait_short_label <- proteins[ samples$bait_ac, 'short_label' ]
 
@@ -645,18 +662,10 @@ BIMAP.plot_prepare <- function( bimap.props, bimap.data,
 #' Draws matrix representation of BI-MAP model
 #' @param bimap.props properties of BI-MAP model (extracted biclustering)
 #' @param bimap.data input data for BI-MAP method (AP-MS data)
-#' @param protein.info dataframe with extended protein information
 #' @param show.abundance.labels draw labels with estimated abundance for each on-block
 #' @param show.protein_ac show protein accession code at protein axis
 #' @param show.sample_id show sample IDs at samples/msruns axis
-#' @param show.msruns show invididual MS runs at samples axis
-#' @param show.borders draw borders around blocks (for NestedCluster results display)
-#' @param show.measurements draw individual per-protein AP/MS measurements
-#' @param sample_name_col name of sample name column
-#' @param protein_name_col name of protein name column in protein.info
-#' @param protein_description_col name of protein description in protein.info (NULL turns off description)
 #' @param title title of the plot
-#' @param cell.func function to apply to cell data
 #' @param col color palette for the blocks
 #' @param cells.col color palette for the cells
 #' @param cells.off.alpha alpha level for cell values in off-blocks
@@ -667,8 +676,9 @@ BIMAP.plot_prepare <- function( bimap.props, bimap.data,
 #' @param grid.lty line type for blocks grid lines
 #' @param protein.label.width width of labels of protein axis
 #' @param sample.label.width width of labels of samples axis 
+#' @param ... parameters for BIMAP.plot_prepare() 
 #' @author Alexey Stukalov
-#' @see BIMAP.mcmcwalk.extract_biclustering(), BIMAP.msdata.load()
+#' @see BIMAP.mcmcwalk.extract_biclustering(), BIMAP.msdata.load(), BIMAP.plot_prepare(), BIMAP.create_xlsx()
 #' @export
 BIMAP.plot <- function( bimap.props, bimap.data,
         show.abundance.labels = TRUE,
@@ -681,13 +691,10 @@ BIMAP.plot <- function( bimap.props, bimap.data,
         bait.col = 'red',
         grid.col = 'darkgrey', grid.lwd = 2, grid.lty = 1,
         protein.label.width = 1.5, sample.label.width = protein.label.width,
-        protein_description_col = NULL,
-        protein_extra_cols = c(),
         ... )
 {
     message( 'Preparing for BI-MAP plotting...' )
     args = list(...)
-    args$protein_extra_cols = unique( protein_extra_cols, protein_description_col )
     bimap.plot_internal <- do.call( 'BIMAP.plot_prepare', c( list( bimap.props, bimap.data ), args ) )
 
     message( 'Plotting BI-MAP...' )
@@ -728,28 +735,32 @@ BIMAP.plot <- function( bimap.props, bimap.data,
                 "(", proteins$protein_ac, ")", sep='' )
     }
     proteins$samples_axis_label <- proteins$axis_label
-    if ( protein_description_col %in% colnames(proteins) ) {
+    if ( 'description' %in% colnames(proteins) ) {
         proteins$axis_label <- paste( proteins$axis_label,
-                proteins[,protein_description_col], sep=' | ' )
+                proteins$description, sep=' | ' )
     }
 
     # compose sample labels
-    samples$axis_label <- samples$bait_short_label
-    if ( show.protein_ac ) {
-        samples$axis_label <- paste( samples$axis_label, "(", samples$bait_ac, ")", sep='' )
+    if ( 'bait_short_label' %in% colnames( samples ) ) {
+        samples$axis_label <- samples$bait_short_label
+        if ( show.protein_ac ) {
+            samples$axis_label <- paste( samples$axis_label, "(", samples$bait_ac, ")", sep='' )
+        }
+        # use bait_ac for baits not in proteins info (also if they are not protein at all)
+        samples[ is.na( samples$axis_label ), 'axis_label' ] <- samples[ is.na( samples$axis_label ), 'bait_ac' ]
+    } else {
+        samples$axis_label <- samples$bait_ac
     }
-    # use bait_ac for baits not in proteins info (also if they are not protein at all)
-    samples[ is.na( samples$axis_label ), 'axis_label' ] <- samples[ is.na( samples$axis_label ), 'bait_ac' ]
-    if ( show.sample_id ) {
-        samples$axis_label <- paste( samples$axis_label, ':', samples$short_label )
-    }
-    if ( 'sample_name' %in% colnames( samples ) ) {
+    if ( 'name' %in% colnames( samples ) ) {
         samples$short_label <- samples$sample_name
         if ( 'msrun' %in% colnames( samples ) ) {
             samples$short_label <- paste( samples$short_label, samples$msrun )
         }
     } else {
         samples$short_label <- samples$col_id
+    }
+    if ( show.sample_id ) {
+        samples$axis_label <- paste( samples$axis_label, ':', samples$short_label )
     }
 
     # plot dendrograms

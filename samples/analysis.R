@@ -25,6 +25,15 @@ source( file.path( bimap_scripts_path, "BIMAP_xlsx.R" ) )
 # load AP-MS data
 bimap.data <- BIMAP.msdata.load( data_path, format = 'CSV' )
 
+# add protein description and Ensemble Gene names to proteins info
+proteins_info.ensembl <- read.table( file.path( data_path, 'ensembl_info.csv' ),
+                                    sep = '\t', header = TRUE, stringsAsFactors = FALSE )
+rownames( proteins_info.ensembl ) <- proteins_info.ensembl$gi_number
+
+setdiff( bimap.data$proteins$protein_ac, proteins_info.ensembl$gi_number )
+
+bimap.data.extra <- BIMAP.msdata.extra_info( bimap.data, proteins_info.ensembl )
+
 # load calculated BI-MAP MCMC walk
 # (run samples/run_bimap_tip49.sh to get run)
 bimap.walk <- BIMAP.mcmcwalk.load( file.path( results_path, 'tip49_walk.xml.bz2' ),
@@ -42,10 +51,6 @@ pdf( file= file.path( results_path, 'tip49_blocks.pdf' ),
      title="TIP49a/b", width=34, height=60 )
 BIMAP.plot( bimap.best_clustering,
     bimap.data,
-    #proteins.info = apms.proteins_info,
-    sample_name_col = 'sample',
-    protein_name_col = 'protein_ac',
-    protein_description_col = 'description',
     show.abundance.labels = FALSE,
     show.protein_ac = TRUE, show.sample_id = TRUE, show.msruns = TRUE,
     show.measurements = TRUE,
@@ -55,19 +60,14 @@ dev.off()
 
 # export to excel
 bimap.xlsx <- BIMAP.create_xlsx( bimap.best_clustering,
-    bimap.data, title = 'BI-MAP of TIP49',
-    #proteins.info = apms.proteins_info,
-    sample_name_col = 'sample',
-    protein_name_col = 'protein_ac',
-    protein_extra_cols = 'seqlength',
+    bimap.data,
     show.msruns = TRUE,
     show.measurements = TRUE
 )
 saveWorkbook( bimap.xlsx, file.path( results_path, 'tip49_blocks.xlsx' ) )
 
 # construct BI-MAP network representation in GraphML format
-bimap.graphml <- BIMAP.graphML( bimap.best_clustering,
-    bimap.data$proteins, bimap.data$samples, bimap.data$msruns )
+bimap.graphml <- BIMAP.graphML( bimap.best_clustering, bimap.data )
 bimap.unstyled.graphml.filename <- file.path( results_path, 'tip49_bimap.graphml' )
 saveXML( bimap.graphml, file = bimap.unstyled.graphml.filename )
 # apply yEd-compatible visual scheme to the graph
