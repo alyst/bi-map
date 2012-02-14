@@ -48,26 +48,32 @@ bimap.best_clustering <- BIMAP.mcmcwalk.extract_biclustering( bimap.walk, bimap.
 
 # render the matrix view of BI-MAP model to PDF file
 pdf( file= file.path( results_path, 'tip49_blocks.pdf' ),
-     title="TIP49a/b", width=34, height=60 )
+     title="TIP49a/b", width=20, height=40 )
 BIMAP.plot( bimap.best_clustering,
-    bimap.data,
+    bimap.data.extra,
+    protein_export_cols = c( name = 'external_gene_id', description = 'description', length = 'seqlength', refseq_ac = 'refseq_id' ),
     show.abundance.labels = FALSE,
     show.protein_ac = TRUE, show.sample_id = TRUE, show.msruns = TRUE,
     show.measurements = TRUE,
-    aspect = 3.0
+    aspect = 3.0, sample.label.width = 2.0, protein.label.width = 3
 )
 dev.off()
 
 # export to excel
 bimap.xlsx <- BIMAP.create_xlsx( bimap.best_clustering,
-    bimap.data,
+    bimap.data.extra,
+    protein_export_cols = c( name = 'external_gene_id', description = 'description', length = 'seqlength', refseq_ac = 'refseq_id' ),
     show.msruns = TRUE,
     show.measurements = TRUE
 )
 saveWorkbook( bimap.xlsx, file.path( results_path, 'tip49_blocks.xlsx' ) )
 
 # construct BI-MAP network representation in GraphML format
-bimap.graphml <- BIMAP.graphML( bimap.best_clustering, bimap.data )
+bimap.graphml <- BIMAP.graphML( bimap.best_clustering, bimap.data.extra,
+                                protein_export_cols = c( name = 'external_gene_id',
+                                                         description = 'description',
+                                                         length = 'seqlength', refseq_ac = 'refseq_id' ),
+                                sample_export_cols = c( name = NA ) )
 bimap.unstyled.graphml.filename <- file.path( results_path, 'tip49_bimap.graphml' )
 saveXML( bimap.graphml, file = bimap.unstyled.graphml.filename )
 # apply yEd-compatible visual scheme to the graph
