@@ -1,0 +1,24 @@
+BI-MAP Changelog
+
+ Changes in BI-MAP 1.1.0
+=========================
+
+  * Update the statistical model for off-blocks to take into account
+    the distribution of spectra with the cells of the off-blocks
+    (noise hypothesis states that misidentified proteins are randomly selected
+    from the "protein universe").
+  * Separately store and output components of Log-Likelihood and Prior Probability
+    (quantitative, topological, object-probes conformance etc).
+  * Enhance model-to-dataset fitting by automatically adjusting the weights
+    of likelihood components such that contribution of each component to
+    the random walk (measured as a variance of log-likelihood) is proportional
+    to the user-defined weights.
+  * Detecting clusters that could have been missed by random walk sampling,
+    but nevertheless represent stable structures that are frequently contained
+    in a sampled partitions as subsets of their parts.
+  * Export BI-MAP biclustering to Excel (requires xslx R package).
+
+ Changes in BI-MAP 1.0.0
+=========================
+
+  * initial release
