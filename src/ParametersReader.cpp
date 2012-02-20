@@ -3,6 +3,8 @@
 
 #include "ParametersReader.h"
 
+namespace cemm { namespace bimap {
+
 namespace po = boost::program_options;
 
 bool BIMAPParamsRead(
@@ -318,3 +320,4 @@ bool BIMAPParamsRead(
     return ( true );
 }
 
+} }

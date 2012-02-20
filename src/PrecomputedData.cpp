@@ -1,13 +1,15 @@
-#include "PrecomputedData.h"
+#include "cemm/bimap/PrecomputedData.h"
 
 #include <ostream>
 #include <boost/format.hpp>
 #include <gsl/gsl_min.h>
 
-#include "dynamic_bitset_utils.h"
+#include <cemm/containers/dynamic_bitset_foreach.h>
 
-ENABLE_STATIC_TRACKING( PrecomputedDataParams )
-ENABLE_STATIC_TRACKING( PrecomputedData )
+ENABLE_STATIC_TRACKING( cemm::bimap::PrecomputedDataParams )
+ENABLE_STATIC_TRACKING( cemm::bimap::PrecomputedData )
+
+namespace cemm { namespace bimap {
 
 PrecomputedDataParams::PrecomputedDataParams()
 : objectFreqThreshold( 0.65 )
@@ -151,3 +153,5 @@ PrecomputedData::dist_to_probe_t PrecomputedData::nearestExternalProbeHitsMatch(
     BOOST_ASSERT( !is_unset( res.second ) );
     return ( res );
 }
+
+} }

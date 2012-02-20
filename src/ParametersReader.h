@@ -1,10 +1,12 @@
 #pragma once
 
-#include "BasicTypedefs.h"
+#include "cemm/bimap/BasicTypedefs.h"
 #include <string>
 
-#include "BIMAPSampler.h"
-#include "OPADataImportCSV.h"
+#include "cemm/bimap/BIMAPSampler.h"
+#include "cemm/bimap/OPADataImportCSV.h"
+
+namespace cemm { namespace bimap {
 
 bool BIMAPParamsRead(
     int argc, char* argv[],
@@ -18,3 +20,4 @@ bool BIMAPParamsRead(
     BIMAPIOParams&                  ioParams
 );
 
+} }

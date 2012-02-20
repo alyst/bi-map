@@ -8,8 +8,10 @@
 #include <boost/archive/xml_iarchive.hpp>
 #include <boost/filesystem.hpp>
 
-#include <OPAData.h>
+#include <cemm/bimap/OPAData.h>
 #include "OPADataTest.h"
+
+namespace cemm { namespace test {
 
 OPAData generateTestOPAData()
 {
@@ -483,3 +485,5 @@ protein 1-1 1-2 1-3 1-4   2-1   2-2   2-3   2-4 3-1 3-2 3-3 3-4   4-1   4-2   4-
         saveTestOPAData( data, "osadata_4x4_triag_lower.xml" );
     }
 }
+
+} }

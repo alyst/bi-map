@@ -1,12 +1,17 @@
-#include "ObjectsPartition.h"
-#include "ProbesPartition.h"
-#include "mcmc/PartitionCrossover.h"
+#include "cemm/bimap/ChessboardBiclusteringCrossover.h"
 
-#include "ChessboardBiclusteringCrossover.h"
+#include <cemm/eesampler/PartitionCrossover.h>
+
+#include "cemm/bimap/ObjectsPartition.h"
+#include "cemm/bimap/ProbesPartition.h"
 
 #define OBJ_XOVER_RATE 0.7
 #define SPLIT_XOVER_RATE 0.5
 #define XOVER_CLUSTER_SAMPLES 5
+
+namespace cemm { namespace bimap {
+
+using namespace cemm::eesampler;
 
 ChessboardBiclusteringCrossoverGenerator::ChessboardBiclusteringCrossoverGenerator(
     const gsl_rng* rndNumGen,
@@ -104,3 +109,5 @@ ChessboardBiclusteringCrossoverGenerator::operator()(
     }
     return ( res );
 }
+
+} }

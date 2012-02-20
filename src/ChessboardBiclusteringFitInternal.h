@@ -1,11 +1,13 @@
 #pragma once
 
-#include "BasicTypedefs.h"
+#include "cemm/bimap/BasicTypedefs.h"
 
-#include "ChessboardBiclusteringFit.h"
-#include "ChessboardBiclusteringPriorEval.h"
-#include "ChessboardBiclusteringLLHEval.h"
-#include "ChessboardBiclusteringStructureLLHEval.h"
+#include "cemm/bimap/ChessboardBiclusteringFit.h"
+#include "cemm/bimap/ChessboardBiclusteringPriorEval.h"
+#include "cemm/bimap/ChessboardBiclusteringLLHEval.h"
+#include "cemm/bimap/ChessboardBiclusteringStructureLLHEval.h"
+
+namespace cemm { namespace bimap {
 
 inline ChessboardBiclusteringPriorEval PriorEval( const ChessboardBiclusteringFit& fit )
 {
@@ -23,3 +25,5 @@ inline ChessboardBiclusteringStructureLLHEval StructureLLHEval( const Chessboard
                                               fit.priors().probesCluOffObjectsCluRate, fit.priors().objectsCluOffProbesCluRate,
                                               (const ChessboardBiclustering&)fit ) );
 }
+
+} }

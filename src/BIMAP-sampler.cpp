@@ -1,13 +1,16 @@
-#include "BasicTypedefs.h"
+#include "cemm/bimap/BasicTypedefs.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
 
-#include "ConsolePTCExecutionMonitor.h"
+#include <cemm/eesampler/ConsolePTCExecutionMonitor.h>
 
-#include "BIMAPResultsSerialize.h"
+#include "cemm/bimap/BIMAPResultsSerialize.h"
+#include "cemm/bimap/OPADataImportCSV.h"
+
 #include "ParametersReader.h"
-#include "OPADataImportCSV.h"
+
+using namespace cemm::bimap;
 
 int main( int argc, char* argv[] )
 {

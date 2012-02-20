@@ -1,7 +1,9 @@
-#include "PartitionStatistics.h"
+#include "cemm/bimap/PartitionStatistics.h"
 
-#include "IndexedPartitionsCollection.h"
-#include "PartitionDataExtractor.h"
+#include "cemm/bimap/IndexedPartitionsCollection.h"
+#include "cemm/bimap/PartitionDataExtractor.h"
+
+namespace cemm { namespace bimap {
 
 template<typename Part>
 PartitionPartsPDF::PartitionPartsPDF(
@@ -28,3 +30,5 @@ PartitionPartsPDF::PartitionPartsPDF(
                                       - partsCnt * log( ptnColl.walk().stepsCount() );
     }
 }
+
+} }

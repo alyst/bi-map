@@ -1,7 +1,9 @@
-#include "dynamic_bitset_utils.h"
-#include "math/Distributions.h"
+#include <cemm/containers/dynamic_bitset_foreach.h>
+#include <cemm/math/Distributions.h>
 
-#include "ChessboardBiclusteringPriorEval.h"
+#include "cemm/bimap/ChessboardBiclusteringPriorEval.h"
+
+namespace cemm { namespace bimap {
 
 ChessboardBiclusteringPriorEval::ChessboardBiclusteringPriorEval(
     const OPAData&                  data,
@@ -143,3 +145,5 @@ log_prob_t ChessboardBiclusteringPriorEval::lpp() const
     BOOST_ASSERT( res < 0 );
     return ( res );
 }
+
+} }

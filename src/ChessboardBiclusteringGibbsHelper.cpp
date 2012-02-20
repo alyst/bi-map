@@ -1,13 +1,15 @@
-#include "dynamic_bitset_utils.h"
+#include <cemm/containers/dynamic_bitset_foreach.h>
 
-#include "mcmc/MetropolisHastingsStep.h"
-#include "mcmc/SingleElementMembershipStep.h"
+#include <cemm/mcmc/MetropolisHastingsStep.h>
+#include <cemm/mcmc/SingleElementMembershipStep.h>
 
 #include "ChessboardBiclusteringFitInternal.h"
-#include "ObjectsPartition.h"
-#include "ProbesPartition.h"
+#include "cemm/bimap/ObjectsPartition.h"
+#include "cemm/bimap/ProbesPartition.h"
 
-#include "ChessboardBiclusteringGibbsHelper.h"
+#include "cemm/bimap/ChessboardBiclusteringGibbsHelper.h"
+
+namespace cemm { namespace bimap {
 
 ChessboardBiclusteringGibbsHelper::ChessboardBiclusteringGibbsHelper(
     const gsl_rng*                      rndNumGen,
@@ -261,3 +263,5 @@ GeometricDistribution ChessboardBiclusteringGibbsHelper::sampleNoiseParams() con
     return ( GeometricDistribution::BySuccessRate( _fit.priors().noise.posterior( signals, 0 )
                                                    .generate( rndNumGen() ) ) );
 }
+
+} }

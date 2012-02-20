@@ -1,9 +1,12 @@
-#include "dynamic_bitset_utils.h"
+#include <cemm/containers/dynamic_bitset_foreach.h>
+
 #include "ChessboardBiclusteringFitInternal.h"
 
-#include "ChessboardBiclusteringFit.h"
+#include "cemm/bimap/ChessboardBiclusteringFit.h"
 
-BOOST_CLASS_EXPORT( ChessboardBiclusteringFit );
+BOOST_CLASS_EXPORT( cemm::bimap::ChessboardBiclusteringFit );
+
+namespace cemm { namespace bimap {
 
 ChessboardBiclusteringFit::ChessboardBiclusteringFit(
     const PrecomputedData&                  precomputed,
@@ -27,13 +30,13 @@ ChessboardBiclusteringFit::ChessboardBiclusteringFit(
   , _priors( priors )
   , _objClusterLLH( objectsClusters().size(), LLHMetrics() )
   , _probeClusterLLH( probesClusters().size(), LLHMetrics() )
-  , _objClusterLPP( objectsClusters().size(), unset() )
-  , _blockLLH( objectsClusters().size(), probesClusters().size(), unset() )
-  , _blockLPP( objectsClusters().size(), probesClusters().size(), unset() )
+  , _objClusterLPP( objectsClusters().size(), unset<log_prob_t>() )
+  , _blockLLH( objectsClusters().size(), probesClusters().size(), unset<log_prob_t>() )
+  , _blockLPP( objectsClusters().size(), probesClusters().size(), unset<log_prob_t>() )
   , _blockIsSignalLLHValid( false )
-  , _blockIsSignalLLH( objectsClusters().size(), probesClusters().size(), unset() )
+  , _blockIsSignalLLH( objectsClusters().size(), probesClusters().size(), unset<log_prob_t>() )
   , _blockIsNoiseLLHValid( false )
-  , _blockIsNoiseLLH( objectsClusters().size(), probesClusters().size(), unset() )
+  , _blockIsNoiseLLH( objectsClusters().size(), probesClusters().size(), unset<log_prob_t>() )
   , _blockToSample( objectsClusters().size(), probesClusters().size(), 0 )
 {
     _baselineSignalParams._scShape = _precomputed.signalParams().scShape;
@@ -260,18 +263,18 @@ ChessboardBiclusteringFit& ChessboardBiclusteringFit::operator=(const Chessboard
 void ChessboardBiclusteringFit::resetAllCaches() const
 {
     _blockLLH.reset( objectsClusters().size(),
-                            probesClusters().size(), unset() );
+                            probesClusters().size(), unset<log_prob_t>() );
     _blockLPP.reset( objectsClusters().size(),
-                            probesClusters().size(), unset() );
+                            probesClusters().size(), unset<log_prob_t>() );
     _objClusterLLH.assign( objectsClusters().size(), LLHMetrics() );
-    _objClusterLPP.assign( objectsClusters().size(), unset() );
+    _objClusterLPP.assign( objectsClusters().size(), unset<log_prob_t>() );
     _probeClusterLLH.assign( probesClusters().size(), LLHMetrics() );
     _blockIsNoiseLLHValid = false;
     _blockIsNoiseLLH.reset( objectsClusters().size(),
-                                   probesClusters().size(), unset() );
+                                   probesClusters().size(), unset<log_prob_t>() );
     _blockIsSignalLLHValid = false;
     _blockIsSignalLLH.reset( objectsClusters().size(),
-                                    probesClusters().size(), unset() );
+                                    probesClusters().size(), unset<log_prob_t>() );
     _metrics.unset( true, true );
 }
 
@@ -279,32 +282,32 @@ void ChessboardBiclusteringFit::resetObjectsClusterCache(
     object_clundex_t    objCluIx,
     bool                contentsChanged
 ) const {
-    _blockLLH.fill1( objCluIx, unset() );
-    _blockLPP.fill1( objCluIx, unset() );
+    _blockLLH.fill1( objCluIx, unset<log_prob_t>() );
+    _blockLPP.fill1( objCluIx, unset<log_prob_t>() );
     if ( contentsChanged ) {
         _blockIsNoiseLLHValid = false;
         _blockIsSignalLLHValid = false;
-        _blockIsSignalLLH.fill1( objCluIx, unset() );
-        _blockIsNoiseLLH.fill1( objCluIx, unset() );
+        _blockIsSignalLLH.fill1( objCluIx, unset<log_prob_t>() );
+        _blockIsNoiseLLH.fill1( objCluIx, unset<log_prob_t>() );
     }
     _objClusterLLH[ objCluIx ].unset();
     _probeClusterLLH.assign( _probeClusterLLH.size(), LLHMetrics() );
-    _objClusterLPP[ objCluIx ] = unset();
+    _objClusterLPP[ objCluIx ] = unset<log_prob_t>();
     _metrics.unset( true, false );
 }
 
 void ChessboardBiclusteringFit::resetProbesClusterCache(
     probe_clundex_t probeCluIx
 ) const {
-    _blockLLH.fill2( probeCluIx, unset() );
-    _blockLPP.fill2( probeCluIx, unset() );
+    _blockLLH.fill2( probeCluIx, unset<log_prob_t>() );
+    _blockLPP.fill2( probeCluIx, unset<log_prob_t>() );
     _blockIsNoiseLLHValid = false;
     _blockIsSignalLLHValid = false;
-    _blockIsSignalLLH.fill2( probeCluIx, unset() );
-    _blockIsNoiseLLH.fill2( probeCluIx, unset() );
+    _blockIsSignalLLH.fill2( probeCluIx, unset<log_prob_t>() );
+    _blockIsNoiseLLH.fill2( probeCluIx, unset<log_prob_t>() );
     _probeClusterLLH[ probeCluIx ].unset();
     _objClusterLLH.assign( _objClusterLLH.size(), LLHMetrics() );
-    _objClusterLPP.assign( _objClusterLPP.size(), unset() );
+    _objClusterLPP.assign( _objClusterLPP.size(), unset<log_prob_t>() );
     _metrics.unset( false, true );
 }
 
@@ -312,8 +315,8 @@ void ChessboardBiclusteringFit::resetCachesAfterLoading()
 {
     _objClusterLLH.resize( objectsClusters().size(), LLHMetrics() );
     _objClusterLLH.assign( _objClusterLLH.size(), LLHMetrics() );
-    _objClusterLPP.resize( objectsClusters().size(), unset() );
-    _objClusterLPP.assign( _objClusterLPP.size(), unset() );
+    _objClusterLPP.resize( objectsClusters().size(), unset<log_prob_t>() );
+    _objClusterLPP.assign( _objClusterLPP.size(), unset<log_prob_t>() );
     _probeClusterLLH.resize( probesClusters().size(), LLHMetrics() );
     _probeClusterLLH.assign( probesClusters().size(), LLHMetrics() );
     // _metrics is serialized and restored, so it should not be reset
@@ -366,7 +369,7 @@ void ChessboardBiclusteringFit::beforeProbesClusterRemoved(probe_clundex_t cluIx
     _blockIsSignalLLH.remove2( cluIx );
     _probeClusterLLH.erase( _probeClusterLLH.begin() + cluIx );
     _objClusterLLH.assign( _objClusterLLH.size(), LLHMetrics() );
-    _objClusterLPP.assign( _objClusterLPP.size(), unset() );
+    _objClusterLPP.assign( _objClusterLPP.size(), unset<log_prob_t>() );
     _metrics.unset( false, true );
 }
 
@@ -374,14 +377,14 @@ void ChessboardBiclusteringFit::afterObjectsClusterInserted(object_clundex_t clu
 {
     ChessboardBiclustering::afterObjectsClusterInserted(cluIx);
     const_cast<block_counts_matrix_type&>( _blockToSample ).insert1( cluIx );
-    _blockLLH.insert1( cluIx, unset() );
-    _blockLPP.insert1( cluIx, unset() );
+    _blockLLH.insert1( cluIx, unset<log_prob_t>() );
+    _blockLPP.insert1( cluIx, unset<log_prob_t>() );
     _blockIsNoiseLLHValid = false;
     _blockIsSignalLLHValid = false;
-    _blockIsNoiseLLH.insert1( cluIx, unset() );
-    _blockIsSignalLLH.insert1( cluIx, unset() );
+    _blockIsNoiseLLH.insert1( cluIx, unset<log_prob_t>() );
+    _blockIsSignalLLH.insert1( cluIx, unset<log_prob_t>() );
     _objClusterLLH.insert( _objClusterLLH.begin() + cluIx, LLHMetrics() );
-    _objClusterLPP.insert( _objClusterLPP.begin() + cluIx, unset() );
+    _objClusterLPP.insert( _objClusterLPP.begin() + cluIx, unset<log_prob_t>() );
     _probeClusterLLH.assign( _probeClusterLLH.size(), LLHMetrics() );
     _metrics.unset( true, false );
 }
@@ -390,15 +393,15 @@ void ChessboardBiclusteringFit::afterProbesClusterInserted(probe_clundex_t cluIx
 {
     ChessboardBiclustering::afterProbesClusterInserted(cluIx);
     const_cast<block_counts_matrix_type&>( _blockToSample ).insert2( cluIx );
-    _blockLLH.insert2( cluIx, unset() );
-    _blockLPP.insert2( cluIx, unset() );
+    _blockLLH.insert2( cluIx, unset<log_prob_t>() );
+    _blockLPP.insert2( cluIx, unset<log_prob_t>() );
     _blockIsNoiseLLHValid = false;
     _blockIsSignalLLHValid = false;
-    _blockIsNoiseLLH.insert2( cluIx, unset() );
-    _blockIsSignalLLH.insert2( cluIx, unset() );
+    _blockIsNoiseLLH.insert2( cluIx, unset<log_prob_t>() );
+    _blockIsSignalLLH.insert2( cluIx, unset<log_prob_t>() );
     _probeClusterLLH.insert( _probeClusterLLH.begin() + cluIx, LLHMetrics() );
     _objClusterLLH.assign( _objClusterLLH.size(), LLHMetrics() );
-    _objClusterLPP.assign( _objClusterLPP.size(), unset() );
+    _objClusterLPP.assign( _objClusterLPP.size(), unset<log_prob_t>() );
     _metrics.unset( false, true );
 }
 
@@ -425,11 +428,11 @@ void ChessboardBiclusteringFit::afterSignalChanged(
     probe_clundex_t     probeCluIx
 ) const {
     ChessboardBiclustering::afterSignalChanged( objCluIx, probeCluIx );
-    _blockLLH( objCluIx, probeCluIx ) = unset();
-    _blockLPP( objCluIx, probeCluIx ) = unset();
+    _blockLLH( objCluIx, probeCluIx ) = unset<log_prob_t>();
+    _blockLPP( objCluIx, probeCluIx ) = unset<log_prob_t>();
     _objClusterLLH[ objCluIx ] = LLHMetrics();
     _probeClusterLLH[ probeCluIx ] = LLHMetrics();
-    _objClusterLPP[ objCluIx ] = unset();
+    _objClusterLPP[ objCluIx ] = unset<log_prob_t>();
     _metrics.unset( false, false );
 }
 
@@ -438,11 +441,11 @@ void ChessboardBiclusteringFit::afterBlockFlipped(
     probe_clundex_t     probeCluIx
 ) const {
     ChessboardBiclustering::afterBlockFlipped(objCluIx, probeCluIx);
-    _blockLLH( objCluIx, probeCluIx ) = unset();
-    _blockLPP( objCluIx, probeCluIx ) = unset();
+    _blockLLH( objCluIx, probeCluIx ) = unset<log_prob_t>();
+    _blockLPP( objCluIx, probeCluIx ) = unset<log_prob_t>();
     _objClusterLLH[ objCluIx ] = LLHMetrics();
     _probeClusterLLH[ probeCluIx ] = LLHMetrics();
-    _objClusterLPP[ objCluIx ] = unset();
+    _objClusterLPP[ objCluIx ] = unset<log_prob_t>();
     _metrics.unset( false, false );
 }
 
@@ -465,3 +468,5 @@ void ChessboardBiclusteringFit::afterNoiseParamsChanged() const
     _signalNoiseCache->setChessboardBiclusteringData( clusteringData() );
     resetAllCaches();
 }
+
+} }

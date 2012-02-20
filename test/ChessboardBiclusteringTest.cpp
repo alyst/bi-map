@@ -11,11 +11,14 @@
 #include <boost/archive/xml_oarchive.hpp>
 #include <boost/filesystem.hpp>
 
-#include <ChessboardBiclustering.h>
-#include <ChessboardBiclusteringsIndexing.h>
-#include <BIMAPSampler.h>
-#include <OPAData.h>
-#include <OPADataImportCSV.h>
+#include <cemm/bimap/ChessboardBiclustering.h>
+#include <cemm/bimap/ChessboardBiclusteringsIndexing.h>
+#include <cemm/bimap/BIMAPSampler.h>
+#include <cemm/bimap/OPAData.h>
+#include <cemm/bimap/OPADataImportCSV.h>
+
+using namespace cemm::bimap;
+using namespace cemm::test;
 
 /*************************************************/
 
@@ -191,8 +194,8 @@ TEST( ChessboardBiclustering, generate_random )
     priors.objectClustering.concentration = 0.8;
     priors.probeClustering.concentration = 0.8;
     PrecomputedData    precomputed( data, precomputedDataParams, signalParams );
-    BIMAPSamplerHelper         helper( precomputed, hyperpriors, priors, params );
-    ChessboardBiclustering             clus = helper.randomClustering();
+    BIMAPSamplerHelper          helper( precomputed, hyperpriors, priors, params );
+    ChessboardBiclustering      clus = helper.randomClustering();
     //EXPECT_TRUE( !clusIndexed.objectClusterData().begin()->second.empty() );
 
     EXPECT_TRUE( clus.checkObjectsPartition() );

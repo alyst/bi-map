@@ -3,15 +3,20 @@
 #include <boost/functional/hash.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include <math/PitmanYorProcess.h>
-#include <math/Distributions.h>
+#include <cemm/math/PitmanYorProcess.h>
+#include <cemm/math/Distributions.h>
 
-#include <mcmc/SingleElementMembershipStep.h>
-#include <mcmc/SplitMergeStep.h>
+#include <cemm/mcmc/SingleElementMembershipStep.h>
+#include <cemm/mcmc/SplitMergeStep.h>
 
-#include <LazyClone.h>
-#include <EntityIndexing.h>
-#include <EntityCollectionIndexing.h>
+#include <cemm/containers/LazyClone.h>
+#include <cemm/containers/EntityIndexing.h>
+#include <cemm/containers/EntityCollectionIndexing.h>
+#include <cemm/containers/set_misc.h>
+
+using namespace cemm::math;
+using namespace cemm::containers;
+using namespace cemm::mcmc;
 
 struct Point {
     double x;
@@ -23,11 +28,6 @@ typedef std::set<int> element_set_t;
 
 typedef EntityCollectionIndexing<element_set_t> ClusteringIndexing;
 typedef ClusteringIndexing::collection_pointer_type IndexedClusteringPointer;
-
-inline std::size_t hash_value( const element_set_t& value )
-{
-    return ( boost::hash_range( value.begin(), value.end() ) );
-}
 
 struct Cluster {
     element_set_t elements;

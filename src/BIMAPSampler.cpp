@@ -2,12 +2,14 @@
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics.hpp>
 
-#include "dynamic_bitset_utils.h"
-#include "math/Permutation.h"
+#include <cemm/containers/dynamic_bitset_foreach.h>
+#include <cemm/math/Permutation.h>
 
 #include "ChessboardBiclusteringFitInternal.h"
 
-#include "BIMAPSampler.h"
+#include "cemm/bimap/BIMAPSampler.h"
+
+namespace cemm { namespace bimap {
 
 const gsl_rng_type* BIMAPSamplerHelper::gslRngType = NULL;
 
@@ -104,14 +106,16 @@ void BIMAPSamplerHelper::randomizeMissingData( ChessboardBiclustering& clus ) co
     if ( clus.objectsClusters().size() == 0 ) {
         PitmanYorSample ptn = priors.objectClustering.random( rndNumGen, data().objectsCount() );
         for ( cluster_index_t i = 0; i < ptn.clustersCount(); ++i ) {
-            clus.addObjectCluster( ptn[ i ].begin(), ptn[ i ].end() );
+            const PitmanYorSample::sample_set_type& cluster = ptn[ i ];
+            clus.addObjectCluster( cluster.begin(), cluster.end() );
         }
     }
     BOOST_ASSERT( clus.checkObjectsPartition() );
     if ( clus.probesClusters().size() == 0 ) {
         PitmanYorSample ptn = priors.probeClustering.random( rndNumGen, data().probesCount() );
         for ( cluster_index_t i = 0; i < ptn.clustersCount(); ++i ) {
-            clus.addProbeCluster( ptn[ i ].begin(), ptn[ i ].end() );
+            const PitmanYorSample::sample_set_type& cluster = ptn[ i ];
+            clus.addProbeCluster( cluster.begin(), cluster.end() );
         }
     }
     BOOST_ASSERT( clus.checkProbesPartition() );
@@ -303,3 +307,5 @@ BIMAPWalk BIMAPSampler_run(
 
     return ( collector.walk() );
 }
+
+} }

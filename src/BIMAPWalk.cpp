@@ -1,4 +1,6 @@
-#include "BIMAPWalk.h"
+#include "cemm/bimap/BIMAPWalk.h"
+
+namespace cemm { namespace bimap {
 
 BIMAPWalk::BIMAPWalk(
     ChessboardBiclusteringsIndexing&  chessboardBiclusteringsIndexing,
@@ -38,3 +40,5 @@ size_t BIMAPWalk::filterSteps(
     }
     return ( filteredCount );
 }
+
+} }

@@ -1,8 +1,10 @@
-#include "dynamic_bitset_utils.h"
-#include "CellsLLHEval.h"
-#include "DataSignalNoiseCache.h"
+//#include "cemm/bimap/dynamic_bitset_utils.h"
+#include "cemm/bimap/CellsLLHEval.h"
+#include "cemm/bimap/DataSignalNoiseCache.h"
 
-BOOST_CLASS_EXPORT( DataSignalNoiseCache )
+BOOST_CLASS_EXPORT( cemm::bimap::DataSignalNoiseCache )
+
+namespace cemm { namespace bimap {
 
 /**
  *  Serialization-only ctor, called by load_construct_data().
@@ -49,11 +51,11 @@ void DataSignalNoiseCache::evalMatrices()
     CellsLLHEval eval( _precomputed, _clusData );
     if ( _noiseLnPdf.size1() != data().objectsCount() || _noiseLnPdf.size2() != data().probesCount() ) {
         _noiseLnPdfValid = false;
-        _noiseLnPdf.reset( data().objectsCount(), data().probesCount(), unset() );
+        _noiseLnPdf.reset( data().objectsCount(), data().probesCount(), unset<log_prob_t>() );
     }
     if ( _signalLnPdf.size1() != data().objectsCount() || _signalLnPdf.size2() != data().probesCount() ) {
         _signalLnPdfValid = false;
-        _signalLnPdf.reset( data().objectsCount(), data().probesCount(), unset() );
+        _signalLnPdf.reset( data().objectsCount(), data().probesCount(), unset<log_prob_t>() );
     }
     for ( probe_index_t probeIx = 0; probeIx < data().probesCount(); probeIx++ ) {
         for ( object_index_t objIx = 0; objIx < data().objectsCount(); objIx++ ) {
@@ -121,3 +123,5 @@ log_prob_t DataSignalNoiseCache::signalLLH(
     }
     return ( lnPdfSum );
 }
+
+} }

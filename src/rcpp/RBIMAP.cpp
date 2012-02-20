@@ -1,4 +1,4 @@
-#include "../BasicTypedefs.h"
+#include <cemm/bimap/BasicTypedefs.h>
 
 #include <stdarg.h>
 #include <cmath>
@@ -8,18 +8,18 @@
 #include <Rcpp/S4.h>
 #include <Rcpp/Vector.h>
 
-#include "../../include/RUtils.h"
+#include <cemm/RUtils.h>
+#include <cemm/containers/dynamic_bitset_foreach.h>
+#include <cemm/eesampler/ConsolePTCExecutionMonitor.h>
 
 #ifndef NDEBUG
 //#define DYNLOAD_DEBUG
 #endif
 
-#include "../dynamic_bitset_utils.h"
-#include "../OPAData.h"
-#include "../BIMAPSampler.h"
-#include "../ChessboardBiclusteringsPDFEval.h"
-#include "../BIMAPResultsSerialize.h"
-#include "../ConsolePTCExecutionMonitor.h"
+#include <cemm/bimap/OPAData.h>
+#include <cemm/bimap/BIMAPSampler.h>
+#include <cemm/bimap/ChessboardBiclusteringsPDFEval.h>
+#include <cemm/bimap/BIMAPResultsSerialize.h>
 
 #define BIMAP_PARAM_WALK_SAMPLES                    "walk.samples"
 #define BIMAP_PARAM_WALK_CREATE_ROBJECT             "walk.create.RObject"
@@ -167,6 +167,8 @@
 #define R_SLOT_NOISE_SIGNAL                 "noise.signal"
 
 #define R_STRINGS_AS_FACTORS                "stringsAsFactors"
+
+namespace cemm { namespace bimap {
 
 /**
     Reads-in Mass-Spec data for clustering.
@@ -1446,3 +1448,5 @@ RcppExport SEXP CalcDistances(
 
     END_RCPP
 }
+
+} }

@@ -1,7 +1,7 @@
 #include <sstream>
 
-#include "dynamic_bitset_utils.h"
-#include "math/logmath.h"
+#include <cemm/containers/dynamic_bitset_foreach.h>
+#include <cemm/math/logmath.h>
 
 #include <fstream>
 #include <boost/filesystem/path.hpp>
@@ -14,10 +14,13 @@
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filter/zlib.hpp>
 
-#include "statically_tracked.h"
-#include "misc_utils.h"
+#include <cemm/statically_tracked.h>
 
-#include "OPAData.h"
+#include "cemm/bimap/misc_utils.h"
+
+#include "cemm/bimap/OPAData.h"
+
+namespace cemm { namespace bimap {
 
 ENABLE_STATIC_TRACKING( OPAData )
 
@@ -470,3 +473,5 @@ OPAData OPAData::load(
         THROW_EXCEPTION( std::invalid_argument, "Unsupported extension of walk file: " << filename );
     }
 }
+
+} }

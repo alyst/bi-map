@@ -1,12 +1,14 @@
-#include "dynamic_bitset_utils.h"
+#include <cemm/containers/dynamic_bitset_foreach.h>
 
 #include <boost/format.hpp>
 
-#include "statically_tracked.h"
+#include <cemm/statically_tracked.h>
 
-#include "ChessboardBiclustering.h"
+#include "cemm/bimap/ChessboardBiclustering.h"
 
-ENABLE_STATIC_TRACKING( ChessboardBiclusteringPriors )
+ENABLE_STATIC_TRACKING( cemm::bimap::ChessboardBiclusteringPriors )
+
+namespace cemm { namespace bimap {
 
 VectorCache<signal_t> ObjectsClusterParams::SignalMapCache;
 VectorCache<size_t> ObjectsClusterParams::MultipleMapCache;
@@ -15,7 +17,7 @@ VectorCache<signal_t> ProbesClusterParams::SignalMapCache;
 ObjectsClusterParams::ObjectsClusterParams(
     const ChessboardBiclustering& clustering
 )   : blocksMask( clustering.probesClusters().size() )
-    , probeSignal( SignalMapCache.borrow( clustering.probesClusters().size(), unset() ) )
+    , probeSignal( SignalMapCache.borrow( clustering.probesClusters().size(), unset<signal_t>() ) )
     , objectMultiple( MultipleMapCache.borrow( clustering.objectsCount(), 0 ) )
 {
 }
@@ -23,7 +25,7 @@ ObjectsClusterParams::ObjectsClusterParams(
 ObjectsClusterParams::ObjectsClusterParams(
     const ChessboardBiclustering::ObjectsClusterParamsProxy& paramsProxy
 )   : blocksMask( paramsProxy.clus.probesClusters().size() )
-    , probeSignal( SignalMapCache.borrow( paramsProxy.clus.probesClusters().size(), unset() ) )
+    , probeSignal( SignalMapCache.borrow( paramsProxy.clus.probesClusters().size(), unset<signal_t>() ) )
     , objectMultiple( MultipleMapCache.borrow( paramsProxy.clus.objectsCount(), 0 ) )
 {
     operator=( paramsProxy );
@@ -40,14 +42,14 @@ ObjectsClusterParams::ObjectsClusterParams(
 ProbesClusterParams::ProbesClusterParams(
     const ChessboardBiclustering& clustering
 ) : blocksMask( clustering.objectsClusters().size() )
-  , objectsSignal( SignalMapCache.borrow( clustering.objectsClusters().size(), unset() ) )
+  , objectsSignal( SignalMapCache.borrow( clustering.objectsClusters().size(), unset<signal_t>() ) )
 {
 }
 
 ProbesClusterParams::ProbesClusterParams(
     const ChessboardBiclustering::ProbesClusterParamsProxy& paramsProxy
 ) : blocksMask( paramsProxy.clus.objectsClusters().size() )
-  , objectsSignal( SignalMapCache.borrow( paramsProxy.clus.objectsClusters().size(), unset() ) )
+  , objectsSignal( SignalMapCache.borrow( paramsProxy.clus.objectsClusters().size(), unset<signal_t>() ) )
 {
     operator=( paramsProxy );
 }
@@ -62,13 +64,14 @@ ProbesClusterParams::ProbesClusterParams(
 ChessboardBiclustering::ChessboardBiclustering(
     size_t  objectsCount,
     size_t  probesCount
-) : ChessboardBiclusteringData( ChessboardBiclusteringDerivedPriors(), signal_params_type(), noise_params_type() )
+) : ChessboardBiclusteringData( ChessboardBiclusteringDerivedPriors(),
+                                signal_params_type(), noise_params_type() )
   , _objectToCluster( objectsCount, CLUSTER_NA )
   , _probeToCluster( probesCount, CLUSTER_NA )
   , _objectsClustersCleanupRequired( false )
   , _probesClustersCleanupRequired( false )
   , _objectMultiples( objectsCount, 1 )
-  , _signals( objectsCount, probesCount, unset() )
+  , _signals( objectsCount, probesCount, unset<signal_t>() )
 {
 }
 
@@ -84,7 +87,7 @@ ChessboardBiclustering::ChessboardBiclustering(
   , _objectsClustersCleanupRequired( false )
   , _probesClustersCleanupRequired( false )
   , _objectMultiples( objectsClusters.samplesCount(), 1 )
-  , _signals( objectsClusters.samplesCount(), probesClusters.samplesCount(), unset() )
+  , _signals( objectsClusters.samplesCount(), probesClusters.samplesCount(), unset<signal_t>() )
 {
     for ( cluster_index_t i = 0; i < objectsClusters.clustersCount(); ++i ) {
         addObjectCluster( objectsClusters[ i ].begin(), objectsClusters[ i ].end() );
@@ -596,7 +599,7 @@ ObjectsClusterParams& ObjectsClusterParams::operator=(
     BOOST_ASSERT( proxy.cluIx < proxy.clus.objectsClusters().size() );
     // clear
     blocksMask.resize( proxy.clus.probesClusters().size() );
-    probeSignal.resize( proxy.clus.probesClusters().size(), unset() );
+    probeSignal.resize( proxy.clus.probesClusters().size(), unset<signal_t>() );
     objectMultiple = proxy.clus.objectMultiples(); // just copy all multiples, it should be reasonably fast
 
     // fill signals and mask
@@ -623,7 +626,7 @@ ProbesClusterParams& ProbesClusterParams::operator=(
 
     // clear
     blocksMask.resize( proxy.clus.objectsClusters().size() );
-    objectsSignal.resize( proxy.clus.objectsClusters().size(), unset() );
+    objectsSignal.resize( proxy.clus.objectsClusters().size(), unset<signal_t>() );
 
     // fill signals and mask
     const probe_bitset_t& probes = proxy.mask.any() ? proxy.mask : proxy.clus.probesCluster( proxy.cluIx ).items();
@@ -698,7 +701,7 @@ bool ChessboardBiclustering::BlockProxy::check() const
     if ( isEnabled() ) {
         const probe_bitset_t& probes = _clustering.probesCluster( probesClusterIndex() ).items();
         const object_set_t& objs = _clustering.objectsCluster( objectsClusterIndex() ).items();
-        signal_t cluSignal = unset();
+        signal_t cluSignal = unset<signal_t>();
         foreach_bit( probe_index_t, probeIx, probes ) {
             for ( object_set_t::const_iterator oit = objs.begin(); oit != objs.end(); ++oit ) {
                 signal_t objSignal = _clustering.cellSignal( *oit, probeIx );
@@ -755,3 +758,5 @@ std::ostream& operator<<( std::ostream& out, const ChessboardBiclustering& cc )
         << " Noise_rate=" << cc.clusteringData()._noiseParams.successRate;
     return ( out );
 }
+
+} }

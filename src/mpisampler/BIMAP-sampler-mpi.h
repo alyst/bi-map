@@ -1,13 +1,16 @@
 #pragma once
 
-#include "../BasicTypedefs.h"
+#include "cemm/bimap/BasicTypedefs.h"
 
-#include "../BIMAPSampler.h"
-#include "MPIUnitCommunicator.h"
+#include <cemm/eesampler/MPIUnitCommunicator.h>
 
-BOOST_IS_MPI_DATATYPE( LLHPartitionWeights )
-BOOST_IS_MPI_DATATYPE( LLHWeights )
-BOOST_IS_MPI_DATATYPE( ChessboardBiclusteringEnergyEval )
+#include "cemm/bimap/BIMAPSampler.h"
+
+BOOST_IS_MPI_DATATYPE( cemm::bimap::LLHPartitionWeights )
+BOOST_IS_MPI_DATATYPE( cemm::bimap::LLHWeights )
+BOOST_IS_MPI_DATATYPE( cemm::bimap::ChessboardBiclusteringEnergyEval )
+
+namespace cemm { namespace bimap {
 
 boost::optional<BIMAPWalk> MPI_BIMAPSampler_run(
     const BIMAPSamplerHelper&      helper,
@@ -21,3 +24,5 @@ boost::optional<BIMAPWalk> MPI_BIMAPSampler_run(
     size_t      samplesReportingPeriod = 100,
     double      maxSamplesReportingDelay = 60
 );
+
+} }

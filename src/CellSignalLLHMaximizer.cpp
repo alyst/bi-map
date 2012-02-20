@@ -1,7 +1,9 @@
-#include "CellSignalLLHMaximizer.h"
+#include "cemm/bimap/CellSignalLLHMaximizer.h"
 
-#include "dynamic_bitset_utils.h"
-#include "math/gsl_exception.h"
+#include <cemm/containers/dynamic_bitset_foreach.h>
+#include <cemm/math/gsl_exception.h>
+
+namespace cemm { namespace bimap {
 
 /**
  *  Serialization-only version of ctor.
@@ -37,7 +39,7 @@ CellSignalLLHMaximizer::signals_matrix_type CellSignalLLHMaximizer::PreliminaryS
     const CellSignalParams&     signalParams
 ){
     //double signalShapeDelta = log( 1.0 - signalParams.scShape );
-    signals_matrix_type res( data.objectsCount(), data.probesCount(), unset() );
+    signals_matrix_type res( data.objectsCount(), data.probesCount(), unset<signal_t>() );
     for ( object_index_t objIx = 0; objIx < data.objectsCount(); objIx++ ) {
         const OPAObject& obj = data.object( objIx );
         for ( probe_index_t probeIx = 0; probeIx < data.probesCount(); probeIx++ ) {
@@ -76,8 +78,8 @@ CellSignalLLHMaximizer::signals_matrix_type CellSignalLLHMaximizer::PreliminaryA
     const CellSignalParams&     signalParams
 ){
     //double signalShapeDelta = log( 1.0 - signalParams.scShape );
-    signals_matrix_type probeSignals( data.objectsCount(), data.probesCount(), unset() );
-    signals_matrix_type res( data.objectsCount(), data.assaysCount(), unset() );
+    signals_matrix_type probeSignals( data.objectsCount(), data.probesCount(), unset<signal_t>() );
+    signals_matrix_type res( data.objectsCount(), data.assaysCount(), unset<signal_t>() );
     for ( object_index_t objIx = 0; objIx < data.objectsCount(); objIx++ ) {
         const OPAObject& obj = data.object( objIx );
         const OPAData::celldata_t* pM = &data.measurement( objIx, 0 );
@@ -104,7 +106,7 @@ signal_t CellSignalLLHMaximizer::blockSignalA(
     const multiple_map_t&   multiples
 ) const {
     // handle simple case
-    if ( objects.size() == 0 || assays.empty() ) return ( unset() );
+    if ( objects.size() == 0 || assays.empty() ) return ( unset<signal_t>() );
     else if ( objects.size() == 1 && assays.count() == 1 ) {
         return ( _preliminaryAssaySignals( *objects.begin(), assays.find_first() ) );
     }
@@ -254,7 +256,7 @@ log_prob_t CellSignalLLHMaximizer::evalObjectsPrelimDistance(
     objs.insert( obj1ix );
     objs.insert( obj2ix );
     const size_t MaxMultiple = 3; // maximum object multiple to test
-    log_prob_t minDist = unset();
+    log_prob_t minDist = unset<log_prob_t>();
     for ( size_t mult1 = 1; mult1 <= MaxMultiple; mult1++ ) {
         for ( size_t mult2 = 1; mult2 <= MaxMultiple; mult2++ ) {
             if ( mult1 == mult2 && mult1 > 1 ) continue;
@@ -303,7 +305,7 @@ log_prob_t CellSignalLLHMaximizer::evalProbesPrelimDistance(
     typedef GeometricDistribution noise_params_type;
     static noise_params_type noiseModel = noise_params_type::ByFailureRate( 1E-4, 0 );
 
-    double maxLLH = unset();
+    double maxLLH = unset<double>();
     // _multCache.assign( _multCache.size(), 1 ); not required -- we don't care about signal
     const OPAProbe& probe1 = _data.probe( probe1ix );
     const OPAProbe& probe2 = _data.probe( probe2ix );
@@ -344,3 +346,5 @@ symmetric_array2d<log_prob_t> CellSignalLLHMaximizer::evalProbeCoSignalDistances
     }
     return ( distances );
 }
+
+} }

@@ -1,4 +1,6 @@
-#include "ChessboardBiclusteringStructureLLHEval.h"
+#include "cemm/bimap/ChessboardBiclusteringStructureLLHEval.h"
+
+namespace cemm { namespace bimap {
 
 ChessboardBiclusteringStructureLLHEval::ChessboardBiclusteringStructureLLHEval(
     const PrecomputedData& precomputed,
@@ -79,3 +81,5 @@ log_prob_t ChessboardBiclusteringStructureLLHEval::probesClusterMismatchLLH(
     }
     return ( res );
 }
+
+} }

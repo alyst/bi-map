@@ -10,7 +10,6 @@ find_package( GSL REQUIRED )
 set( BIMAP_Sources
      "OPAData.cpp"
      "OPADataImportCSV.cpp"
-     "ConsolePTCExecutionMonitor.cpp"
      "ChessboardBiclustering.cpp"
      "DataSignalNoiseCache.cpp"
      "CellSignalLLHMaximizer.cpp"
@@ -33,12 +32,6 @@ set( BIMAP_Sources
      "BIMAPResultsSerialize.cpp"
      "ParametersReader.cpp"
      "misc_utils.cpp"
-     "math/logmath.cpp"
-     "math/Distributions.cpp"
-     "math/PitmanYorProcess.cpp"
-     "eesampler/ParticleCache.cpp"
-     "eesampler/Turbine.cpp"
-     "eesampler/TurbineCascadeUnit.cpp"
 )
 
 set( BIMAP_Headers
@@ -59,14 +52,15 @@ set( BIMAP_Headers
 include_directories( ${Boost_INCLUDE_DIRS} )
 
 add_library( BIMAP SHARED ${BIMAP_Sources} )
-    target_link_libraries( BIMAP ${GSL_LIBRARIES} ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} ${BZIP2_LIBRARIES} )
+    add_dependencies( BIMAP math eesampler mcmc )
+    target_link_libraries( BIMAP math eesampler ${GSL_LIBRARIES} ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} ${BZIP2_LIBRARIES} )
 
 set( BIMAPSampler_Sources
      "BIMAP-sampler.cpp"
 )
 
 add_executable( BIMAP-sampler ${BIMAPSampler_Sources} )
-    add_dependencies( BIMAP-sampler bi-map )
+    add_dependencies( BIMAP-sampler BIMAP )
     target_link_libraries( BIMAP-sampler BIMAP ${Boost_LIBRARIES} )
 
 add_subdirectory( mpisampler )

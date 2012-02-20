@@ -1,8 +1,10 @@
-#include "dynamic_bitset_utils.h"
+#include <cemm/containers/dynamic_bitset_foreach.h>
 
 #include "ChessboardBiclusteringFitInternal.h"
 
-#include "ObjectsPartition.h"
+#include "cemm/bimap/ObjectsPartition.h"
+
+namespace cemm { namespace bimap {
 
 std::string ObjectsPartition::ObjectsClusterProxy::label() const
 {
@@ -325,3 +327,5 @@ log_prob_t ObjectsParamsSampler::transitionLP(
     BOOST_ASSERT( !is_unset( lnProb ) );
     return ( lnProb );
 }
+
+} }

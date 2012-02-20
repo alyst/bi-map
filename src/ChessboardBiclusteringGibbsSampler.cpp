@@ -1,11 +1,15 @@
-#include "math/PitmanYorProcess.h"
-#include "mcmc/SplitMergeStep.h"
-#include "ObjectsPartition.h"
-#include "ProbesPartition.h"
-#include "dynamic_bitset_utils.h"
+#include <cemm/containers/dynamic_bitset_foreach.h>
 
-#include "ChessboardBiclusteringGibbsSampler.h"
+#include <cemm/math/PitmanYorProcess.h>
+#include <cemm/mcmc/SplitMergeStep.h>
+
+#include "cemm/bimap/ObjectsPartition.h"
+#include "cemm/bimap/ProbesPartition.h"
+
+#include "cemm/bimap/ChessboardBiclusteringGibbsSampler.h"
 #include "ChessboardBiclusteringFitInternal.h"
+
+namespace cemm { namespace bimap {
 
 GibbsSamplerParams::GibbsSamplerParams()
     : priorsUpdatePeriod( 50 )
@@ -129,7 +133,7 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
         // find object with farthest distance in neighbouring clusters
         const object_set_t& cluObjs = clus.objectsCluster( objCluIx ).items();
         object_index_t obj1ix = 0;
-        PrecomputedData::dist_to_obj_t obj2Dist( OBJECT_NA, unset() );
+        PrecomputedData::dist_to_obj_t obj2Dist( OBJECT_NA, unset<log_prob_t>() );
         for ( object_set_t::const_iterator oit = cluObjs.begin(); oit != cluObjs.end(); ++oit ) {
              PrecomputedData::dist_to_obj_t dist = _precomputed.rankedObject( *oit, cluObjs, true,
                                                     gsl_ran_geometric( rndNumGen(), 1.0 / _params.meanObjectRank )-1, false, true );
@@ -267,7 +271,7 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
         probe_clundex_t probeCluIx = clus.clusterOfProbe( randomProbeToModify( clus ) );
         const probe_bitset_t& cluProbes = clus.probesCluster( probeCluIx ).items();
         probe_index_t probe1ix = 0;
-        PrecomputedData::dist_to_probe_t probe2Dist( PROBE_NA, unset() );
+        PrecomputedData::dist_to_probe_t probe2Dist( PROBE_NA, unset<log_prob_t>() );
         foreach_bit( probe_index_t, probeIx, cluProbes ) {
              PrecomputedData::dist_to_probe_t dist = _precomputed.rankedProbe( probeIx, cluProbes, true,
                                                     gsl_ran_geometric( rndNumGen(), 1.0 / _params.meanProbeRank )-1, false, true );
@@ -490,3 +494,5 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
 
     return ( clus.totalLnP(_energyEval.weights) );
 }
+
+} }

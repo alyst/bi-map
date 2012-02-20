@@ -1,5 +1,8 @@
-#include "ChessboardBiclusteringsIndexing.h"
-#include "dynamic_bitset_utils.h"
+#include "cemm/bimap/ChessboardBiclusteringsIndexing.h"
+
+#include <cemm/containers/dynamic_bitset_foreach.h>
+
+namespace cemm { namespace bimap {
 
 object_clundex_t ChessboardBiclusteringScaffold::objectsClusterIndex(
     objects_cluster_serial_type objectsCluSerial
@@ -164,3 +167,5 @@ ChessboardBiclusteringIndexed ChessboardBiclusteringsIndexing::index(
 
     return ( ChessboardBiclusteringIndexed( pScaffold, blockData, clustering.objectMultiples(), clustering.clusteringData() ) );
 }
+
+} }

@@ -1,11 +1,13 @@
 #include <boost/format.hpp>
 
-#include "math/Distributions.h"
+#include <cemm/math/Distributions.h>
 
-#include "CoOccurrenceGraph.h"
+#include "cemm/bimap/CoOccurrenceGraph.h"
+
+namespace cemm { namespace bimap {
 
 /**
- * Calculates graph of elements co-occurence based on
+ * Calculates graph of elements co-occurrence based on
  * independent occurrence in observations
  * (hypergeometric distribution is used),
  * 
@@ -64,3 +66,5 @@ co_occurrence_graph_t CreateCoOccurrenceGraph(
               << " D[ln(p)]=" << boost::format("%.3f") % lpVar );
     return ( res );
 }
+
+} }

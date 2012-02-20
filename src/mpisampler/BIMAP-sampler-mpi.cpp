@@ -1,14 +1,17 @@
-#include "../BasicTypedefs.h"
+#include "cemm/bimap/BasicTypedefs.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
 
-#include "../ConsolePTCExecutionMonitor.h"
+#include <cemm/eesampler/ConsolePTCExecutionMonitor.h>
 
-#include "../BIMAPResultsSerialize.h"
+#include "cemm/bimap/BIMAPResultsSerialize.h"
+#include "cemm/bimap/OPADataImportCSV.h"
+
 #include "../ParametersReader.h"
-#include "../OPADataImportCSV.h"
 #include "BIMAP-sampler-mpi.h"
+
+namespace cemm { namespace bimap {
 
 boost::optional<BIMAPWalk> MPI_BIMAPSampler_run(
     const BIMAPSamplerHelper&      helper,
@@ -87,8 +90,12 @@ void broadcast_statically_tracked( boost::mpi::communicator& comm, const char* n
     }
 }
 
+} }
+
 int main( int argc, char* argv[] )
 {
+    using namespace cemm::bimap;
+
     boost::mpi::environment env( argc, argv, true );
     boost::mpi::communicator world;
 

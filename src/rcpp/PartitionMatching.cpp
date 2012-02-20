@@ -1,4 +1,4 @@
-#include "../BasicTypedefs.h"
+#include <cemm/bimap/BasicTypedefs.h>
 
 #include <stdarg.h>
 #include <cmath>
@@ -6,11 +6,13 @@
 #include <boost/unordered_map.hpp>
 
 #include <R_ext/Rdynload.h>
-#include "../../include/RUtils.h"
+#include <cemm/RUtils.h>
 
 #ifndef NDEBUG
 //#define DYNLOAD_DEBUG
 #endif
+
+namespace cemm { namespace bimap {
 
 /**
  *  Calculates number of matches and mismatches
@@ -199,3 +201,5 @@ RcppExport SEXP CountPartitionMismatches(
     return ( res );
     END_RCPP
 }
+
+} }

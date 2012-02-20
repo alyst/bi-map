@@ -1,4 +1,4 @@
-#include "misc_utils.h"
+#include "cemm/bimap/misc_utils.h"
 
 /**
  *  Test if string ends with given substring.

@@ -7,11 +7,14 @@
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 
-#include <OPAData.h>
-#include <BIMAPWalk.h>
-#include <BIMAPSampler.h>
+#include <cemm/eesampler/ConsolePTCExecutionMonitor.h>
 
-#include <ConsolePTCExecutionMonitor.h>
+#include <cemm/bimap/OPAData.h>
+#include <cemm/bimap/BIMAPWalk.h>
+#include <cemm/bimap/BIMAPSampler.h>
+
+using namespace cemm::bimap;
+using namespace cemm::eesampler;
 
 TEST( BIMAPWalk, serialize_write )
 {

@@ -1,4 +1,4 @@
-#include "BIMAPResultsSerialize.h"
+#include "cemm/bimap/BIMAPResultsSerialize.h"
 
 #include <fstream>
 #include <boost/filesystem/path.hpp>
@@ -13,8 +13,11 @@
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filter/zlib.hpp>
 
-#include "unordered_serialization.h"
-#include "misc_utils.h"
+#include <cemm/containers/dynamic_bitset_serialization.h>
+
+#include "cemm/bimap/misc_utils.h"
+
+namespace cemm { namespace bimap {
 
 template<class Archive, class InputStream>
 void DeserializeResults(
@@ -218,3 +221,5 @@ void BIMAPResultsSave(
         THROW_RUNTIME_ERROR( "Unsupported extension of results file" );
     }
 }
+
+} }

@@ -31,16 +31,14 @@ set( RBIMAP_Sources
 )
 
 add_library( RBIMAP SHARED ${RBIMAP_Sources} )
-    add_dependencies( RBIMAP BIMAP )
+    add_dependencies( RBIMAP BIMAP math eesampler mcmc )
     target_link_libraries( RBIMAP BIMAP ${R_LIB} ${Rcpp_LIB} )
 
 set( RBIMAPMath_Sources
      "ExtraStats.cpp"
      "PartitionMatching.cpp"
-     "../math/logmath.cpp"
-     "../math/Distributions.cpp"
-     "../math/PitmanYorProcess.cpp"
 )
 
 add_library( RBIMAP-math SHARED ${RBIMAPMath_Sources} )
+    add_dependencies( RBIMAP-math math )
     target_link_libraries( RBIMAP-math ${GSL_LIBRARIES} ${R_LIB} ${Rcpp_LIB} )

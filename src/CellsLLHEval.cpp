@@ -1,7 +1,9 @@
-#include "dynamic_bitset_utils.h"
-#include "math/Distributions.h"
+//#include "cemm/bimap/dynamic_bitset_utils.h"
+#include <cemm/math/Distributions.h>
 
-#include "CellsLLHEval.h"
+#include "cemm/bimap/CellsLLHEval.h"
+
+namespace cemm { namespace bimap {
 
 CellsLLHEval::CellsLLHEval(
     const PrecomputedData&      precomputed,
@@ -52,3 +54,5 @@ log_prob_t CellsLLHEval::cellSignalLnPdf(
     LOG_DEBUG2( "Cell[S](" << objIx << "," << probeIx << ") pdf=" << res );
     return ( res );
 }
+
+} }

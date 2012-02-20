@@ -1,4 +1,4 @@
-#include "OPADataImportCSV.h"
+#include "cemm/bimap/OPADataImportCSV.h"
 
 #include <fstream>
 
@@ -6,6 +6,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/algorithm/string/trim.hpp>
+
+namespace cemm { namespace bimap {
 
 typedef boost::escaped_list_separator<char> csv_listsep_t;
 typedef boost::tokenizer< boost::escaped_list_separator<char> > csvrow_tokenizer_t;
@@ -151,3 +153,5 @@ OPAData OPADataImportCSV(
     ImportMeasurements( data, ioParams.measurementsFilename.c_str(), ioParams.csvColumnSeparator );
     return ( data );
 }
+
+} }

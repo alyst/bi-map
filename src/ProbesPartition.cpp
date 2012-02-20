@@ -1,10 +1,12 @@
 #include <limits>
 
-#include "dynamic_bitset_utils.h"
+#include <cemm/containers/dynamic_bitset_foreach.h>
 
 #include "ChessboardBiclusteringFitInternal.h"
 
-#include "ProbesPartition.h"
+#include "cemm/bimap/ProbesPartition.h"
+
+namespace cemm { namespace bimap {
 
 std::string ProbesPartition::ProbesClusterProxy::label() const
 {
@@ -242,3 +244,5 @@ log_prob_t ProbesParamsSampler::transitionLP(
     }
     return ( lnProb );
 }
+
+} }

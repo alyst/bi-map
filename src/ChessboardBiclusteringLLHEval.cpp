@@ -1,7 +1,9 @@
-#include "dynamic_bitset_utils.h"
-#include "math/Distributions.h"
+#include <cemm/containers/dynamic_bitset_foreach.h>
+#include <cemm/math/Distributions.h>
 
-#include "ChessboardBiclusteringLLHEval.h"
+#include "cemm/bimap/ChessboardBiclusteringLLHEval.h"
+
+namespace cemm { namespace bimap {
 
 ChessboardBiclusteringLLHEval::ChessboardBiclusteringLLHEval(
     DataSignalNoiseCache&   cache,
@@ -324,3 +326,5 @@ log_prob_t BlockEnablementDataLLH::operator()(
     return ( isEnabled ? cache.signalLLH( objects, probes )
                        : cache.noiseLLH( objects, probes ) );
 }
+
+} }

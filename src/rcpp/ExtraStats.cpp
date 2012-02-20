@@ -1,18 +1,20 @@
-#include "../BasicTypedefs.h"
+#include <cemm/bimap/BasicTypedefs.h>
 
 #include <stdarg.h>
 #include <cmath>
 
 #include <R_ext/Rdynload.h>
-#include "../../include/RUtils.h"
+#include <cemm/RUtils.h>
 
 #ifndef NDEBUG
 //#define DYNLOAD_DEBUG
 #endif
 
-#include "../math/LagrangianPoisson.h"
-#include "../math/PitmanYorProcess.h"
-#include "../math/GenericDiscreteDistribution.h"
+#include <cemm/math/LagrangianPoisson.h>
+#include <cemm/math/PitmanYorProcess.h>
+#include <cemm/math/GenericDiscreteDistribution.h>
+
+namespace cemm { namespace bimap {
 
 gsl_rng* rndNumGen = NULL;
 
@@ -124,3 +126,5 @@ RcppExport SEXP DoNothing(
     END_RCPP
 }
 #endif
+
+} }

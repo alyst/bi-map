@@ -1,8 +1,11 @@
-#include "ChessboardBiclusteringsPDFEval.h"
+#include "cemm/bimap/ChessboardBiclusteringsPDFEval.h"
 
-#include "dynamic_bitset_utils.h"
-#include "IndexedPartitionsCollection.h"
+#include <cemm/containers/dynamic_bitset_foreach.h>
+
+#include "cemm/bimap/IndexedPartitionsCollection.h"
 #include "PartitionStatisticsImpl.h"
+
+namespace cemm { namespace bimap {
 
 PartitionIndependentComponentsPDF::PartitionIndependentComponentsPDF(
     size_t normalizer,
@@ -236,3 +239,5 @@ log_prob_t ChessboardBiclusteringsPDFEval::lnCellsMaskPdf(
     }
     return ( res );
 }
+
+} }

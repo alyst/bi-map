@@ -1,15 +1,18 @@
 #include <set>
 #include <map>
 
-#include <dynamic_bitset_utils.h>
+#include <cemm/containers/dynamic_bitset_foreach.h>
+#include <cemm/eesampler/ConsolePTCExecutionMonitor.h>
 
-#include <BIMAPSampler.h>
-#include <ChessboardBiclusteringsPDFEval.h>
-
-#include <ConsolePTCExecutionMonitor.h>
+#include <cemm/bimap/BIMAPSampler.h>
+#include <cemm/bimap/ChessboardBiclusteringsPDFEval.h>
 
 #include "TestCommon.h"
 #include "OPADataTest.h"
+
+using namespace cemm::bimap;
+using namespace cemm::eesampler;
+using namespace cemm::test;
 
 /*************************************************/
 

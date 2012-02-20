@@ -1,15 +1,18 @@
 #include <set>
 #include <map>
 
-#include <dynamic_bitset_utils.h>
+#include <cemm/containers/dynamic_bitset_foreach.h>
 
-#include <ChessboardBiclusteringFit.h>
+#include <cemm/bimap/ChessboardBiclusteringFit.h>
 
 #include "TestCommon.h"
 #include "OPADataTest.h"
 
-#include "ObjectsPartition.h"
-#include "ProbesPartition.h"
+#include <cemm/bimap/ObjectsPartition.h>
+#include <cemm/bimap/ProbesPartition.h>
+
+using namespace cemm::bimap;
+using namespace cemm::test;
 
 /*************************************************/
 
