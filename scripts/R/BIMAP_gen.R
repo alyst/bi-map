@@ -4,7 +4,7 @@
 ###############################################################################
 
 source( paste( bimap_scripts_path, "BIMAP.R", sep = .Platform$file.sep ) )
-source( paste( bimap_scripts_path, "BIMAPMath.R", sep = .Platform$file.sep ) )
+source( paste( bimap_scripts_path, "BIMAP_math.R", sep = .Platform$file.sep ) )
 
 #' Loads biclustering blocks matrix from file
 #' @param matrix_file 
