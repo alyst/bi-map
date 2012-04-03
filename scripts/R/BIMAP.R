@@ -80,6 +80,7 @@ BIMAP.msdata.import <- function( ms_data, protein_info, msrun.multipliers = NULL
     samples.colnames <- unique( c( sample_column, bait_column,
                                    intersect( colnames(ms_data_noglob),
                                               sample_extra_columns ) ) )
+    if ( sample_column == bait_column ) samples.colnames <- c( sample_column, samples.colnames ) # handle case sample = bait
     samples.df <- unique( subset( ms_data_noglob, select = samples.colnames ) )
     samples.colnames[1:2] <- c( 'sample', 'bait_ac' )
     colnames( samples.df ) <- samples.colnames 
