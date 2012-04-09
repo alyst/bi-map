@@ -862,7 +862,8 @@ BIMAP.mcmcwalk.interactors_frame <- function( bimap.walk, protein.ac, protein.in
 #' @export
 BIMAP.mcmcwalk.extract_stable_clusters <- function( bimap.walk, bimap.data,
         min.avg.nsample = 3, min.size = 2,
-        min.included.freq = 0.95, size.weight = 0.2 )
+        min.included.freq = 0.95, size.weight = 0.2,
+        allow.intersections = FALSE )
 {
     min.nsteps.included = nrow( bimap.walk@clusterings.walk ) * min.included.freq
     good.clusters.info <- subset( bimap.walk@objects.clusters.info, size >= min.size & nsteps.included >= min.nsteps.included )
@@ -882,14 +883,18 @@ BIMAP.mcmcwalk.extract_stable_clusters <- function( bimap.walk, bimap.data,
     intersecting.pairs <- unique( merge( good.clusters, good.clusters, by = c( 'object' ),
                     all = FALSE, sort = FALSE )
                     [ c( 'objects.cluster.serial.x', 'objects.cluster.serial.y' ) ] )
-    best.clusters.serials <- c()
-    while ( nrow( good.clusters.info ) > 0 ) {
-        best.cluster <- good.clusters.info[ order( good.clusters.info$score, decreasing = TRUE )[1], 'objects.cluster.serial' ]
-        best.clusters.serials <- c( best.clusters.serials, best.cluster )
-        intersects.with <- subset( intersecting.pairs, objects.cluster.serial.x == best.cluster )$objects.cluster.serial.y
-        good.clusters.info <- subset( good.clusters.info, !( objects.cluster.serial %in% intersects.with ) )
+    if ( !allow.intersections ) {
+        best.clusters.serials <- c()
+        while ( nrow( good.clusters.info ) > 0 ) {
+            best.cluster <- good.clusters.info[ order( good.clusters.info$score, decreasing = TRUE )[1], 'objects.cluster.serial' ]
+            best.clusters.serials <- c( best.clusters.serials, best.cluster )
+            intersects.with <- subset( intersecting.pairs, objects.cluster.serial.x == best.cluster )$objects.cluster.serial.y
+            good.clusters.info <- subset( good.clusters.info, !( objects.cluster.serial %in% intersects.with ) )
+        }
+        res <- subset( bimap.walk@objects.clusters, objects.cluster.serial %in% best.clusters.serials )
+    } else {
+        res <- subset( bimap.walk@objects.clusters, objects.cluster.serial %in% good.clusters.info$objects.cluster.serial )
     }
-    res <- subset( bimap.walk@objects.clusters, objects.cluster.serial %in% best.clusters.serials )
     res <- res[ order( res$objects.cluster.serial, res$object ), ]
     return ( res )
 }
