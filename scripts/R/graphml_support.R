@@ -119,14 +119,15 @@ http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd" )
     if ( !is.null(edges) && nrow( edges ) > 0 ) {
         message( 'Generating edges...' )
         newXMLCommentNode( 'Edges', parent = rootGraph )
-        apply( edges, 1, function( edge_data ) {
-                sourceNode <- edge_data[ source_col ]
-                targetNode <- edge_data[ target_col ]
+        ddply( edges, c( source_col, target_col ), function( edge_data ) {
+                sourceNode <- edge_data[ , source_col ]
+                targetNode <- edge_data[ , target_col ]
                 edgeXmlNode <- newXMLNode( 'edge', parent = rootGraph, 
                     attrs = list( id = paste( sourceNode, targetNode, sep = '_' ), 
                         source = sourceNode, target = targetNode ) )
                 apply( edgeAttrs.df, 1, writeDataNode, edge_data, edgeXmlNode )
                 edgeXmlNode
+                return ( NULL )
             } )
     }
 
