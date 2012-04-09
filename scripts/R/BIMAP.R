@@ -157,7 +157,7 @@ BIMAP.msdata.load <- function(
     if ( format == 'OPAData'){
         return ( .Call( "OPADataLoad", filename ) )
     } else {
-        print( paste( "Reading BI-MAP data from", data_path, "..." ) )
+        message( "Reading BI-MAP data from ", data_path, "..." )
         bimap.data <- list()
         bimap.data$measurements <- read.table(
             file = file.path( data_path, 'measurements.txt' ),
@@ -196,7 +196,7 @@ BIMAP.msdata.save <- function( bimap.data,
                 bimap.data$proteins, bimap.data$samples, bimap.data$msruns,
                 bimap.data$measurements ) )
     } else {
-        print( paste( "Writing BI-MAP data to", data_path, "..." ) )
+        message( "Writing BI-MAP data to ", data_path, "..." )
         write.table( bimap.data$measurements[,intersect(colnames(bimap.data$measurements),
                     c('msrun','prey_ac','sc','pc'))],
             file = file.path( data_path, 'measurements.txt' ),
@@ -381,9 +381,9 @@ BIMAP.mcmcwalk.eval_MPI <- function(
     cmdline <- paste( "mpiexec", paste( mpirun.options, collapse=' ' ),
                       file.path( program.path, "MPIBIMAPSampler" ),
                       paste( sampler_options, collapse = ' ' ), sep = ' ' )
-    print( paste('Running MPI sampler: ', cmdline ) )
+    message( 'Running BI-MAP MPI sampler: ', cmdline, '...' )
     system( cmdline )
-    print( paste( 'Finished MPI sampling' ) )
+    message( 'BI-MAP MPI sampler finished' )
 
     unlink( tempOPAfilename ) # delete temporarily data file
 
@@ -700,17 +700,17 @@ BIMAP.mcmcwalk.extract_biclustering <- function( bimap.walk, bimapId,
     colnames( res$samples.clusters.info ) <- c( 'samples.cluster', 'size', 'nsteps', 'nsteps_included', 'avg_pairs_cooccur' )
     res$samples.clusters.info$avg_pairs_freq <- res$samples.clusters.info$avg_pairs_cooccur / nrow( bimap.walk@clusterings.walk )
     if ( extract.signals ) {
-        print( paste( 'Extracting signals for clustering #', bimapId, '...', sep='') )
+        message( 'Extracting signals for on-blocks of bi-clustering #', bimapId, '...' )
         # get subframe with all samples for signals of given bimap
         # (but samples might be from other bimaps, which contain the same clusters)
         block_ids <- paste( blocks$proteins.cluster, blocks$samples.cluster )
         signals.subframe <- subset( bimap.walk@signals,
                 paste( objects.cluster.serial, probes.cluster.serial ) %in% block_ids )[c('step', 'objects.cluster.serial', 'probes.cluster.serial', 'signal')]
-        print( paste( nrow(signals.subframe), "signals extracted" ) )
+        message( nrow(signals.subframe), " signals extracted" )
         colnames( signals.subframe ) <- c( 'step', 'proteins.cluster', 'samples.cluster', 'signal' )
         signals.subframe$proteins.cluster <- as.character( signals.subframe$proteins.cluster )
         signals.subframe$samples.cluster <- as.character( signals.subframe$samples.cluster )
-        print( "Calculating signals statistics..." )
+        message( "Calculating on-blocks signals statistics..." )
         signal_stats <- BIMAP.signal_stats( signals.subframe )
         res$blocks$signal.mean <- apply( res$blocks, 1,
                 function( block ) signal_stats$signals.mean[ block[['proteins.cluster']], block[['samples.cluster']] ] )
@@ -718,7 +718,7 @@ BIMAP.mcmcwalk.extract_biclustering <- function( bimap.walk, bimapId,
                 function( block ) signal_stats$signals.sd[ block[['proteins.cluster']], block[['samples.cluster']] ] )
         res <- c( res, signal_stats )
         res$signals.subframe = signals.subframe
-        print( 'Signals extracted' )
+        message( 'On-blocks signals statistics calculation done' )
     }
     return ( res )
 }
