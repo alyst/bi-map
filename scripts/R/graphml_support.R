@@ -87,7 +87,7 @@ http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd" )
         lapply( graph_node_ids, function( node_id ) {
                 nodeXmlNode <- newXMLNode( 'node', parent = parent_xml_node, attrs = list( id = node_id ) )
                 node_data <- nodes[ nodes[,node_col] == node_id, ]
-                if ( nrow( node_data ) > 1 ) {
+                if ( is.data.frame( node_data ) && nrow( node_data ) > 1 ) {
                     stop( 'Duplicate node id: ', node_id )
                 }
                 apply( nodeAttrs.df, 1, writeDataNode, node_data, nodeXmlNode )
