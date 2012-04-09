@@ -10,6 +10,8 @@ generateGraphML <- function(
     nodes, edges,
     node_col = 'node', parent_col = 'parent',
     source_col = 'source', target_col = 'target',
+    node_attrs_export_names = NULL,
+    edge_attrs_export_names = NULL,
     directed = TRUE
 ){
     graphMLRoot <- newXMLNode( "graphml", namespace = "", 
@@ -29,19 +31,25 @@ http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd" )
                        'numeric' = 'double', 'integer' = 'int',
                        'logical' = 'boolean' )
     
-    writeAttrNodes <- function( attrOf, df, attrNames ) {
+    writeAttrNodes <- function( attrOf, df, attrCols, attrNames ) {
         attrs.df <- data.frame(
-            name = attrNames,
-            id = paste( substr( attrOf, 1, 1 ), 1:length( attrNames ), sep = '' ),
-            type = sapply( attrNames, function( attr ) attrClassMap[ as.character( class( df[, attr] ) ) ] ),
+            name = attrCols,
+            export_name = attrCols,
+            id = paste( substr( attrOf, 1, 1 ), 1:length( attrCols ), sep = '' ),
+            type = sapply( attrCols, function( attr ) attrClassMap[ as.character( class( df[, attr] ) ) ] ),
             stringsAsFactors = FALSE
         )
-        rownames( attrs.df ) <- attrNames
+        rownames( attrs.df ) <- attrCols
+        # substitute the column name with the export name of the attribute
+        if ( !is.null( attrNames ) ) {
+            attrs.df[ attrs.df$name %in% names( attrNames ), 'export_name' ] <- 
+                    attrNames[ attrs.df[ attrs.df$name %in% names( attrNames ), 'export_name' ] ]
+        }
         attrKeyNodes <- apply( attrs.df, 1, function( attr ) {
                 newXMLNode( 'key', parent = graphMLRoot, attrs = list(
                         'for'= attrOf,
                         'id' = attr['id'],
-                        'attr.name' = attr['name'],
+                        'attr.name' = attr['export_name'],
                         'attr.type' = attr['type'] ) )
             } )
         return ( attrs.df )
@@ -49,12 +57,12 @@ http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd" )
     # generate node attributes
     message( 'Generating node attributes...' )
     newXMLCommentNode( 'Node attributes definitions', parent = graphMLRoot )
-    nodeAttrs.df <- writeAttrNodes( 'node', nodes, setdiff( colnames( nodes ), c( source_col, target_col ) ) )
+    nodeAttrs.df <- writeAttrNodes( 'node', nodes, setdiff( colnames( nodes ), c( source_col, target_col ) ), node_attrs_export_names )
     print( nodeAttrs.df )
     message( 'Generating edge attributes...' )
     newXMLCommentNode( 'Edge attributes definitions', parent = graphMLRoot )
     if ( nrow(edges) > 0 ) {
-        edgeAttrs.df <- writeAttrNodes( 'edge', edges, setdiff( colnames( edges ), c( source_col, target_col ) ) )
+        edgeAttrs.df <- writeAttrNodes( 'edge', edges, setdiff( colnames( edges ), c( source_col, target_col ) ), edge_attrs_export_names )
         print( edgeAttrs.df )
     } else {
         warning( 'No edges' )
