@@ -14,6 +14,147 @@
 
 namespace cemm { namespace bimap {
 
+struct PairsStats {
+    size_t nCoCo;
+    size_t nCoMm;
+    size_t nMmCo;
+
+    PairsStats()
+    : nCoCo( 0 ), nCoMm( 0 ), nMmCo( 0 )
+    {};
+
+    PairsStats& operator+=( const PairsStats& that )
+    {
+        nCoCo += that.nCoCo;
+        nCoMm += that.nCoMm;
+        nMmCo += that.nMmCo;
+        return ( *this );
+    }
+};
+
+struct PartitionCollection {
+    typedef std::string elm_label_t;
+    typedef size_t elm_ix_t;
+    typedef size_t clu_ix_t;
+    typedef std::string ptn_ix_t;
+
+    typedef std::set<elm_ix_t> elm_set_t;
+    typedef boost::unordered_map<clu_ix_t, elm_set_t> clu2elmset_map_t;
+    typedef boost::unordered_map<ptn_ix_t, clu2elmset_map_t> ptn_coll_t;
+    typedef boost::unordered_map<elm_label_t, elm_ix_t> elm_label_map_t;
+    typedef boost::unordered_map<ptn_ix_t, ptn_ix_t> ptn_map_t;
+
+    elm_label_map_t     elmLabel2ix;    /// element label to element index map
+    ptn_coll_t          ptnIx2clusters; /// partition index to its clusters map
+    ptn_map_t           ptnIx2tmplPtnIx;/// partition index to template partition index
+    std::size_t         _clustersCount; /// count of clusters in all partitions
+
+    void read( const Rcpp::StringVector&    ptnId,
+               const Rcpp::StringVector&    tmplPtnId,
+               const Rcpp::IntegerVector&   cluId,
+               const Rcpp::StringVector&    elmId,
+               bool initElementIndexes = false );
+
+    std::size_t elementsCount() const {
+        return ( elmLabel2ix.size() );
+    }
+
+    std::size_t partitionsCount() const {
+        return ( ptnIx2clusters.size() );
+    }
+    std::size_t clustersCount() const {
+        return ( _clustersCount );
+    }
+    static PairsStats ClusterStats( const clu2elmset_map_t& partition, const elm_set_t& cluster );
+};
+
+void PartitionCollection::read(
+   const Rcpp::StringVector&    ptnId,
+   const Rcpp::StringVector&    tmplPtnId,
+   const Rcpp::IntegerVector&   cluId,
+   const Rcpp::StringVector&    elmId,
+   bool                         initElementIndexes
+){
+    // reset maps
+    if ( initElementIndexes ) elmLabel2ix.clear();
+    ptnIx2clusters.clear();
+    ptnIx2tmplPtnIx.clear();
+    _clustersCount = 0;
+
+    for ( int i = 0; i < ptnId.size(); i++ ) {
+        // get the element
+        elm_label_t elm = (elm_label_t)elmId[ i ];
+        elm_label_map_t::const_iterator elmIt = elmLabel2ix.find( elm );
+        elm_ix_t elmIx;
+        if ( elmIt != elmLabel2ix.end() ) {
+            elmIx = elmIt->second;
+        } else {
+            if ( initElementIndexes ) {
+                // assign index to newly encountered element
+                elmIx = elmLabel2ix.size();
+                elmLabel2ix.insert( elmIt, elm_label_map_t::value_type( elm, elmIx ) );
+            } else {
+                THROW_RUNTIME_ERROR( "Element '" << elm << "' not found in template partition" );
+            }
+        }
+
+        // get the partition
+        ptn_ix_t ptnIx = (ptn_ix_t)ptnId[ i ];
+        ptn_coll_t::iterator ptnIt = ptnIx2clusters.find( ptnIx );
+        if ( ptnIt == ptnIx2clusters.end() ) {
+            // create the new empty partition
+            ptnIt = ptnIx2clusters.insert( ptnIt, ptn_coll_t::value_type( ptnIx, clu2elmset_map_t() ) );
+        }
+        // get the cluster index (local to the partition)
+        clu_ix_t cluIx = cluId[ i ];
+        // append cluster to the partition
+        clu2elmset_map_t::iterator jt = ptnIt->second.find( cluIx );
+        if ( jt != ptnIt->second.end() ) {
+            // append element to the existing cluster
+            jt->second.insert( elmIx );
+        } else {
+            // create new cluster (containing elmIx)
+            elm_set_t eset;
+            eset.insert( elmIx );
+            ptnIt->second.insert( jt, clu2elmset_map_t::value_type( cluIx, eset ) );
+            _clustersCount++;
+        }
+        // link partition and the template partition
+        ptn_ix_t tmplPtnIx = (ptn_ix_t)tmplPtnId[ i ];
+        ptn_map_t::const_iterator tmplPtnIt = ptnIx2tmplPtnIx.find( ptnIx );
+        if ( tmplPtnIt == ptnIx2tmplPtnIx.end() ) {
+            ptnIx2tmplPtnIx.insert( tmplPtnIt, ptn_map_t::value_type( ptnIx, tmplPtnIx ) );
+        } else {
+            if ( tmplPtnIt->second != tmplPtnIx ) {
+                THROW_RUNTIME_ERROR( "Template partition Id '" << tmplPtnIx
+                                     << "' is different from the one already stored: '" << tmplPtnIt->second << "'" );
+            }
+        }
+    }
+}
+
+PairsStats PartitionCollection::ClusterStats(
+    const clu2elmset_map_t& partition,
+    const elm_set_t&        cluster
+){
+    const std::size_t clusterSize = cluster.size();
+    PairsStats res;
+    for ( clu2elmset_map_t::const_iterator partIt = partition.begin();
+        partIt != partition.end(); ++partIt
+    ){
+        const elm_set_t& part = partIt->second;
+        std::vector<elm_ix_t> isect;
+        std::set_intersection( part.begin(), part.end(),
+                               cluster.begin(), cluster.end(),
+                               std::back_inserter( isect ) );
+        const size_t isectSize = isect.size();
+        res.nCoCo += isectSize * ( isectSize - 1 ); // matching pairs
+        res.nCoMm += ( part.size() - isectSize ) * isectSize; // co-clustered in partition, but not in cluster
+        res.nMmCo += ( clusterSize - isectSize ) * isectSize; // co-clustered in cluster, but mismatch in partition
+    }
+    return ( res );
+}
+
 /**
  *  Calculates number of matches and mismatches
  *  in co-clustered pairs between the "template" partition
@@ -34,156 +175,76 @@ RcppExport SEXP CountPartitionMismatches(
     std::string elmIdColName = Rcpp::as<std::string>( elementIdColumnExp );
     std::string tmplPtnIdColName = Rcpp::as<std::string>( templatePartitionIdColumnExp );
 
-    typedef std::string elm_label_t;
-    typedef size_t elm_ix_t;
-    typedef size_t clu_ix_t;
-    typedef std::string ptn_ix_t;
-
-    typedef std::set<elm_ix_t> elm_set_t;
-    typedef boost::unordered_map<clu_ix_t, elm_set_t> clu2elmset_map_t;
-    typedef boost::unordered_map<ptn_ix_t, clu2elmset_map_t> ptn_coll_t;
-    typedef boost::unordered_map<elm_label_t, elm_ix_t> elm_label_map_t;
-    typedef boost::unordered_map<ptn_ix_t, ptn_ix_t> ptn_map_t;
-
-    size_t nElms;
-
-    clu2elmset_map_t    tmplClu2ElmSet;
-    elm_label_map_t     elmLabelMap;
     // read the template partition
     Rprintf( "Reading template partitions collection...\n" );
-    ptn_coll_t tmplPtnColl;
-    // read the partitions of the collection while simultaneously calculating the scores
+    PartitionCollection tmplPtnColl;
     {
         Rcpp::DataFrame ptnCollDf = templatePartitionsCollectionExp;
-        Rcpp::StringVector ptnCollPtnId = ptnCollDf[ tmplPtnIdColName ];
-        Rcpp::IntegerVector ptnCollCluId = ptnCollDf[ cluIdColName ];
-        Rcpp::StringVector ptnCollElmId = ptnCollDf[ elmIdColName ];
-        for ( int i = 0; i < ptnCollPtnId.size(); i++ ) {
-            ptn_ix_t ptnIx = (ptn_ix_t)ptnCollPtnId[ i ];
-            clu_ix_t cluIx = ptnCollCluId[ i ];
-            ptn_coll_t::iterator ptnIt = tmplPtnColl.find( ptnIx );
-            if ( ptnIt == tmplPtnColl.end() ) {
-                ptnIt = tmplPtnColl.insert( ptnIt, ptn_coll_t::value_type( ptnIx, clu2elmset_map_t() ) );
-            }
-            elm_label_t elm = (elm_label_t)ptnCollElmId[ i ];
-            elm_label_map_t::const_iterator elmIt = elmLabelMap.find( elm );
-            elm_ix_t elmIx;
-            if ( elmIt != elmLabelMap.end() ) {
-                elmIx = elmIt->second;
-            } else {
-                elmIx = elmLabelMap.size();
-                elmLabelMap.insert( elmIt, elm_label_map_t::value_type( elm, elmIx ) );
-            }
-            clu2elmset_map_t::iterator jt = ptnIt->second.find( cluIx );
-            if ( jt != ptnIt->second.end() ) {
-                jt->second.insert( elmIx );
-            } else {
-                elm_set_t eset;
-                eset.insert( elmIx );
-                ptnIt->second.insert( jt, clu2elmset_map_t::value_type( cluIx, eset ) );
-            }
-        }
-        nElms = elmLabelMap.size();
+        tmplPtnColl.read( ptnCollDf[ tmplPtnIdColName ],
+                          ptnCollDf[ tmplPtnIdColName ],
+                          ptnCollDf[ cluIdColName ],
+                          ptnCollDf[ elmIdColName ],
+                          true );
     }
+    size_t nElms = tmplPtnColl.elementsCount();
 
     Rprintf( "Reading partitions collection...\n" );
-    ptn_coll_t ptnColl;
-    ptn_map_t  ptnToTmplPtnMap;
-    // read the partitions of the collection while simultaneously calculating the scores
+    PartitionCollection ptnColl;
+    ptnColl.elmLabel2ix = tmplPtnColl.elmLabel2ix;
     {
         Rcpp::DataFrame ptnCollDf = partitionsCollectionExp;
-        Rcpp::StringVector ptnCollPtnId = ptnCollDf[ ptnIdColName ];
-        Rcpp::IntegerVector ptnCollCluId = ptnCollDf[ cluIdColName ];
-        Rcpp::StringVector ptnCollElmId = ptnCollDf[ elmIdColName ];
-        Rcpp::StringVector tmplPtnId = ptnCollDf[ tmplPtnIdColName ];
-
-        for ( int i = 0; i < ptnCollPtnId.size(); i++ ) {
-            ptn_ix_t ptnIx = (ptn_ix_t)ptnCollPtnId[ i ];
-            clu_ix_t cluIx = ptnCollCluId[ i ];
-            elm_label_t elm = (elm_label_t)ptnCollElmId[ i ];
-            elm_label_map_t::const_iterator elmIt = elmLabelMap.find( elm );
-            if ( elmIt == elmLabelMap.end() ) THROW_RUNTIME_ERROR( "Element '" << elm << "' not found in template partition" );
-            elm_ix_t elmIx = elmIt->second;
-            ptn_coll_t::iterator ptnIt = ptnColl.find( ptnIx );
-            if ( ptnIt == ptnColl.end() ) {
-                ptnIt = ptnColl.insert( ptnIt, ptn_coll_t::value_type( ptnIx, clu2elmset_map_t() ) );
-            }
-            clu2elmset_map_t::iterator jt = ptnIt->second.find( cluIx );
-            if ( jt != ptnIt->second.end() ) {
-                jt->second.insert( elmIx );
-            } else {
-                elm_set_t eset;
-                eset.insert( elmIx );
-                ptnIt->second.insert( jt, clu2elmset_map_t::value_type( cluIx, eset ) );
-            }
-            ptnToTmplPtnMap[ ptnIx ] = tmplPtnId[ i ];
-        }
+        ptnColl.read( ptnCollDf[ ptnIdColName ],
+                      ptnCollDf[ tmplPtnIdColName ],
+                      ptnCollDf[ cluIdColName ],
+                      ptnCollDf[ elmIdColName ],
+                      false );
     }
 
     // calculate co-clustered and not co-clustered pairs
-    Rprintf( "Calculating (%d partitions)...\n", ptnColl.size() );
+    Rprintf( "Calculating (%d partitions, %d templates)...\n",
+             ptnColl.partitionsCount(), tmplPtnColl.partitionsCount() );
     Rcpp::DataFrame res;
     {
-        Rcpp::StringVector ptnIdVec( ptnColl.size() );
-        Rcpp::StringVector tmplPtnIdVec( ptnColl.size() );
-        Rcpp::IntegerVector nCoCoVec( ptnColl.size() );
-        Rcpp::IntegerVector nCoMmVec( ptnColl.size() );
-        Rcpp::IntegerVector nMmCoVec( ptnColl.size() );
-        Rcpp::IntegerVector nMmMmVec( ptnColl.size() );
+        Rcpp::StringVector ptnIdVec( ptnColl.partitionsCount() );
+        Rcpp::StringVector tmplPtnIdVec( ptnColl.partitionsCount() );
+        Rcpp::IntegerVector nCoCoVec( ptnColl.partitionsCount() );
+        Rcpp::IntegerVector nCoMmVec( ptnColl.partitionsCount() );
+        Rcpp::IntegerVector nMmCoVec( ptnColl.partitionsCount() );
+        Rcpp::IntegerVector nMmMmVec( ptnColl.partitionsCount() );
         size_t i = 0;
-        for ( ptn_coll_t::const_iterator ptnIt = ptnColl.begin(); ptnIt != ptnColl.end(); ++ptnIt ) {
-            ptn_map_t::const_iterator tmplIdIt = ptnToTmplPtnMap.find( ptnIt->first );
-            if ( tmplIdIt == ptnToTmplPtnMap.end() ) {
+        for ( PartitionCollection::ptn_coll_t::const_iterator ptnIt = ptnColl.ptnIx2clusters.begin();
+              ptnIt != ptnColl.ptnIx2clusters.end(); ++ptnIt ) {
+            PartitionCollection::ptn_map_t::const_iterator tmplIdIt = ptnColl.ptnIx2tmplPtnIx.find( ptnIt->first );
+            if ( tmplIdIt == ptnColl.ptnIx2tmplPtnIx.end() ) {
                 THROW_RUNTIME_ERROR( "Template ID not found for partition "
                                         << "'" << ptnIt->first << "'" );
             }
-            ptn_coll_t::const_iterator tmplIt = tmplPtnColl.find( tmplIdIt->second );
-            if ( tmplIt == tmplPtnColl.end() ) {
+            PartitionCollection::ptn_coll_t::const_iterator tmplPtnIt = tmplPtnColl.ptnIx2clusters.find( tmplIdIt->second );
+            if ( tmplPtnIt == tmplPtnColl.ptnIx2clusters.end() ) {
                 THROW_RUNTIME_ERROR( "Template partition ID=" << tmplIdIt->second
                                         << " not found for partition "
                                         << "'" << tmplIdIt->first << "'" );
             }
-            const clu2elmset_map_t& tmplPtn = tmplIt->second;
+            const PartitionCollection::clu2elmset_map_t& tmplPtn = tmplPtnIt->second;
 
-            ptn_ix_t ptnIx = ptnIt->first;
-            size_t nCoCo = 0;
-            size_t nCoMm = 0;
-            size_t nMmCo = 0;
+            PairsStats ptnStats;
             size_t nPtnElems = 0;
-            for ( clu2elmset_map_t::const_iterator tmplCluIt = tmplPtn.begin();
-                    tmplCluIt != tmplPtn.end(); ++tmplCluIt
+            for ( PartitionCollection::clu2elmset_map_t::const_iterator tmplCluIt = tmplPtn.begin();
+                  tmplCluIt != tmplPtn.end(); ++tmplCluIt
             ){
                 nPtnElems += tmplCluIt->second.size();
-                const elm_set_t& tmplClu = tmplCluIt->second;
-                size_t tmplCluSize = tmplClu.size();
-                for ( clu2elmset_map_t::const_iterator cluIt = ptnIt->second.begin();
-                    cluIt != ptnIt->second.end(); ++cluIt
-                ){
-                    const elm_set_t& clu = cluIt->second;
-                    size_t cluSize = clu.size();
-                    std::vector<elm_ix_t> isect;
-                    std::set_intersection( clu.begin(), clu.end(),
-                                           tmplClu.begin(), tmplClu.end(),
-                                           std::inserter( isect, isect.end() ) );
-                    size_t isectSize = isect.size();
-                    size_t coco = isectSize * ( isectSize - 1 );
-                    nCoCo += coco;
-                    size_t comm = ( cluSize - isectSize ) * isectSize;
-                    nCoMm += comm; // co-clustered in collection, but not in template
-                    size_t mmco = ( tmplCluSize - isectSize ) * isectSize;
-                    nMmCo += mmco; // co-clustered in template, but mismatch in collection
-                }
+                ptnStats += PartitionCollection::ClusterStats( ptnIt->second, tmplCluIt->second );
             }
             if ( nPtnElems > nElms ) {
-                THROW_RUNTIME_ERROR( "Partition '" << ptnIt->first << 
+                THROW_RUNTIME_ERROR( "Template partition '" << tmplPtnIt->first <<
                                      "' has " << nPtnElems << " elements, > " << nElms );
             }
             tmplPtnIdVec[ i ] = tmplIdIt->second;
-            ptnIdVec[ i ] = ptnIx;
-            nCoCoVec[ i ] = nCoCo / 2;
-            nCoMmVec[ i ] = nCoMm / 2;
-            nMmCoVec[ i ] = nMmCo / 2;
-            nMmMmVec[ i ] = ( nPtnElems * ( nElms - 1 ) - nCoCo - nCoMm - nMmCo ) / 2;
+            ptnIdVec[ i ] = ptnIt->first;
+            nCoCoVec[ i ] = ptnStats.nCoCo / 2;
+            nCoMmVec[ i ] = ptnStats.nCoMm / 2;
+            nMmCoVec[ i ] = ptnStats.nMmCo / 2;
+            nMmMmVec[ i ] = ( nPtnElems * ( nElms - 1 ) - ptnStats.nCoCo - ptnStats.nCoMm - ptnStats.nMmCo ) / 2;
             i++;
         }
         Rprintf( "Creating results data.frame\n" );
