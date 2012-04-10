@@ -263,4 +263,114 @@ RcppExport SEXP CountPartitionMismatches(
     END_RCPP
 }
 
+/**
+ *  Calculates number of matches and mismatches
+ *  in co-clustered pairs between the "template" partition
+ *  and a set of other partitions.
+ */
+RcppExport SEXP CountPartsMismatches(
+    SEXP    templatePartitionsCollectionExp,
+    SEXP    partitionsCollectionExp,
+    SEXP    templatePartitionIdColumnExp,
+    SEXP    partitionIdColumnExp,
+    SEXP    clusterIdColumnExp,
+    SEXP    elementIdColumnExp
+){
+    BEGIN_RCPP
+
+    std::string ptnIdColName = Rcpp::as<std::string>( partitionIdColumnExp );
+    std::string cluIdColName = Rcpp::as<std::string>( clusterIdColumnExp );
+    std::string elmIdColName = Rcpp::as<std::string>( elementIdColumnExp );
+    std::string tmplPtnIdColName = Rcpp::as<std::string>( templatePartitionIdColumnExp );
+
+    // read the template partition
+    Rprintf( "Reading template partitions collection...\n" );
+    PartitionCollection tmplPtnColl;
+    {
+        Rcpp::DataFrame ptnCollDf = templatePartitionsCollectionExp;
+        tmplPtnColl.read( ptnCollDf[ tmplPtnIdColName ],
+                          ptnCollDf[ tmplPtnIdColName ],
+                          ptnCollDf[ cluIdColName ],
+                          ptnCollDf[ elmIdColName ],
+                          true );
+    }
+    size_t nElms = tmplPtnColl.elementsCount();
+
+    Rprintf( "Reading partitions collection...\n" );
+    PartitionCollection ptnColl;
+    ptnColl.elmLabel2ix = tmplPtnColl.elmLabel2ix;
+    {
+        Rcpp::DataFrame ptnCollDf = partitionsCollectionExp;
+        ptnColl.read( ptnCollDf[ ptnIdColName ],
+                      ptnCollDf[ tmplPtnIdColName ],
+                      ptnCollDf[ cluIdColName ],
+                      ptnCollDf[ elmIdColName ],
+                      false );
+    }
+
+    // calculate co-clustered and not co-clustered pairs
+    Rprintf( "Calculating (%d partitions, %d template partitions, %d template clusters)...\n",
+             ptnColl.partitionsCount(), tmplPtnColl.partitionsCount(),
+             tmplPtnColl.clustersCount() );
+    Rcpp::DataFrame res;
+    {
+        std::vector<PartitionCollection::ptn_ix_t> tmplPtnIdVec;
+        std::vector<PartitionCollection::clu_ix_t> tmplCluIxVec;
+        std::vector<size_t> tmplCluSizeVec;
+        std::vector<PartitionCollection::ptn_ix_t> ptnIdVec;
+        std::vector<size_t> nCoCoVec;
+        std::vector<size_t> nCoMmVec;
+        std::vector<size_t> nMmCoVec;
+
+        for ( PartitionCollection::ptn_coll_t::const_iterator ptnIt = ptnColl.ptnIx2clusters.begin();
+              ptnIt != ptnColl.ptnIx2clusters.end(); ++ptnIt ) {
+            PartitionCollection::ptn_map_t::const_iterator tmplIdIt = ptnColl.ptnIx2tmplPtnIx.find( ptnIt->first );
+            if ( tmplIdIt == ptnColl.ptnIx2tmplPtnIx.end() ) {
+                THROW_RUNTIME_ERROR( "Template ID not found for partition "
+                                        << "'" << ptnIt->first << "'" );
+            }
+            PartitionCollection::ptn_coll_t::const_iterator tmplPtnIt = tmplPtnColl.ptnIx2clusters.find( tmplIdIt->second );
+            if ( tmplPtnIt == tmplPtnColl.ptnIx2clusters.end() ) {
+                THROW_RUNTIME_ERROR( "Template partition ID=" << tmplIdIt->second
+                                        << " not found for partition "
+                                        << "'" << tmplIdIt->first << "'" );
+            }
+            const PartitionCollection::clu2elmset_map_t& tmplPtn = tmplPtnIt->second;
+
+            size_t nPtnElems = 0;
+            for ( PartitionCollection::clu2elmset_map_t::const_iterator tmplCluIt = tmplPtn.begin();
+                  tmplCluIt != tmplPtn.end(); ++tmplCluIt
+            ){
+                PairsStats cluStats = PartitionCollection::ClusterStats( ptnIt->second, tmplCluIt->second );
+                tmplPtnIdVec.push_back( tmplPtnIt->first );
+                tmplCluIxVec.push_back( tmplCluIt->first );
+                tmplCluSizeVec.push_back( tmplCluIt->second.size() );
+                ptnIdVec.push_back( ptnIt->first );
+                nCoCoVec.push_back( cluStats.nCoCo / 2 );
+                nCoMmVec.push_back( cluStats.nCoMm );
+                nMmCoVec.push_back( cluStats.nMmCo / 2 );
+                nPtnElems += tmplCluIt->second.size();
+            }
+            if ( nPtnElems > nElms ) {
+                THROW_RUNTIME_ERROR( "Template partition '" << tmplPtnIt->first <<
+                                     "' has " << nPtnElems << " elements, > " << nElms );
+            }
+        }
+        Rprintf( "Creating results data.frame\n" );
+        res = Rcpp::DataFrame::create(
+                Rcpp::Named( ptnIdColName, ptnIdVec ),
+                Rcpp::Named( tmplPtnIdColName, tmplPtnIdVec ),
+                Rcpp::Named( cluIdColName, tmplCluIxVec ),
+                Rcpp::Named( "size", tmplCluSizeVec ),
+                Rcpp::Named( "co.tco", nCoCoVec ),
+                Rcpp::Named( "co.tmismatch", nCoMmVec ),
+                Rcpp::Named( "mismatch.tco", nMmCoVec ),
+                Rcpp::Named( "stringsAsFactors", false )
+             );
+    }
+    Rprintf( "Partitions Mismatches Calculation done...\n" );
+    return ( res );
+    END_RCPP
+}
+
 } }
