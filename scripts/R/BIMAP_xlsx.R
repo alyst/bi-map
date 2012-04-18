@@ -54,10 +54,12 @@ BIMAP.create_xlsx <- function(
             proteins_clu$clu.order <- 1:nrow( proteins_clu )
             return ( proteins_clu )
         } )
+        proteins <- proteins[ order( proteins$order ), ]
         samples <- ddply( samples, c( 'samples.cluster' ), function( samples_clu ) {
             samples_clu$clu.order <- 1:nrow( samples_clu )
             return ( samples_clu )
         } )
+        samples <- samples[ order( samples$order ), ]
 
         message( 'Generating intermediate cells representation' )
         xl.cells <- merge( proteins, samples, by = c(), all = TRUE, suffixes = c( '.row', '.col' ) )
