@@ -8,7 +8,7 @@ require( 'Rcpp' )
 # load RBIMAP library
 # Note: RBIMAP.libpath should be set before executing this script, e.g.:
 #       RBIMAP.libpath <- file.path( bimap_scripts_path, "build/release/src/R" )
-dyn.unload( file.path( RBIMAP.libpath, paste("libRBIMAP-math", .Platform$dynlib.ext, sep="")) ) 
+try( dyn.unload( file.path( RBIMAP.libpath, paste("libRBIMAP-math", .Platform$dynlib.ext, sep="")) ) )
 dyn.load( file.path( RBIMAP.libpath, paste("libRBIMAP-math", .Platform$dynlib.ext, sep="")), 
           type = "Call" ) 
 
@@ -43,10 +43,14 @@ countPartitionMismatches <- function(
     clusterId_col = 'cluster',
     elementId_col = 'element'
 ){
-    return ( .Call( "CountPartitionMismatches",
+    return ( within( .Call( "CountPartitionMismatches",
                     templatePartitionCollection, partitionCollection, 
                     templatePartitionId_col, partitionId_col,
-                    clusterId_col, elementId_col ) )
+                    clusterId_col, elementId_col ), {
+        exp.co.tco <- co.co * tco.tco / totalPairs
+        rand.index <- ( co.tco + mismatch.tmismatch ) / totalPairs
+        adj.rand.index <- ( co.tco - exp.co.tco ) / ( tco.tco - exp.co.tco )
+    } ) )
 }
 
 countPartsMismatches <- function(
