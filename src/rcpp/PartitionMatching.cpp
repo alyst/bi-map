@@ -347,8 +347,10 @@ RcppExport SEXP CountPartsMismatches(
                 tmplCluSizeVec.push_back( tmplCluIt->second.size() );
                 ptnIdVec.push_back( ptnIt->first );
                 nCoCoVec.push_back( cluStats.nCoCo / 2 );
-                nCoMmVec.push_back( cluStats.nCoMm );
                 nMmCoVec.push_back( cluStats.nMmCo / 2 );
+                // WARNING co-mm is not adjusted, since it makes sense
+                // only in the context of the whole template partition
+                nCoMmVec.push_back( cluStats.nCoMm );
                 nPtnElems += tmplCluIt->second.size();
             }
             if ( nPtnElems > nElms ) {
@@ -368,7 +370,7 @@ RcppExport SEXP CountPartsMismatches(
                 Rcpp::Named( "stringsAsFactors", false )
              );
     }
-    Rprintf( "Partitions Mismatches Calculation done...\n" );
+    Rprintf( "Parts Mismatches Calculation done...\n" );
     return ( res );
     END_RCPP
 }
