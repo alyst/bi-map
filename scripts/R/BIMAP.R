@@ -84,14 +84,18 @@ BIMAP.msdata.import <- function( ms_data, protein_info, msrun.multipliers = NULL
     samples.df <- unique( subset( ms_data_noglob, select = samples.colnames ) )
     samples.colnames[1:2] <- c( 'sample', 'bait_ac' )
     colnames( samples.df ) <- samples.colnames 
-    rownames( samples.df ) <- samples.df$sample 
+    rownames( samples.df ) <- samples.df$sample
+    samples.df <- samples.df[ order( samples.df$bait_ac, samples.df$sample ), ]
     msruns.df <- as.data.frame( unique( subset( ms_data_noglob, select = unique( c( msrun_column, sample_column ) ) ) ),
                                 stringsAsFactors = FALSE )
     msruns.df <- data.frame( 
-            msrun = as.character( msruns.df[, msrun_column ] ), 
+            msrun = as.character( msruns.df[, msrun_column ] ),
             sample = as.character( msruns.df[, sample_column ] ),
             stringsAsFactors = FALSE )
-    rownames( msruns.df ) <- msruns.df$msrun 
+    msruns.df$bait_ac <- samples.df[ msruns.df$sample, 'bait_ac' ]
+    msruns.df <- msruns.df[ order( msruns.df$bait_ac, msruns.df$sample, msruns.df$msrun ), ]
+    msruns.df$bait_ac <- NULL
+    rownames( msruns.df ) <- msruns.df$msrun
     if ( !is.null(msrun.multipliers) ) {
         mean.mult <- mean( msrun.multipliers[ msruns.df$msrun ], na.rm = TRUE )
         msruns.df$multiplier <- msrun.multipliers[ msruns.df$msrun ] / mean.mult
