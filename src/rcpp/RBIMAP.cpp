@@ -1,7 +1,14 @@
 #include <cemm/bimap/BasicTypedefs.h>
 
+#include <cemm/debug.h>
+
 #include <stdarg.h>
 #include <cmath>
+
+#include <Rcpp/iostream/Rostream.h>
+#include <boost/log/trivial.hpp>
+#include <boost/log/sinks.hpp>
+#include <boost/log/core.hpp>
 
 #include <R_ext/Print.h>
 #include <R_ext/Rdynload.h>
@@ -167,6 +174,30 @@
 #define R_SLOT_NOISE_SIGNAL                 "noise.signal"
 
 #define R_STRINGS_AS_FACTORS                "stringsAsFactors"
+
+#if defined(USE_BOOST_LOG)
+// Called when the library is loaded and before dlopen() returns
+void __attribute__ ((constructor)) RBIMAP_load()
+{
+    // initialize boost-log
+    // Construct the R sink
+    typedef boost::log::sinks::synchronous_sink<boost::log::sinks::text_ostream_backend> text_sink;
+    boost::shared_ptr< text_sink > pRSink = boost::make_shared< text_sink >();
+
+    // Add a stream to write log to
+    pRSink->locked_backend()->add_stream( boost::make_shared<Rcpp::Rostream>() );
+
+    // Register the sink in the logging core
+    boost::log::core::get()->add_sink(pRSink);
+
+    LOG_INFO( "R BI-MAP library loaded" );
+}
+
+// Called when the library is unloaded and before dlclose() returns
+void __attribute__ ((destructor)) RBIMAP_unload()
+{
+}
+#endif
 
 namespace cemm { namespace bimap {
 
