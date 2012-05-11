@@ -15,9 +15,9 @@
 namespace cemm { namespace bimap {
 
 struct PairsStats {
-    size_t nCoCo;
-    size_t nCoMm;
-    size_t nMmCo;
+    size_t nCoCo;   /// co-clustered both in partition and template cluster(partition)
+    size_t nCoMm;   /// co-clustered in partition, but not in template cluster(partition)
+    size_t nMmCo;   /// co-clustered in template cluster(partition), but mismatch in partition
 
     PairsStats()
     : nCoCo( 0 ), nCoMm( 0 ), nMmCo( 0 )
@@ -208,12 +208,22 @@ RcppExport SEXP CountPartitionMismatches(
         Rcpp::StringVector ptnIdVec( ptnColl.partitionsCount() );
         Rcpp::StringVector tmplPtnIdVec( ptnColl.partitionsCount() );
         Rcpp::IntegerVector nCoCoVec( ptnColl.partitionsCount() );
-        Rcpp::IntegerVector nCoMmVec( ptnColl.partitionsCount() );
-        Rcpp::IntegerVector nMmCoVec( ptnColl.partitionsCount() );
-        Rcpp::IntegerVector nMmMmVec( ptnColl.partitionsCount() );
+        Rcpp::IntegerVector nTCoTCoVec( ptnColl.partitionsCount() );
+        Rcpp::IntegerVector nCoTCoVec( ptnColl.partitionsCount() );
+        Rcpp::IntegerVector nCoTMmVec( ptnColl.partitionsCount() );
+        Rcpp::IntegerVector nMmTCoVec( ptnColl.partitionsCount() );
+        Rcpp::IntegerVector nMmTMmVec( ptnColl.partitionsCount() );
+        Rcpp::IntegerVector nTotalPairs( ptnColl.partitionsCount() );
         size_t i = 0;
         for ( PartitionCollection::ptn_coll_t::const_iterator ptnIt = ptnColl.ptnIx2clusters.begin();
               ptnIt != ptnColl.ptnIx2clusters.end(); ++ptnIt ) {
+            size_t coCoCount = 0;
+            for ( PartitionCollection::clu2elmset_map_t::const_iterator partIt = ptnIt->second.begin();
+                partIt != ptnIt->second.end(); ++partIt
+            ){
+                std::size_t partSize = partIt->second.size();
+                coCoCount += partSize * ( partSize - 1 );
+            }
             PartitionCollection::ptn_map_t::const_iterator tmplIdIt = ptnColl.ptnIx2tmplPtnIx.find( ptnIt->first );
             if ( tmplIdIt == ptnColl.ptnIx2tmplPtnIx.end() ) {
                 THROW_RUNTIME_ERROR( "Template ID not found for partition "
@@ -229,9 +239,11 @@ RcppExport SEXP CountPartitionMismatches(
 
             PairsStats ptnStats;
             size_t nPtnElems = 0;
+            size_t tCotCoCount = 0;
             for ( PartitionCollection::clu2elmset_map_t::const_iterator tmplCluIt = tmplPtn.begin();
                   tmplCluIt != tmplPtn.end(); ++tmplCluIt
             ){
+                tCotCoCount += tmplCluIt->second.size() * ( tmplCluIt->second.size() - 1);
                 nPtnElems += tmplCluIt->second.size();
                 ptnStats += PartitionCollection::ClusterStats( ptnIt->second, tmplCluIt->second );
             }
@@ -241,20 +253,26 @@ RcppExport SEXP CountPartitionMismatches(
             }
             tmplPtnIdVec[ i ] = tmplIdIt->second;
             ptnIdVec[ i ] = ptnIt->first;
-            nCoCoVec[ i ] = ptnStats.nCoCo / 2;
-            nCoMmVec[ i ] = ptnStats.nCoMm / 2;
-            nMmCoVec[ i ] = ptnStats.nMmCo / 2;
-            nMmMmVec[ i ] = ( nPtnElems * ( nElms - 1 ) - ptnStats.nCoCo - ptnStats.nCoMm - ptnStats.nMmCo ) / 2;
+            nCoCoVec[ i ] = coCoCount / 2;
+            nTCoTCoVec[ i ] = tCotCoCount / 2;
+            nCoTCoVec[ i ] = ptnStats.nCoCo / 2;
+            nCoTMmVec[ i ] = ptnStats.nCoMm / 2;
+            nMmTCoVec[ i ] = ptnStats.nMmCo / 2;
+            nMmTMmVec[ i ] = ( nPtnElems * ( nElms - 1 ) - ptnStats.nCoCo - ptnStats.nCoMm - ptnStats.nMmCo ) / 2;
+            nTotalPairs[ i ] = nPtnElems * ( nElms - 1 ) / 2;
             i++;
         }
         Rprintf( "Creating results data.frame\n" );
         res = Rcpp::DataFrame::create(
                 Rcpp::Named( ptnIdColName, ptnIdVec ),
                 Rcpp::Named( tmplPtnIdColName, tmplPtnIdVec ),
-                Rcpp::Named( "co.tco", nCoCoVec ),
-                Rcpp::Named( "co.tmismatch", nCoMmVec ),
-                Rcpp::Named( "mismatch.tco", nMmCoVec ),
-                Rcpp::Named( "mismatch.tmismatch", nMmMmVec ),
+                Rcpp::Named( "co.co", nCoCoVec ),
+                Rcpp::Named( "tco.tco", nTCoTCoVec ),
+                Rcpp::Named( "co.tco", nCoTCoVec ),
+                Rcpp::Named( "totalPairs", nTotalPairs ),
+                Rcpp::Named( "co.tmismatch", nCoTMmVec ),
+                Rcpp::Named( "mismatch.tco", nMmTCoVec ),
+                Rcpp::Named( "mismatch.tmismatch", nMmTMmVec ),
                 Rcpp::Named( "stringsAsFactors", false )
              );
     }
