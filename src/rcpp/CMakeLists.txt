@@ -1,16 +1,17 @@
 find_path( R_INCLUDE_DIR "Rinternals.h" 
            PATHS "/usr/include" "/usr/share" "/usr/local/share"
+                 "/fast/opt/include" "/fast/opt/lib64"
            PATH_SUFFIXES "R/include" "R" )
 find_path( Rcpp_INCLUDE_DIR "Rcpp.h" 
-           PATHS "/usr/lib" "/usr/local/lib" "/usr/lib64"
+           PATHS "/usr/lib" "/usr/local/lib" "/usr/lib64" "/fast/opt/lib64"
            PATH_SUFFIXES "R/site-library/Rcpp/include" "R/library/Rcpp/include" )
 find_library( Rcpp_LIB "Rcpp" 
               PATHS
               "/home/astukalov/R/x86_64-unknown-linux-gnu-library/2.11"
-              "/usr/lib" "/usr/local/lib" "/usr/lib64"
+              "/usr/lib" "/usr/local/lib" "/usr/lib64" "/fast/opt/lib64"
               PATH_SUFFIXES "R/site-library/Rcpp/lib" "R/library/Rcpp/lib" "Rcpp/lib" )
 find_library( R_LIB "R"
-              PATHS "/usr/lib" "/usr/local/lib" "/usr/lib64"
+              PATHS "/usr/lib" "/usr/local/lib" "/usr/lib64" "/fast/opt/lib64"
               PATH_SUFFIXES "R/lib" )
 
 if ( R_INCLUDE_DIR )
