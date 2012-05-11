@@ -60,11 +60,13 @@ struct LLHMetrics {
         quant += b.quant;
         topo += b.topo;
         conf += b.conf;
+        return ( *this );
     }
     LLHMetrics& operator-=( const LLHMetrics& b ) {
         quant -= b.quant;
         topo -= b.topo;
         conf -= b.conf;
+        return ( *this );
     }
     log_prob_t operator()( const LLHPartitionWeights& w ) const {
         return ( total( w ) );

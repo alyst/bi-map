@@ -248,9 +248,6 @@ log_prob_t CellSignalLLHMaximizer::evalObjectsPrelimDistance(
     object_index_t  obj1ix,
     object_index_t  obj2ix
 ) const {
-    typedef GeometricDistribution noise_params_type;
-    static noise_params_type noiseModel = noise_params_type::ByFailureRate( 1E-4, 0 );
-
     assay_bitset_t assays( data().assaysCount() );
     object_set_t objs;
     objs.insert( obj1ix );
@@ -302,9 +299,6 @@ log_prob_t CellSignalLLHMaximizer::evalProbesPrelimDistance(
     probe_index_t  probe1ix,
     probe_index_t  probe2ix
 ) const {
-    typedef GeometricDistribution noise_params_type;
-    static noise_params_type noiseModel = noise_params_type::ByFailureRate( 1E-4, 0 );
-
     double maxLLH = unset<double>();
     // _multCache.assign( _multCache.size(), 1 ); not required -- we don't care about signal
     const OPAProbe& probe1 = _data.probe( probe1ix );

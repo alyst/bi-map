@@ -36,9 +36,9 @@ std::string entity_error::compose_error_msg(
 
 OPAData::OPAData( bool mapBaitsToObjects,
                   size_t objectsUniverseSize )
-    : _matrixModified( true )
-    , _mapBaitsToObjects( mapBaitsToObjects )
+    : _mapBaitsToObjects( mapBaitsToObjects )
     , _objectsUniverseSize( objectsUniverseSize )
+    , _matrixModified( true )
 {
 }
 

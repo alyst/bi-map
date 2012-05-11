@@ -52,6 +52,7 @@ public:
     {
         _ptnComponentsMap = t._ptnComponentsMap;
         _ptnComponentsFreq = t._ptnComponentsFreq;
+        return ( *this );
     }
 
     const serial_vector_type& subpartitions( serial_type ptnSerial ) const {

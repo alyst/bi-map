@@ -58,6 +58,7 @@ public:
     PartitionPartsPDF& operator=( const PartitionPartsPDF& t )
     {
         _ptnPartsFreq = t._ptnPartsFreq;
+        return ( *this );
     }
 
     log_prob_t lnPdf( partition_serial ptnSerial ) const {

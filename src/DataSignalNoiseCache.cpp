@@ -96,7 +96,7 @@ log_prob_t DataSignalNoiseCache::noiseLLH(
     res += gsl_sf_lnchoose( data().objectsUniverseSize(), scObjsNE );
     // 2. possibilities to distribute scSum spectral counts among scObjNE objects
     res += ln_factorial( scSum );
-    for ( int i = 0; i < scCounts.size(); i++ ) {
+    for ( std::size_t i = 0; i < scCounts.size(); i++ ) {
         if ( scCounts[i] > 0 ) res -= ln_factorial( scCounts[i] );
     }
     // 3. probability to pick a sequence of scSum objects from the universe (without replacement)
