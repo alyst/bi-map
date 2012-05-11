@@ -411,6 +411,8 @@ OPAData DeserializeOPAData(
     LOG_INFO( "Reading OPAData...\n" );
     OPAData  data;
     dataArchive >> boost::serialization::make_nvp( "data", data );
+    LOG_INFO( "OPAData read, " << data.objectsCount() << " object(s), "
+              << data.probesCount() << " probe(s)" );
 
     return ( data );
 }
