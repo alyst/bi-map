@@ -1,9 +1,10 @@
 set(Boost_USE_STATIC_LIBS   OFF)
 set(Boost_USE_MULTITHREADED ON)
-find_package( Boost REQUIRED COMPONENTS serialization iostreams filesystem program_options system )
+find_package( Boost REQUIRED COMPONENTS serialization iostreams filesystem program_options system log )
 
 find_package( ZLIB )
 find_package( BZip2 )
+find_package( Threads )
 
 find_package( GSL REQUIRED )
 
@@ -61,7 +62,7 @@ set( BIMAPSampler_Sources
 
 add_executable( BIMAP-sampler ${BIMAPSampler_Sources} )
     add_dependencies( BIMAP-sampler BIMAP )
-    target_link_libraries( BIMAP-sampler BIMAP ${Boost_LIBRARIES} )
+    target_link_libraries( BIMAP-sampler BIMAP ${CMAKE_THREAD_LIBS_INIT} ${Boost_LIBRARIES} )
 
 add_subdirectory( mpisampler )
 
