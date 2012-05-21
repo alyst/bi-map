@@ -14,8 +14,11 @@ import.nestedcluster <- function(
 ){
     # original bait x prey abundance matrix
     message('Reading Input data...')
+    dheader = read.delim( file.path( path_prefix, data_filename ),
+                          header=FALSE, sep="\t", as.is=TRUE, skip=0, nrows = 2)
     d = read.delim( file.path( path_prefix, data_filename ),
-        header=TRUE, sep="\t", as.is=TRUE, skip=1)
+                    header=FALSE, sep="\t", as.is=TRUE, skip=2)
+    colnames(d) <- dheader[2,]
     # first column is protein names (Experiment is description for corresponding column)
     rownames( d ) <- d$Experiment
     d$Experiment <- NULL
@@ -25,8 +28,11 @@ import.nestedcluster <- function(
     # colnames: logLik, bait IDs
     # rows, sorted by likelihood: likelihood, indices of bait clusters
     # nrows = number of records
+    clus.header = read.delim( file.path( path_prefix, "Clusters" ),
+                       header=FALSE, sep="\t", as.is=TRUE, skip=0, nrows=1 )
     clus = read.delim( file.path( path_prefix, "Clusters" ),
-        header=TRUE, sep="\t", as.is=TRUE )
+        header=FALSE, sep="\t", as.is=TRUE, skip=1 )
+    colnames( clus ) <- clus.header
     nclusterings <- nrow( clus )
     message( "Total ", nclusterings, " clusterings" )
     clusterings = data.frame(
