@@ -578,12 +578,15 @@ BIMAP.mcmcwalk.lastClustering <- function( walk, serial )
 #' @return data.frame with clusters information
 #' @author astukalov
 #' @export
-BIMAP.mcmcwalk.biclusterings_order <- function( walk, n = 30 ) {
+BIMAP.mcmcwalk.biclusterings_order <- function( walk, n = 30, by = c( 'parts.pdf', 'components.pdf' ) ) {
     clus.df <- walk@clusterings
     rownames( clus.df ) <- clus.df$clustering_id
-    clus.df <- clus.df[ order(
-            #clus.df$objects.parts.lnpdf + clus.df$probes.parts.lnpdf,
-            clus.df$objects.lnpdf + clus.df$probes.lnpdf,
+    if ( by == 'parts.pdf' ) {
+       clu_pdf <- clus.df$objects.parts.lnpdf + clus.df$probes.parts.lnpdf
+    } else if ( by == 'components.pdf' ){
+       clu_pdf <- clus.df$objects.lnpdf + clus.df$probes.lnpdf
+    }
+    clus.df <- clus.df[ order( clu_pdf,
             #clus.df$probes.lnpdf,
             clus.df$total.lnpdf,
             decreasing = TRUE ), ]
