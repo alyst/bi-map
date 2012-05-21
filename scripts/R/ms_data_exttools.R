@@ -40,14 +40,12 @@ import.nestedcluster <- function(
         llh = as.numeric( clus[,1] ),
         stringsAsFactors = FALSE )
     rownames( clusterings ) <- clusterings$clustering
-    baits.clusters = do.call( 'rbind', apply( clus[,-1], 1, function( baits.clusters ) {
-                data.frame(
-                    bait_ac = colnames(clus)[-1],
-                    baits.cluster = baits.clusters,
-                    stringsAsFactors = FALSE
-                )
-            } ) )
-    baits.clusters$clustering <- rep( 1:nclusterings, each = ncol(clus)-1)
+    baits.clusters = data.frame(
+        clustering = rep( 1:nclusterings, each = ncol(clus)-1),
+        bait_ac = rep( colnames(clus)[-1], times = nclusterings ),
+        baits.cluster = as.vector( t( clus[,-1] ) ),
+        stringsAsFactors = FALSE
+    )
 
     # prey clusterings
     # integer matrix
