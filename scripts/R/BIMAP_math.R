@@ -47,7 +47,16 @@ countPartitionMismatches <- function(
                     templatePartitionCollection, partitionCollection, 
                     templatePartitionId_col, partitionId_col,
                     clusterId_col, elementId_col ), {
-        exp.co.tco <- co.co * tco.tco / totalPairs
+        exp.co.tco <- co.co * tco.tco / totalPairs # expected number of correct co-clusterings
+        exp.mismatch.tmismatch <- totalPairs + exp.co.tco - ( co.co + tco.tco ) 
+        exp.co.tmismatch <- co.co - exp.co.tco
+        exp.mismatch.tco <- tco.tco - exp.co.tco
+        co_tco_rate <- co.tco / ( co.tco + mismatch.tco )
+        mis_tmis_rate <- mismatch.tmismatch / ( mismatch.tmismatch + co.tmismatch )
+        #adj.tpr <- ( tpr - exp.co.tco / ( exp.co.tco + exp.mismatch.tco ) ) / ( 1 - exp.co.tco / ( exp.co.tco + exp.mismatch.tco ) )
+        adj.co_tco_rate <- ( ( exp.co.tco + exp.mismatch.tco ) * co_tco_rate - exp.co.tco ) / ( exp.mismatch.tco )
+        #adj.tnr <- ( tnr - exp.mismatch.tmismatch / ( exp.co.tmismatch + exp.mismatch.tmismatch ) ) / ( 1 - exp.mismatch.tmismatch / ( exp.co.tmismatch + exp.mismatch.tmismatch ) )
+        adj.mis_tmis_rate <- ( mis_tmis_rate * ( exp.co.tmismatch + exp.mismatch.tmismatch ) - exp.mismatch.tmismatch ) / ( exp.co.tmismatch )
         rand.index <- ( co.tco + mismatch.tmismatch ) / totalPairs
         adj.rand.index <- ( co.tco - exp.co.tco ) / ( tco.tco - exp.co.tco )
     } ) )
