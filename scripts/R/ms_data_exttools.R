@@ -111,9 +111,14 @@ import.nestedcluster <- function(
     # MCMC parameters
     # iteration, likelihood, number of bait clusters, number of prey clusters for each bait
     message('Reading MCMC walk...')
-    mcmc.params = read.delim( file.path( path_prefix, "MCMCparameters" ),
-        header=FALSE, sep="\t", as.is=TRUE )
-    colnames( mcmc.params ) <- c( 'step', 'llh', 'nbait.clusters', 'move.type', colnames(clus)[-1] )
+    mcmc.params.file <- file.path( path_prefix, "MCMCparameters" )
+    if ( file.exists( mcmc.params.file ) ) {
+        mcmc.params <- read.delim( mcmc.params.file,
+                                   header=FALSE, sep="\t", as.is=TRUE )
+        colnames( mcmc.params ) <- c( 'step', 'llh', 'nbait.clusters', 'move.type', colnames(clus)[-1] )
+    } else {
+        mcmc.params <- NA
+    }
 
     # optimal clusters
     # number of files = 2x number of records
