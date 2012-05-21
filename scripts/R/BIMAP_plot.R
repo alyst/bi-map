@@ -684,6 +684,7 @@ BIMAP.plot <- function( bimap.props, bimap.data,
         show.abundance.labels = TRUE,
         show.protein_ac = TRUE,
         show.sample_id = TRUE,
+        show.dendrograms = TRUE,
         col = colorRampPalette( c("blue","cyan","yellow") ),
         cells.col = colorRampPalette( c("blue","cyan","yellow") ),
         cells.off.alpha = 0.5,
@@ -765,12 +766,13 @@ BIMAP.plot <- function( bimap.props, bimap.data,
 
     # plot dendrograms
     legend = list()
+    if ( show.dendrograms ) { 
     if ( !is.null( signals.matrix.bihclust$samples.ordering$elements.dgram ) ) {
         legend$top <- list( fun = dendrogramGrob.fixed, args = list( signals.matrix.bihclust$samples.ordering$elements.dgram, side='top' ) )
     }
     if ( !is.null( signals.matrix.bihclust$proteins.ordering$elements.dgram ) ) {
         legend$right <- list( fun = dendrogramGrob.fixed, args = list( signals.matrix.bihclust$proteins.ordering$elements.dgram, side='right' ) )
-    }
+    } }
 
     levelplot( t(block.matrix),
        col.regions = col,
