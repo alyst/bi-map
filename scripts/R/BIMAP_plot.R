@@ -408,6 +408,7 @@ BIMAP.signals_matrix.bihclust <- function( bimap.props, signal.na.subst = -100 )
     signals.matrix.sd <- signals.matrix
     existing.proteins.clusters <- rownames( bimap.props$signals.mean )
     existing.samples.clusters <- colnames( bimap.props$signals.mean )
+    
     signals.matrix[ existing.proteins.clusters, existing.samples.clusters ] <- 
         bimap.props$signals.mean[ existing.proteins.clusters, existing.samples.clusters ]
     if ( !is.null(bimap.props$signals.sd) ) {
@@ -559,11 +560,13 @@ BIMAP.plot_prepare <- function( bimap.props, bimap.data,
 
     #print( samples.clusters )
     
+    message( 'Building dendrograms...')
     signals.matrix.bihclust <- BIMAP.signals_matrix.bihclust( bimap.props )
     signals.matrix <- signals.matrix.bihclust$signals.matrix
     signals.matrix.sd <- signals.matrix.bihclust$signals.matrix.sd
 
     # prepare binary matrix of enabled clusters
+    message( 'Preparing blocks matrix...')
     bimap.matrix <- matrix( 0, nrow = nrow( proteins.clusters ), 
                             ncol = nrow( samples.clusters ) )
     rownames( bimap.matrix ) <- rownames( proteins.clusters )
@@ -586,6 +589,7 @@ BIMAP.plot_prepare <- function( bimap.props, bimap.data,
     bimap.matrix <- bimap.matrix[ proteins.clusters$serial, samples.clusters$serial ]
 
     # prepare cells matrix
+    message( 'Preparing cells matrix...')
     block.matrix <- matrix( NA, nrow = nrow( proteins ), ncol = nrow( samples ) )
     colnames(block.matrix) <- samples$col_id
     rownames(block.matrix) <- proteins$protein_ac
@@ -698,7 +702,7 @@ BIMAP.plot <- function( bimap.props, bimap.data,
     args = list(...)
     bimap.plot_internal <- do.call( 'BIMAP.plot_prepare', c( list( bimap.props, bimap.data ), args ) )
 
-    message( 'Plotting BI-MAP...' )
+    message( 'Preparing layout...' )
 
     layout.widths = trellis.par.get('layout.widths')
     layout.widths$left.padding = 0
@@ -710,6 +714,8 @@ BIMAP.plot <- function( bimap.props, bimap.data,
     layout.heights$bottom.padding = 0
     layout.heights$axis.top = sample.label.width
     layout.heights$axis.bottom = 0.5
+
+    message( 'Preparing axes...' )
 
     axis.fixed <- function (side = c("top", "bottom", "left", "right"), scales, 
         components, as.table, labels = c("default", "yes", "no"), 
@@ -729,6 +735,7 @@ BIMAP.plot <- function( bimap.props, bimap.data,
     }
 
     return ( with( bimap.plot_internal, {
+    message( 'Preparing axes labels...' )
     # compose proteins labels
     proteins$axis_label <- proteins$short_label
     if ( show.protein_ac ) {
@@ -765,6 +772,7 @@ BIMAP.plot <- function( bimap.props, bimap.data,
     }
 
     # plot dendrograms
+    message( 'Preparing dendrograms...' )
     legend = list()
     if ( show.dendrograms ) { 
     if ( !is.null( signals.matrix.bihclust$samples.ordering$elements.dgram ) ) {
@@ -774,6 +782,7 @@ BIMAP.plot <- function( bimap.props, bimap.data,
         legend$right <- list( fun = dendrogramGrob.fixed, args = list( signals.matrix.bihclust$proteins.ordering$elements.dgram, side='right' ) )
     } }
 
+    message( 'Creating BI-MAP plot object...' )
     levelplot( t(block.matrix),
        col.regions = col,
        colorkey = list( space='bottom' ),
