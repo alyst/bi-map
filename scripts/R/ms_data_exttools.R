@@ -177,7 +177,7 @@ nestedcluster.extract <- function( clusterings, clustering_id )
            ) )
 }
 
-#' Convert NestedCluster biclustering to Chessboard Biclustering biclustering
+#' Convert NestedCluster biclustering to Chessboard Biclustering
 #' @param nested.clustering 
 #' @param proteins 
 #' @param samples 
@@ -188,10 +188,10 @@ nestedcluster.extract <- function( clusterings, clustering_id )
 #' @see import.nestedcluster()
 #' @export
 nestedcluster.to.bimap <- function(
-        nested.clustering,
-        proteins,
-        samples,
-        min.intensity = 0.01
+    nested.clustering,
+    proteins,
+    samples,
+    min.intensity = 0.01
 ){
     # compose proteins.clusters -- intersect all nested clusters
     preys.isect.clusters <- partition.multisect( nested.clustering$proteins.clusters,
@@ -201,21 +201,24 @@ nestedcluster.to.bimap <- function(
     proteins.clusters$proteins.cluster <- as.character( proteins.clusters$proteins.cluster )
 
     # compose samples clusters
-    samples.clusters <- merge( samples, nested.clustering$baits.clusters )[,c('sample','baits.cluster')]
+    samples$bait_ac <- as.character( samples$bait_ac )
+    samples.clusters <- merge( samples, nested.clustering$baits.clusters, by = 'bait_ac' )[,c('sample','baits.cluster')]
     colnames( samples.clusters ) <- c('sample','samples.cluster' )
     samples.clusters$samples.cluster <- as.character( samples.clusters$samples.cluster )
 
     # merge nested clusters with intersected prey clusters to get chessboard biclustering blocks
     # FIXME: non-unique intensity seems to be internal nestedcluster error
-    preys2isect <- ddply( unique( merge( nested.clustering$proteins.clusters, preys.isect.clusters, by = 'protein_ac' )[
+    preys2isect <- ddply( unique( merge( nested.clustering$proteins.clusters,
+                                       preys.isect.clusters, by = 'protein_ac' )[
         , c('baits.cluster','proteins.cluster','proteins.cluster.isect','intensity')] ),
         c('baits.cluster','proteins.cluster','proteins.cluster.isect'), function( rows ) {
-            if ( nrow( rows ) > 1 ) warning( 'Non unique row ', str( rows ) )
-            if ( length( unique( rows$intensity) ) > 1 ) warning( 'Non unique intensitiy ', str( rows ) )
+            if ( nrow( rows ) > 1 ) warning( 'Non unique row ', length( rows ) )
+            if ( length( unique( rows$intensity) ) > 1 ) warning( 'Non unique intensitiy ', sort(unique( rows$intensity )) )
             data.frame( intensity = mean( rows$intensity ), stringsAsFactors = FALSE )
         } )
     # remove off-blocks by intensity threshold
     preys2isect <- subset( preys2isect, intensity >= min.intensity )
+    preys2isect$baits.cluster <- as.character( preys2isect$baits.cluster )
     blocks <- preys2isect[,c('baits.cluster','proteins.cluster.isect','intensity','proteins.cluster')]
     colnames(blocks) <- c('samples.cluster','proteins.cluster','signal','nested.preys.cluster')
     return ( list(
