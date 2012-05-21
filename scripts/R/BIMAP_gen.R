@@ -298,28 +298,34 @@ BIMAP.generate.ms_data <- function(
     proteins, msruns, samples = NULL,
     seq.length.factor = 0.5,
     signal.shape = 0.1, noise.rate = 1E-3,
-    rate.factor = 3
+    subthreshold.factor = 3, subthreshold.offset = 2,
+    avg.sc = 30
 ){
-    res <- ddply( proteins, c('protein_ac'), function( protein ) {
+    offset <- log( avg.sc ) - mean( log( proteins$seqlength ) * seq.length.factor + log( proteins$multiple ) )
+    res <- ddply( subset( proteins, protein_ac %in% proteins.clusters$protein_ac ), c('protein_ac'),
+        function( protein ) {
         protsClu <- subset( proteins.clusters, protein_ac == protein$protein_ac )$proteins.cluster
         # signal factor of the protein
-        protein.factor.log <- log( protein$seqlength ) * seq.length.factor + log( protein$multiple )
+        protein.factor.log <- log( protein$seqlength ) * seq.length.factor + log( protein$multiple ) + offset
 
         do.call('rbind', lapply( unique( samples.clusters$samples.cluster ), function( samplesClu ) {
             cluSamples <- subset( samples.clusters, samples.cluster == samplesClu )$sample # samples of cluster
             cluMsRuns <- subset( msruns, sample %in% cluSamples ) # msruns of cluster
-            crossClu <- subset( blocks, proteins.cluster == protsClu & samples.cluster == samplesClu )
-            if ( nrow( crossClu ) == 0 ) {
-                # no signal, generate noise
-                counts <- rgeom( nrow(cluMsRuns), 1-noise.rate )
-            }
-            else {
+            block <- subset( blocks, proteins.cluster == protsClu & samples.cluster == samplesClu )
+            # add technical noise (to all cells)
+            counts <- rgeom( nrow(cluMsRuns), 1-noise.rate )
+            if ( nrow( block ) > 0 ) {
                 # signal
-                counts <- sapply( cluMsRuns$multiplier, function( mult ) {
-                            lnRate = crossClu$signal + log( mult )
-                            ifelse( is.na(rate.factor) || rbinom( 1, 1, max(0.01, 1 - exp( -rate.factor* exp(lnRate) )) ),
-                                    rlagpois( 1, lnRate + protein.factor.log, signal.shape ),
-                                    0 ) } )
+                counts <- counts + sapply( cluMsRuns$multiplier, function( mult ) {
+                    lnRate = block$signal + log( mult )
+                    if ( !is.na(subthreshold.factor) ) {
+                        sub.threshold.prob <- 1 - exp( -subthreshold.factor * exp(lnRate+subthreshold.offset) )
+                        gen <- rbinom( 1, 1, sub.threshold.prob ) == 1
+                    } else {
+                        gen <- TRUE
+                    }
+                    if ( gen ) rlagpois( 1, lnRate + protein.factor.log, signal.shape ) else 0
+                } )
             }
             data.frame(
                 msrun = cluMsRuns$msrun,
@@ -335,5 +341,5 @@ BIMAP.generate.ms_data <- function(
     if ( !is.null( samples ) ) {
         res$bait_ac <- samples[ res$sample, 'bait_ac' ]
     }
-    return ( subset( res, sc > 0 ) )
+    return ( res )
 }
