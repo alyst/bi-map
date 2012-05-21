@@ -13,14 +13,14 @@ import.nestedcluster <- function(
     prior.proteins.clusterings = FALSE
 ){
     # original bait x prey abundance matrix
-    print('Reading Input data...')
+    message('Reading Input data...')
     d = read.delim( file.path( path_prefix, data_filename ),
         header=TRUE, sep="\t", as.is=TRUE, skip=1)
     # first column is protein names (Experiment is description for corresponding column)
     rownames( d ) <- d$Experiment
     d$Experiment <- NULL
 
-    print('Reading Bait Clusters...')
+    message('Reading Bait Clusters...')
     # bait clusterings
     # colnames: logLik, bait IDs
     # rows, sorted by likelihood: likelihood, indices of bait clusters
@@ -28,7 +28,7 @@ import.nestedcluster <- function(
     clus = read.delim( file.path( path_prefix, "Clusters" ),
         header=TRUE, sep="\t", as.is=TRUE )
     nclusterings <- nrow( clus )
-    print( paste( "Total", nclusterings, "clusterings" ) )
+    message( "Total ", nclusterings, " clusterings" )
     clusterings = data.frame(
         clustering = 1:nrow( clus ),
         llh = as.numeric( clus[,1] ),
@@ -49,12 +49,12 @@ import.nestedcluster <- function(
     #          column position = baits cluster index
     # rows = (number of records, ordered by likelihood) x prey
     # cells: index of prey(row) cluster of corresponding bait(col) from given record(row - prey)
-    print('Reading Nested clusters...')
+    message('Reading Nested clusters...')
     nestedclusters = read.delim( file.path( path_prefix, "NestedClusters" ),
         header=FALSE, sep="\t", as.is=TRUE )
     max.baits.clusters <- ncol( nestedclusters )
-    print( paste( nrow(nestedclusters), "rows in NestedClusters table" ) )
-    print( paste( ncol(nestedclusters), "max possible bait clusters" ) )
+    message( nrow(nestedclusters), " rows in NestedClusters table" )
+    message( ncol(nestedclusters), " max possible bait clusters" )
     proteins.clusters <- data.frame(
             clustering = rep( 1:nclusterings, each = nrow(d) * max.baits.clusters ),
             baits.cluster = rep( 1:max.baits.clusters, times = nrow(d) * nclusterings ),
@@ -68,10 +68,10 @@ import.nestedcluster <- function(
     # columns: max.possible bait clusters (nb parameter)
     # rows = (number of records, ordered by likelihood) x prey
     # cells: abundance of prey(row) in cluster of corresponding bait(col) from given record(row)
-    print('Reading Phi (bicluster intensity)...')
+    message('Reading Phi (bicluster intensity)...')
     preys.phi = as.matrix( read.delim( file.path( path_prefix, "NestedMu" ),
         header=FALSE, sep="\t", as.is=TRUE ) )
-    print( paste( nrow(preys.phi), 'Phi values' ) )
+    message( nrow(preys.phi), ' Phi values' )
     proteins.clusters$intensity = as.vector( t( preys.phi ) )
     # all clusters below intensity threshold are considered empty
     if ( is.numeric( min.intensity ) ) {
@@ -83,10 +83,10 @@ import.nestedcluster <- function(
     # columns: max.possible bait clusters (nb parameter)
     # rows = (number of records, ordered by likelihood) x prey
     # cells: variation of abundance of prey(row) in cluster of corresponding bait(col) from given record(row)
-    print('Reading Sigma^2 (bicluster intensity variation)...')
+    message('Reading Sigma^2 (bicluster intensity variation)...')
     preys.sigma = as.matrix( read.delim( file.path( path_prefix, "NestedSigma2" ),
         header=FALSE, sep="\t", as.is=TRUE ) )
-    print( paste( nrow(preys.sigma), 'Sigma^2 values' ) )
+    message( nrow(preys.sigma), ' Sigma^2 values' )
     proteins.clusters$sigma= as.vector( t( preys.sigma ) )
 
     if ( !prior.proteins.clusterings ) {
@@ -96,7 +96,7 @@ import.nestedcluster <- function(
         proteins.clusters <- merge( baits.clusters.ids, proteins.clusters,
             by = c( 'baits.cluster', 'clustering' ),
             all.x = FALSE, all.y = FALSE )
-        print( paste( "Removed prior-only prey cluster records: before=", nclus.old, " after=", nrow(proteins.clusters), sep = '' ) )
+        message( "Removed prior-only prey cluster records: before=", nclus.old, " after=", nrow(proteins.clusters), sep = '' )
     }
     if ( !is.na( max.clusterings ) ) {
         clusterings <- subset( clusterings, clustering <= max.clusterings )
@@ -106,7 +106,7 @@ import.nestedcluster <- function(
 
     # MCMC parameters
     # iteration, likelihood, number of bait clusters, number of prey clusters for each bait
-    print('Reading MCMC walk...')
+    message('Reading MCMC walk...')
     mcmc.params = read.delim( file.path( path_prefix, "MCMCparameters" ),
         header=FALSE, sep="\t", as.is=TRUE )
     colnames( mcmc.params ) <- c( 'step', 'llh', 'nbait.clusters', 'move.type', colnames(clus)[-1] )
