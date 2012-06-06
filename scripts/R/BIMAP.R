@@ -103,11 +103,14 @@ BIMAP.msdata.import <- function( ms_data, protein_info, msrun.multipliers = NULL
     } else {
         msruns.df$multiplier <- 1
     }
-    proteins.df <- unique( protein_info[ protein_info[ , protein_ac_column ] %in% 
+    proteins.df <- protein_info[ protein_info[ , protein_ac_column ] %in% 
                 union( as.character( ms_data_noglob[ , prey_column ] ), 
                     as.character( ms_data_noglob[ , bait_column ] ) ), 
-                                         c( protein_ac_column, protein_seqlength_column ) ] ) 
-         
+                                         c( protein_ac_column, protein_seqlength_column ) ]
+    proteins.df <- ddply( proteins.df, c( protein_ac_column ), function( prot_data ) {
+                data.frame( seqlength = max( prot_data[,protein_seqlength_column] ),
+                            stringsAsFactors = FALSE )
+    } )
     #print( as.character( ms_data_noglob$prey_ac ) )
     colnames( proteins.df ) <- c( 'protein_ac', 'seqlength' )
     rownames( proteins.df ) <- proteins.df$protein_ac 
