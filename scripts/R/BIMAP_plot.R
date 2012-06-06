@@ -114,8 +114,8 @@ BIMAP.block.plot <- function( proteins, samples,
                         signals.matrix, signals.matrix.sd,
                         signals.frame = NULL,
                         show.abundance.label = TRUE,
-                        bait.col = 'red',
-                        border.col = NULL,
+                        bait.col = 'red', bait.lwd = 3,
+                        border.col = NULL, border.lwd = 2,
                         border.above = TRUE,
                         border.below = TRUE )
 {
@@ -135,7 +135,7 @@ BIMAP.block.plot <- function( proteins, samples,
             pushViewport( viewport( layout.pos.row = rowIx,
                                     layout.pos.col = colIx ) )
             panel.rect( 0.01, 0.01, 0.99, 0.99, 
-                  border = bait.col, lwd = 3 )
+                  border = bait.col, lwd = bait.lwd )
             popViewport()
         }
     }
@@ -187,18 +187,18 @@ BIMAP.block.plot <- function( proteins, samples,
     if ( !is.null( border.col ) ) {
         if ( border.above && border.below ) {
             panel.rect( 0.0, 0.0, 1.0, 1.0, 
-                  border = border.col, lwd = 3 )
+                  border = border.col, lwd = border.lwd )
         } else {
             panel.segments( c( 0.0, 1.0 ), c( 0.0, 0.0 ),
                             c( 0.0, 1.0 ), c( 1.0, 1.0 ),
-                  col = border.col, lwd = 3 )
+                  col = border.col, lwd = border.lwd )
             if ( border.above ) {
                 panel.segments( 0.0, 0.0, 1.0, 0.0,
-                      col = border.col, lwd = 3 )
+                      col = border.col, lwd = border.lwd )
             }
             if ( border.below ) {
                 panel.segments( 0.0, 1.0, 1.0, 1.0,
-                      col = border.col, lwd = 3 )
+                      col = border.col, lwd = border.lwd )
             }
         }
     }
@@ -693,7 +693,7 @@ BIMAP.plot <- function( bimap.props, bimap.data,
         cells.col = colorRampPalette( c("blue","cyan","yellow") ),
         cells.off.alpha = 0.5,
         aspect = 1.0,
-        bait.col = 'red',
+        bait.col = 'red', bait.lwd = 3, border.lwd = 3,
         grid.col = 'darkgrey', grid.lwd = 2, grid.lty = 1,
         protein.label.width = 1.5, sample.label.width = protein.label.width,
         ... )
@@ -848,8 +848,8 @@ BIMAP.plot <- function( bimap.props, bimap.data,
                       show.abundance.label = show.abundance.labels,
                       signals.matrix, signals.matrix.sd,
                       NULL, # TODO: signals.subframe
-                      bait.col = bait.col,
-                      border.col = blk$nested.color,
+                      bait.col = bait.col, bait.lwd = bait.lwd,
+                      border.col = blk$nested.color, border.lwd = border.lwd,
                       border.above = is.logical(blk$border.above) & blk$border.above,
                       border.below = is.logical(blk$border.below) & blk$border.below
                   )
@@ -858,7 +858,7 @@ BIMAP.plot <- function( bimap.props, bimap.data,
           }
           popViewport()
        },
-       #legend = legend,
+       legend = legend,
        #scales = list( x = list( at = seq_len( colnames(signals.matrix) ), 
        #                         labels = colnames(signals.matrix) ) ),
        main = title,
