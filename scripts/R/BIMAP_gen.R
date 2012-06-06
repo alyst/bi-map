@@ -160,29 +160,17 @@ BIMAP.Poisson_distributed_partition <- function(
 
 BIMAP.generate_proteins <- function(
     nProteins,
-    cluster.size.rate = NULL, cluster.size.shape = NA,
-    protein.concentration = 0.5, protein.discount = 0.5,
     nProteinLengthRate = 500
 ){
-    if ( is.null( cluster.size.rate ) ) {
-        proteins.partition <- BIMAP.generate_partition( nProteins, protein.concentration, protein.discount, 'P' )
-    } else {
-        proteins.partition <- BIMAP.Poisson_distributed_partition( nProteins, cluster.size.rate, cluster.size.shape, 'P' )
-    }
-    colnames( proteins.partition ) <- c( 'protein_ac', 'proteins.cluster' )
-    nProtClusters <- length( unique( proteins.partition$proteins.cluster ) )
-    
     proteins.df <- data.frame(
-            protein_ac = proteins.partition$protein_ac,
+            protein_ac = 1:nProteins,
             seqlength = rpois( nProteins, nProteinLengthRate ),
             multiple = 1,
             stringsAsFactors = FALSE
         )
     rownames( proteins.df ) <- proteins.df$protein_ac
 
-    return ( list( proteins = proteins.df,
-                   proteins.clusters = proteins.partition
-    ) )
+    return ( proteins = proteins.df )
 }
 
 # convert block signals to a matrix
