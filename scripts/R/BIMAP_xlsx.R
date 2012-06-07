@@ -11,6 +11,8 @@ source( file.path( bimap_scripts_path, "BIMAP_plot.R" ) )
 #' @param grid.col grid color
 #' @param bait.border.col grid color for detected baits
 #' @param col.width width of columns
+#' @param workbook XLSX workbook object, if NULL the new workbook is created 
+#' @param sheet.name name of the BI-MAP results sheet
 #' @param ... parameters for BIMAP.prepare_plot() 
 #' @returnType 
 #' @return XLSX object
@@ -23,15 +25,24 @@ BIMAP.create_xlsx <- function(
     grid.col = 'black',
     bait.border.col = 'red',
     col.width = 5,
+    workbook = NULL,
+    sheet.name = 'BI-MAP results',
     ...
 ){
-    message( 'Preparing for BI-MAP plotting...' )
+    message( 'Preparing BI-MAP output...' )
     args = list(...)
     bimap.plot_internal <- do.call( 'BIMAP.plot_prepare', c( list( bimap.props, bimap.data ), args ) )
 
+    putBorder <- function( block, rowIndex, colIndex, border ) {
+        CB.setBorder( block,
+                      rowIndex = rep.int( rowIndex, length(colIndex) ),
+                      colIndex = rep( colIndex, each = length(rowIndex) ),
+                      border )
+    }
+
     message( 'Generating BI-MAP XLSX...' )
-    bimap.workbook <- createWorkbook( type = 'xlsx' )
-    wsh <- createSheet( bimap.workbook, title )
+    bimap.workbook <- if ( is.null( workbook ) ) createWorkbook( type = 'xlsx' ) else workbook
+    wsh <- createSheet( bimap.workbook, sheet.name )
     with( bimap.plot_internal, {
         #print( head( proteins ) )
         #print( head( samples ) )
@@ -61,144 +72,35 @@ BIMAP.create_xlsx <- function(
         } )
         samples <- samples[ order( samples$order ), ]
 
-        message( 'Generating intermediate cells representation' )
-        xl.cells <- merge( proteins, samples, by = c(), all = TRUE, suffixes = c( '.row', '.col' ) )
-
-        message( 'Blocks color assignment...' )
-        min.signal <- min( blocks$signal.mean )
-        max.signal <- max( blocks$signal.mean )
-        blocks <- within( blocks, {
-            q <- ( signal.mean - min.signal ) / ( max.signal - min.signal )
-            fill.color <- sapply( q, function( k ) do.call( rgb, as.list( blocks.pal( k )[1,]/255 ) ) )
-        } )
-        xl.cells <- merge( xl.cells, blocks, by = c( 'proteins.cluster', 'samples.cluster' ),
-                           all.x = TRUE )
-        xl.cells <- within( xl.cells, {
-            is_bait <- protein_ac == bait_ac
-            block_on <- !is.na( signal.mean )
-            has_data <- FALSE
-            off_data <- FALSE
-            border.left <- clu.order.col == 1 | is_bait
-            border.top <- clu.order.row == 1 | is_bait
-            border.right <- is_bait
-            border.bottom <- is_bait
-            border.color <- ifelse( is_bait, bait.border.col,
-                            ifelse( border.left | border.top | border.right| border.bottom, grid.col, NA ) )
-        } )
-        # TODO: clear border for cells below or to the right of bait cells to preserve the color
-        # xl.cells.bait <- subset( xl.cells, is_bait )
-        
-
-        if ( !is.null( cells.on.matrix ) ) {
-            message( 'MS-data writing...' )
-            cells.matrix <- cells.on.matrix
-            cells.matrix[ is.na( cells.on.matrix) ] <- cells.off.matrix[ is.na( cells.on.matrix ) ]
-            xl.cells$data <- apply( xl.cells, 1, function(x) cells.matrix[ x[['protein_ac']], x[['col_id']] ] )
-            xl.cells$has_data <- !is.na( xl.cells$data )
-            xl.cells$off_data <- xl.cells$has_data & !xl.cells$block_on
-            addDataFrame( cells.matrix, wsh,
-                          startRow = 1 + row_offset,
-                          startCol = 1 + col_offset,
-                          col.names = FALSE, row.names = FALSE )
-            if ( any( xl.cells$off_data ) ) {
-                message( 'Off-blocks cells color assignment' )
-                min.signal <- min( xl.cells[ xl.cells$off_data, 'data' ], na.rm = TRUE )
-                max.signal <- max( xl.cells[ xl.cells$off_data, 'data' ], na.rm = TRUE ) + 1E-7
-                xl.cells[ xl.cells$off_data, 'q.off' ] <- ( xl.cells[ xl.cells$off_data, 'data' ] - min.signal ) /
-                                  ( max.signal - min.signal )
-                xl.cells[ xl.cells$off_data, 'fill.color' ] <- sapply( xl.cells[ xl.cells$off_data, 'q.off' ], function( k ) do.call( rgb, as.list( cells.pal( k )[1,]/255 ) ) )
-            }
-        }
         header_style <- CellStyle( bimap.workbook ) + Fill( 'lightblue' ) +
                         Font( bimap.workbook, isItalic = TRUE, isBold = TRUE )
         info_style <- CellStyle( bimap.workbook ) +
                        Font( bimap.workbook, isItalic = TRUE )
 
         message( 'Samples data writing...' )
-        header_rows <- createRow( wsh, rowIndex = 1:length(samp_cols) )
-        mapply( setCellValue, createCell( header_rows, colIndex = col_offset ), samp_cols )
-        lapply( getCells( header_rows, colIndex = col_offset ), setCellStyle, header_style )
-        for ( i in 1:length(samp_cols) ) {
-            col_row <- getRows( wsh, i )
-            mapply( setCellValue, createCell( col_row, colIndex = col_offset + samples$order ),
-                                  samples[,samp_cols[[i]]])
-        }
-        grid_rows <- getRows( wsh, 1:length(samp_cols) )
-        lapply( getCells( grid_rows, colIndex = subset( samples, clu.order > 1 )$order + col_offset ),
-                setCellStyle, info_style )
-        lapply( getCells( grid_rows, colIndex = 1 + col_offset ),
-                setCellStyle, info_style + Border( color = grid.col,
-                                     position = c( 'LEFT' ), pen = c( 'BORDER_THICK' ) ) )
-        lapply( getCells( grid_rows, colIndex = subset( samples, clu.order == 1 & order > 1 )$order + col_offset ),
-                setCellStyle, info_style + Border( color = grid.col,
-                                     position = c( 'LEFT' ), pen = c( 'BORDER_THIN' ) ) )
-        message( 'Protein data writing...' )
-        rows <- getRows( wsh, proteins$order + row_offset )
-        header_row <- getRows( wsh, rowIndex = row_offset )
-        mapply( setCellValue, createCell( header_row, colIndex = 1:length(prot_cols) ), prot_cols )
-        lapply( getCells( header_row, colIndex = 1:length(prot_cols) ), setCellStyle, header_style )
-        for ( i in 1:length(prot_cols) ) {
-            mapply( setCellValue, createCell( rows, colIndex = i ),
-                                  proteins[,prot_cols[[i]]] )
-        }
-        lapply( getCells( getRows( wsh, subset( proteins, clu.order > 1 )$order + row_offset ),
-                          colIndex = 1:length(prot_cols) ),
-                setCellStyle, info_style )
-        lapply( getCells( getRows( wsh, 1 + row_offset ),
-                          colIndex = 1:length(prot_cols) ),
-                setCellStyle, info_style + Border( color = grid.col,
-                                     position = c( 'TOP' ), pen = c( 'BORDER_THICK' ) ) )
-        lapply( getCells( getRows( wsh, subset( proteins, clu.order == 1 & order > 1 )$order + row_offset ),
-                          colIndex = 1:length(prot_cols) ),
-                setCellStyle, info_style + Border( color = grid.col,
-                                     position = c( 'TOP' ), pen = c( 'BORDER_THIN' ) ) )
-
-        message( 'Applying cell styles...' )
-        #print( head( xl.cells ))
-        ddply( xl.cells, c( 'is_bait', 'off_data', 'fill.color', 'border.color',
-                            'border.left', 'border.right', 'border.top', 'border.bottom' ),
-            function( sub.cells ) {
-                # construct style
-                style_desc <- sub.cells[ 1, ]
-                cs <- CellStyle( bimap.workbook )
-                if ( !is.na( style_desc$fill.color ) ) {
-                    cs <- cs + Fill( foregroundColor = sub.cells[ 1, 'fill.color' ] )
-                }
-                cs <- cs + Font( bimap.workbook, isBold = style_desc$is_bait,
-                                                 isItalic = style_desc$off_data )
-                border_pos <- c()
-                if ( style_desc$border.left ) border_pos <- c( border_pos, c( 'LEFT' ) )
-                if ( style_desc$border.right ) border_pos <- c( border_pos, c( 'RIGHT' ) )
-                if ( style_desc$border.top ) border_pos <- c( border_pos, c( 'TOP' ) )
-                if ( style_desc$border.bottom ) border_pos <- c( border_pos, c( 'BOTTOM' ) )
-                if ( length( border_pos) > 0 ) {
-                  cs <- cs + Border( color = style_desc$border.color,
-                                     position = border_pos, pen = c( 'BORDER_THIN' ) )
-                }
-                # apply style
-                prots.pos <- unique( sub.cells$order.row )
-                for ( prot.pos in prots.pos ) {
-                    prot.row <- getRows( wsh, rowIndex= prot.pos + row_offset )
-                    cells <- getCells( prot.row, colIndex= subset( sub.cells, order.row == prot.pos )$order.col + col_offset )
-                    lapply( cells, setCellStyle, cs )
-                }
-            
-            return ( NULL )
-        } )
-        setColumnWidth( wsh, col_offset + 1:nrow(samples), col.width )
-
-        message( 'On-Blocks signal comments...' ) 
-        for ( i in 1:nrow(blocks) ) {
-            block <- blocks[i,]
-            first.cell <- subset( xl.cells, proteins.cluster == block$proteins.cluster &
-                                            samples.cluster == block$samples.cluster &
-                                            clu.order.row == 1 & clu.order.col == 1 )
-            signal_txt <- paste( format( block$signal.mean, digits=3 ), "\u0b1",
-                                 format( block$signal.sd, digits=3 ), sep="" )
-            first_row <- getRows( wsh, rowIndex = first.cell[ 1, 'order.row' ] + row_offset )
-            lapply( getCells( first_row, colIndex = first.cell[ 1, 'order.col' ] + col_offset ),
-                    createCellComment, string = signal_txt )
-        }
+        sampleInfoBlock <- addDataFrame( samples[,samp_cols], wsh,
+                      startRow = 1, startCol = col_offset,
+                      col.names = TRUE, row.names = FALSE,
+                      byrow = TRUE, colnamesStyle = header_style,
+                      colStyle = info_style )
+        # cluster borders
+        putBorder( sampleInfoBlock,
+                   colIndex = 1 + subset( samples, clu.order == 1 & order > 1 )$order,
+                   rowIndex = 1:length(samp_cols),
+                   Border( color = grid.col, position = c( 'LEFT' ), pen = c( 'BORDER_THIN' ) ) )
+        # outer frame
+        putBorder( sampleInfoBlock,
+                   Border( color = grid.col, position = c( 'LEFT' ), pen = c( 'BORDER_THICK' ) ),
+                   colIndex = 2, rowIndex =1:length(samp_cols) )
+        putBorder( sampleInfoBlock,
+                   Border( color = grid.col, position = c( 'RIGHT' ), pen = c( 'BORDER_THICK' ) ),
+                   colIndex = 1 + nrow(samples), rowIndex = 1:length(samp_cols) )
+        putBorder( sampleInfoBlock,
+                   Border( color = grid.col, position = c( 'TOP' ), pen = c( 'BORDER_THICK' ) ),
+                   colIndex = 1 + 1:nrow(samples), rowIndex = 1 )
+        putBorder( sampleInfoBlock,
+                   Border( color = grid.col, position = c( 'BOTTOM' ), pen = c( 'BORDER_THICK' ) ),
+                   colIndex = 1 + 1:nrow(samples), rowIndex = length(samp_cols) )
         message( 'Merging sample info columns' )
         for ( icol in 1:length(samp_cols) ) {
             ddply( samples, c( "samples.cluster", samp_cols[[icol]] ), function( merged_cells ) {
@@ -207,14 +109,117 @@ BIMAP.create_xlsx <- function(
                                  col_offset + max( merged_cells$order ) )
             } )
         }
+        setColumnWidth( wsh, col_offset + 1:nrow(samples), col.width )
+
+        message( 'Proteins data writing...' )
+        proteinInfoBlock <- addDataFrame( proteins[,prot_cols], wsh,
+                      startRow = row_offset, startCol = 1,
+                      col.names = TRUE, row.names = FALSE,
+                      byrow = FALSE,
+                      colStyle = info_style, colnamesStyle = header_style )
+        # cluster borders
+        putBorder( proteinInfoBlock,
+                   rowIndex = 1 + subset( proteins, clu.order == 1 & order > 1 )$order,
+                   colIndex = 1 + 1:length(samp_cols),
+                   Border( color = grid.col, position = c( 'TOP' ), pen = c( 'BORDER_THIN' ) ) )
+        # outer frame
+        putBorder( proteinInfoBlock,
+                   Border( color = grid.col, position = c( 'TOP' ), pen = c( 'BORDER_THICK' ) ),
+                   rowIndex = 2, colIndex = 1:length(prot_cols) )
+        putBorder( proteinInfoBlock,
+                   Border( color = grid.col, position = c( 'BOTTOM' ), pen = c( 'BORDER_THICK' ) ),
+                   rowIndex = 1 + nrow(proteins), colIndex = 1:length(prot_cols) )
+        putBorder( proteinInfoBlock,
+                   Border( color = grid.col, position = c( 'LEFT' ), pen = c( 'BORDER_THICK' ) ),
+                   rowIndex = 1 + 1:nrow(proteins), colIndex = 1 )
+        putBorder( proteinInfoBlock,
+                   Border( color = grid.col, position = c( 'RIGHT' ), pen = c( 'BORDER_THICK' ) ),
+                   rowIndex = 1 + 1:nrow(proteins), colIndex = length(prot_cols) )
+
+        if ( !is.null( cells.on.matrix ) ) {
+            message( 'MS-data writing...' )
+            cells.matrix <- cells.on.matrix
+            cells.matrix[ is.na( cells.on.matrix) ] <- cells.off.matrix[ is.na( cells.on.matrix ) ]
+        } else {
+            cells.matrix <- matrix( nrow = nrow( proteins ), ncol = ncol( samples ) )
+        }
+        biclustersBlock <- addDataFrame( cells.matrix, wsh,
+                          startRow = 1 + row_offset,
+                          startCol = 1 + col_offset,
+                          col.names = FALSE, row.names = FALSE )
+        message( 'Biclusters grid...' )
+        putBorder( biclustersBlock,
+                   rowIndex = subset( proteins, clu.order == 1 & order > 1 )$order,
+                   colIndex = 1:ncol( cells.matrix ),
+                   Border( color = grid.col, position = c( 'TOP' ), pen = c( 'BORDER_THIN' ) ) )
+        putBorder( biclustersBlock,
+                   rowIndex = 1:nrow( cells.matrix ),
+                   colIndex = subset( samples, clu.order == 1 & order > 1 )$order,
+                   Border( color = grid.col, position = c( 'LEFT' ), pen = c( 'BORDER_THIN' ) ) )
+
+        message( 'On-Blocks color assignment...' )
+        min.signal <- min( blocks$signal.mean )
+        max.signal <- max( blocks$signal.mean )
+        blocks <- within( blocks, {
+            q <- ( signal.mean - min.signal ) / ( max.signal - min.signal )
+            fill.color <- sapply( q, function( k ) do.call( rgb, as.list( blocks.pal( k )[1,]/255 ) ) )
+        } )
+        
+        # TODO: clear border for cells below or to the right of bait cells to preserve the color
+
+        message( 'On-Blocks styling...' ) 
+        for ( i in 1:nrow(blocks) ) {
+            block <- blocks[i,]
+            block_rows <- subset( proteins, proteins.cluster == block$proteins.cluster )$order
+            block_cols <- subset( samples, samples.cluster == block$samples.cluster )$order
+            if ( !is.na( block$fill.color ) ) {
+                CB.setFill( biclustersBlock,
+                            Fill( foregroundColor = blocks[ i, 'fill.color' ] ),
+                            rowIndex = rep.int( block_rows, length(block_cols) ),
+                            colIndex = rep( block_cols, each=length(block_rows)) )
+            }
+            createCellComment( CB.getCell( biclustersBlock, block_rows[1], block_cols[1] ),
+                               string = paste( format( block$signal.mean, digits=3 ), "\u0b1",
+                                         format( block$signal.sd, digits=3 ), sep="" ) )
+        }
+
+        if ( any( cells.off.matrix ) ) {
+            message( 'Off-blocks cells styling...' )
+            colnames(cells.off.matrix) <- NULL
+            rownames(cells.off.matrix) <- NULL
+            off.cells <- adply( cells.off.matrix, c(1,2), function(x) data.frame( data = x ) )
+            off.cells <- subset( off.cells, !is.na( data ) )
+            colnames(off.cells) <- c( 'order.protein', 'order.sample', 'data' )
+            off.cells$order.protein <- as.integer( off.cells$order.protein )
+            off.cells$order.sample <- as.integer( off.cells$order.sample )
+            min.signal <- min( off.cells$data, na.rm = TRUE )
+            max.signal <- max( off.cells$data, na.rm = TRUE ) + 1E-7
+            off.cells$q <- ( off.cells$data - min.signal ) / ( max.signal - min.signal )
+            off.cells$fill.color <- sapply( off.cells$q, function( k ) do.call( rgb, as.list( cells.pal( k )[1,]/255 ) ) )
+            for ( i in 1:nrow(off.cells) ) {
+                CB.setFill( biclustersBlock, Fill( foregroundColor = off.cells[ i, 'fill.color' ] ),
+                            rowIndex = off.cells[i,'order.protein'],
+                            colIndex = off.cells[i,'order.sample'] )
+            }
+        }
+
+        message( 'Baits...' )
+        bait_cells <- merge( subset( proteins, protein_ac %in% samples$bait_ac ),
+                             samples, by.x = c( 'protein_ac' ), by.y = c( 'bait_ac' ),
+                             suffixes = c( '.protein', '.sample' ), all = FALSE )
+        bait_border = Border( color = bait.border.col, position = c( 'TOP', 'LEFT', 'RIGHT', 'BOTTOM' ), pen = 'BORDER_THICK' )
+        CB.setBorder( biclustersBlock, bait_border,
+                      rowIndex = bait_cells$order.protein,
+                      colIndex = bait_cells$order.sample )
 
         message( "Outer frame..." )
-        lapply( createCell( createRow( wsh, row_offset + nrow( proteins ) + 1 ),
-                            colIndex = 1:(col_offset+nrow(samples) ) ),
-                setCellStyle, CellStyle( bimap.workbook ) + Border( grid.col, position = c( 'TOP' ), pen = c( 'BORDER_THICK' ) ) )
-        lapply( createCell( getRows( wsh, 1:( row_offset + nrow( proteins ) ) ), 
-                            colIndex = col_offset+nrow(samples) + 1 ),
-                setCellStyle, CellStyle( bimap.workbook ) + Border( grid.col, position = c( 'LEFT' ), pen = c( 'BORDER_THICK' ) ) )
+        putBorder( biclustersBlock,
+                   rowIndex = nrow( cells.matrix ), colIndex = 1:ncol( cells.matrix ),
+                   Border( color = grid.col, position = c( 'BOTTOM' ), pen = c( 'BORDER_THICK' ) ) )
+        putBorder( biclustersBlock,
+                   rowIndex = 1:nrow( cells.matrix ), colIndex = ncol( cells.matrix ),
+                   Border( color = grid.col, position = c( 'RIGHT' ), pen = c( 'BORDER_THICK' ) ) )
     })
+    message( "BI-MAP XLSX generation done" )
     return ( bimap.workbook )
 }
