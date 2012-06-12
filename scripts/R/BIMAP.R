@@ -52,7 +52,8 @@ BIMAP.msdata.import <- function( ms_data, protein_info, msrun.multipliers = NULL
     bait_column = 'bait_ac', prey_column = 'prey_ac',
     sc_column = 'sc', pc_column = 'pc',
     sample_extra_columns = c(),
-    protein_ac_column = 'primaryac', protein_seqlength_column = 'seqlength'
+    protein_ac_column = 'primaryac', protein_seqlength_column = 'seqlength',
+    protein_extra_columns = c()
 ){
     ms_data_noglob <- ms_data[ ms_data[, msrun_column ] != '#glob#', ]
     measurements.df <- data.frame(
@@ -103,16 +104,27 @@ BIMAP.msdata.import <- function( ms_data, protein_info, msrun.multipliers = NULL
     } else {
         msruns.df$multiplier <- 1
     }
+    # prepare proteins frame
+    protein_extra_columns <- setdiff( unique( protein_extra_columns ), protein_seqlength_column )
     proteins.df <- protein_info[ protein_info[ , protein_ac_column ] %in% 
                 union( as.character( ms_data_noglob[ , prey_column ] ), 
                     as.character( ms_data_noglob[ , bait_column ] ) ), 
-                                         c( protein_ac_column, protein_seqlength_column ) ]
-    proteins.df <- ddply( proteins.df, c( protein_ac_column ), function( prot_data ) {
-                data.frame( seqlength = max( prot_data[,protein_seqlength_column] ),
-                            stringsAsFactors = FALSE )
-    } )
+                                 c( protein_ac_column, protein_seqlength_column,
+                                    protein_extra_columns ) ]
+    colnames( proteins.df ) <- c( 'protein_ac', 'seqlength', protein_extra_columns )
+    # group all protein records referring to the same protein AC
+    # (this is important if proteins.df contains multiple isosofrms)
+    protein_ids <- plyr:::id_var( proteins.df[,c('protein_ac')], drop = TRUE )
+    protein_indices <- plyr:::split_indices( seq_len(nrow(proteins.df)), protein_ids, n = attr( protein_ids, "n" ) )
+    protein_first_index <- vapply( protein_indices, function(indices) indices[[1]], integer(1) )
+    # sequence length is the maximum in AC group
+    seqlength <- vapply( protein_indices,
+                         function(indices) max( proteins.df$seqlength ),
+                         integer(1) )
+    # leave one (first) record per protein AC
+    proteins.df <- proteins.df[ protein_first_index, ]
+    proteins.df$seqlength <- seqlength
     #print( as.character( ms_data_noglob$prey_ac ) )
-    colnames( proteins.df ) <- c( 'protein_ac', 'seqlength' )
     rownames( proteins.df ) <- proteins.df$protein_ac 
 
     exp_design.df <- merge( samples.df, msruns.df )[,c('bait_ac','sample','msrun','multiplier')]
