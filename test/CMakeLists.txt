@@ -1,3 +1,5 @@
+set(Boost_USE_STATIC_LIBS   OFF)
+set(Boost_USE_MULTITHREADED ON)
 find_package( GTest REQUIRED )
 find_package( Boost REQUIRED COMPONENTS filesystem program_options )
 
