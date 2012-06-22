@@ -54,7 +54,11 @@ include_directories( ${Boost_INCLUDE_DIRS} )
 
 add_library( BIMAP SHARED ${BIMAP_Sources} )
     add_dependencies( BIMAP math eesampler mcmc )
-    target_link_libraries( BIMAP math eesampler ${GSL_LIBRARIES} ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} ${BZIP2_LIBRARIES} )
+    target_link_libraries( BIMAP math eesampler
+                           ${GSL_LIBRARIES}
+                           ${Boost_LIBRARIES}
+                           ${ZLIB_LIBRARIES} ${BZIP2_LIBRARIES} 
+                           ${CMAKE_THREAD_LIBS_INIT} )
 
 set( BIMAPSampler_Sources
      "BIMAP-sampler.cpp"
@@ -62,7 +66,9 @@ set( BIMAPSampler_Sources
 
 add_executable( BIMAP-sampler ${BIMAPSampler_Sources} )
     add_dependencies( BIMAP-sampler BIMAP )
-    target_link_libraries( BIMAP-sampler BIMAP ${CMAKE_THREAD_LIBS_INIT} ${Boost_LIBRARIES} )
+    target_link_libraries( BIMAP-sampler BIMAP
+                           ${CMAKE_THREAD_LIBS_INIT}
+                           ${Boost_LIBRARIES} )
 
 add_subdirectory( mpisampler )
 

@@ -1,7 +1,7 @@
 set(Boost_USE_STATIC_LIBS   OFF)
 set(Boost_USE_MULTITHREADED ON)
-find_package( Boost REQUIRED COMPONENTS thread serialization iostreams filesystem program_options mpi )
-
+find_package( Boost REQUIRED COMPONENTS thread serialization iostreams filesystem program_options mpi log )
+find_package( Threads )
 find_package( MPI )
 
 include_directories( ${Boost_INCLUDE_DIRS} )
@@ -18,7 +18,7 @@ if ( MPI_FOUND )
    add_executable( BIMAP-sampler-mpi ${BIMAPSamplerMPI_Sources} )
         add_dependencies( BIMAP-sampler-mpi BIMAP )
         target_link_libraries( BIMAP-sampler-mpi BIMAP ${Boost_LIBRARIES}
-${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY} )
+${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} )
         set_target_properties( BIMAP-sampler-mpi PROPERTIES LINK_FLAGS
 "${MPI_LINK_FLAGS}" )
 
