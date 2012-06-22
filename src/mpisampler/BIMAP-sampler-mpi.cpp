@@ -116,7 +116,8 @@ int main( int argc, char* argv[] )
     boost::scoped_ptr<BIMAPSampleCollectorParams>    collectorParams;
     boost::scoped_ptr<BIMAPIOParams>  ioParams;
     bool params_res = false;
-    if ( world.rank() == 0 ) {
+    bool is_collector = world.rank();
+    if ( is_collector ) {
         priors.reset( new ChessboardBiclusteringPriors() );
         priors->probeClustering.concentration = 0.01;
         priors->cellEnablementProb = 0.5;
@@ -156,7 +157,7 @@ int main( int argc, char* argv[] )
         }
     }
     LOG_INFO( "#" << world.rank() << ": " 
-              << ( world.rank() == 0 ? "broadcasting" : "receiving" )
+              << ( is_collector ? "broadcasting" : "receiving" )
               << " input data" );
     mpi::broadcast( world, params_res, 0 );
     if ( !params_res ) return ( 0 ); // --help option, no computation
@@ -169,7 +170,7 @@ int main( int argc, char* argv[] )
     broadcast_statically_tracked( world, "priors", priors, 0 );
     broadcast_statically_tracked( world, "precomputedDataParams", precomputedDataParams, 0 );
     broadcast_statically_tracked( world, "precomputed", precomputed, 0 );
-    LOG_DEBUG1_IF( world.rank() != 0, "#" << world.rank() << ": received OPAData (" 
+    LOG_DEBUG1_IF( !is_collector, "#" << world.rank() << ": received OPAData (" 
                     << data->objectsCount() << " objects, " << data->probesCount() << " probes)" );
     LOG_INFO( "#" << world.rank() << ": initializing sampler..." );
     BIMAPSamplerHelper         helper( *precomputed,
@@ -178,12 +179,12 @@ int main( int argc, char* argv[] )
 
     LOG_DEBUG1( "#" << world.rank() << ": setting initial clustering..." );
     ChessboardBiclustering iniClus;
-    if ( world.rank() == 0 ) iniClus = helper.trivialClustering();
+    if ( is_collector ) iniClus = helper.trivialClustering();
     mpi::broadcast( world, iniClus, 0 );
 
     StdOutPTCExecutionMonitor   mon( 1 );
     boost::scoped_ptr<ChessboardBiclusteringsIndexing> ccIndexing;
-    if ( world.rank() == 0 ) ccIndexing.reset( new ChessboardBiclusteringsIndexing() );
+    if ( is_collector ) ccIndexing.reset( new ChessboardBiclusteringsIndexing() );
 
     boost::optional<BIMAPWalk> res = MPI_BIMAPSampler_run( helper, world, cascadeParams, iniClus, 
                                                              ccIndexing.get(), collectorParams.get(), &mon );
