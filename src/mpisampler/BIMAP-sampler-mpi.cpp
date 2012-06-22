@@ -11,6 +11,14 @@
 #include "../ParametersReader.h"
 #include "BIMAP-sampler-mpi.h"
 
+#if defined(USE_BOOST_LOG)
+#include <boost/log/sinks.hpp>
+#include <boost/log/core.hpp>
+#include <boost/log/attributes/constant.hpp>
+#include <boost/log/attributes/timer.hpp>
+#include <boost/log/trivial.hpp>
+#endif
+
 namespace cemm { namespace bimap {
 
 boost::optional<BIMAPWalk> MPI_BIMAPSampler_run(
@@ -31,9 +39,9 @@ boost::optional<BIMAPWalk> MPI_BIMAPSampler_run(
         collector.reset( new BIMAPSampleCollector( *ccIndexing, *collectorParams ) );
     }
 
-    LOG_INFO( comm.rank() << ": initializing " 
-                          << eeCascadeParams.turbinesCount << " node(s), "
-                          << eeCascadeParams.levelsCount << " level(s) cascade..." );
+    LOG_INFO( "Initializing " 
+              << eeCascadeParams.turbinesCount << " node(s), "
+              << eeCascadeParams.levelsCount << " level(s) cascade..." );
 
     LOG_DEBUG1( "MPI Turbine Cascade Creation for communicator of size " << comm.size() );
 
@@ -62,9 +70,9 @@ boost::optional<BIMAPWalk> MPI_BIMAPSampler_run(
         iniClu.check();
         eeSampler.init( StaticChessboardBiclustering( iniClu ) );
     }
-    LOG_INFO( comm.rank() << ": running sampling..." );
+    LOG_INFO( "Running sampling..." );
     eeSampler.run();
-    LOG_INFO( comm.rank() << ": finished sampling in "
+    LOG_INFO( "Finished sampling in "
               << boost::format( "%0.f" ) % eeSampler.elapsed() << " second(s)" );
     return ( collector ? collector->walk() : boost::optional<BIMAPWalk>() );
 }
@@ -72,8 +80,7 @@ boost::optional<BIMAPWalk> MPI_BIMAPSampler_run(
 template<class Object>
 void broadcast_statically_tracked( boost::mpi::communicator& comm, const char* name, boost::scoped_ptr<Object>& object, int root )
 {
-    LOG_INFO( "#" << comm.rank() << ": " 
-                << ( comm.rank() == root ? "broadcasting " : "receiving " ) << name << "..." );
+    LOG_INFO( ( comm.rank() == root ? "broadcasting " : "receiving " ) << name << "..." );
     const Object* pObj = object.get();
     if ( ( pObj == NULL ) && ( comm.rank() == root ) ) {
         THROW_RUNTIME_ERROR( "Root does not have data for broadcasting" );
@@ -83,8 +90,7 @@ void broadcast_statically_tracked( boost::mpi::communicator& comm, const char* n
     }
     statically_tracked<Object> pstObj( name, pObj );
     boost::mpi::broadcast( comm, pstObj, root );
-    LOG_INFO( "#" << comm.rank() << ": " 
-                << ( comm.rank() == root ? "broadcast " : "receive " ) << name << " complete" );
+    LOG_INFO( ( comm.rank() == root ? "broadcast " : "receive " ) << name << " complete" );
     if ( comm.rank() != root ) {
         object.reset( const_cast<Object*>( pObj ) );
     }
@@ -99,7 +105,19 @@ int main( int argc, char* argv[] )
     boost::mpi::environment env( argc, argv, true );
     boost::mpi::communicator world;
 
-    LOG_INFO( "#" << world.rank() << ": MPI environment initialized, "
+#if defined(USE_BOOST_LOG)
+    typedef boost::log::attributes::constant<int> mpi_rank_attr_t;
+    typedef boost::log::attributes::timer         timer_attr_t;
+
+    boost::shared_ptr< boost::log::core > log_core = boost::log::core::get();
+
+    log_core->add_global_attribute( "mpi_rank",
+                                    mpi_rank_attr_t( world.rank() ) );
+    log_core->add_global_attribute( "timer",
+                                    timer_attr_t() );
+#endif
+
+    LOG_INFO( "MPI environment initialized, "
               << world.size() << " process(es) in total..." );
     ChessboardBiclusteringHyperPriors  hyperpriors;
     hyperpriors.signalHyperprior.meanVarScale = 2;
@@ -139,11 +157,10 @@ int main( int argc, char* argv[] )
         if ( params_res ) {
         if ( !ioParams->dataFilename.empty() ) {
             boost::filesystem::path data_file_path( ioParams->dataFilename );
-            LOG_DEBUG1( "#" << world.rank() << ": loading data from " << data_file_path << "..." );
+            LOG_INFO( "Loading data from " << data_file_path << "..." );
             if ( !boost::filesystem::exists( data_file_path ) ) {
                 THROW_RUNTIME_ERROR( "OPAData file not found: " << data_file_path );
             }
-            LOG_INFO( "Loading data..." );
             data.reset( new OPAData( OPAData::load( data_file_path.string().c_str() ) ) );
         }
         else if ( !ioParams->proteinsFilename.empty() ) {
@@ -156,9 +173,7 @@ int main( int argc, char* argv[] )
         precomputed.reset( new PrecomputedData( *data, *precomputedDataParams, *signalParams ) );
         }
     }
-    LOG_INFO( "#" << world.rank() << ": " 
-              << ( is_collector ? "broadcasting" : "receiving" )
-              << " input data" );
+    LOG_INFO( ( is_collector ? "Broadcasting" : "Receiving" ) << " input data" );
     mpi::broadcast( world, params_res, 0 );
     if ( !params_res ) return ( 0 ); // --help option, no computation
 
@@ -170,14 +185,14 @@ int main( int argc, char* argv[] )
     broadcast_statically_tracked( world, "priors", priors, 0 );
     broadcast_statically_tracked( world, "precomputedDataParams", precomputedDataParams, 0 );
     broadcast_statically_tracked( world, "precomputed", precomputed, 0 );
-    LOG_DEBUG1_IF( !is_collector, "#" << world.rank() << ": received OPAData (" 
+    LOG_DEBUG1_IF( !is_collector, "Received OPAData (" 
                     << data->objectsCount() << " objects, " << data->probesCount() << " probes)" );
-    LOG_INFO( "#" << world.rank() << ": initializing sampler..." );
+    LOG_INFO( "Initializing sampler..." );
     BIMAPSamplerHelper         helper( *precomputed,
                                         hyperpriors, *priors, gibbsParams,
                                         world.rank() * 1981 );
 
-    LOG_DEBUG1( "#" << world.rank() << ": setting initial clustering..." );
+    LOG_DEBUG1( "Setting initial clustering..." );
     ChessboardBiclustering iniClus;
     if ( is_collector ) iniClus = helper.trivialClustering();
     mpi::broadcast( world, iniClus, 0 );
@@ -190,8 +205,7 @@ int main( int argc, char* argv[] )
                                                              ccIndexing.get(), collectorParams.get(), &mon );
 
     if ( res ) {
-        LOG_INFO( "Process #" << world.rank()
-                  << " finished with " << res->stepsCount() << " samples collected" );
+        LOG_INFO( "Process finished with " << res->stepsCount() << " samples collected" );
         BOOST_ASSERT( res->check() );
         if ( !ioParams->outputFilename.empty() ) {
             LOG_INFO( "Saving walk to file " << ioParams->outputFilename << "..." );
@@ -211,6 +225,6 @@ int main( int argc, char* argv[] )
         }
     }
     else {
-        LOG_INFO( "Process #" << world.rank() << " finished (not collector)" );
+        LOG_INFO( "Process finished (not collector)" );
     }
 }
