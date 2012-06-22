@@ -134,7 +134,7 @@ int main( int argc, char* argv[] )
     boost::scoped_ptr<BIMAPSampleCollectorParams>    collectorParams;
     boost::scoped_ptr<BIMAPIOParams>  ioParams;
     bool params_res = false;
-    bool is_collector = world.rank();
+    bool is_collector = world.rank() == 0;
     if ( is_collector ) {
         priors.reset( new ChessboardBiclusteringPriors() );
         priors->probeClustering.concentration = 0.01;
