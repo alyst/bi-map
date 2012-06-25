@@ -3,6 +3,23 @@
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
 
+#if defined(USE_BOOST_LOG)
+#include <boost/asio/ip/host_name.hpp>
+#include <boost/log/utility/init/common_attributes.hpp>
+#include <boost/log/utility/init/to_console.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/log/core.hpp>
+#include <boost/log/filters.hpp>
+#include <boost/log/formatters.hpp>
+#include <boost/log/sinks/sync_frontend.hpp>
+#include <boost/log/sinks/text_ostream_backend.hpp>
+#include <boost/log/sources/severity_channel_logger.hpp>
+#include <boost/log/sources/record_ostream.hpp>
+#include <boost/log/utility/empty_deleter.hpp>
+#include <boost/log/attributes/constant.hpp>
+#include <boost/log/attributes/timer.hpp>
+#endif
+
 #include <cemm/eesampler/ConsolePTCExecutionMonitor.h>
 
 #include "cemm/bimap/BIMAPResultsSerialize.h"
@@ -11,13 +28,12 @@
 #include "../ParametersReader.h"
 #include "BIMAP-sampler-mpi.h"
 
-#if defined(USE_BOOST_LOG)
-#include <boost/log/sinks.hpp>
-#include <boost/log/core.hpp>
-#include <boost/log/attributes/constant.hpp>
-#include <boost/log/attributes/timer.hpp>
-#include <boost/log/trivial.hpp>
-#endif
+namespace log_src = boost::log::sources;
+namespace log_fmt = boost::log::formatters;
+namespace log_flt = boost::log::filters;
+namespace log_sinks = boost::log::sinks;
+namespace log_attrs = boost::log::attributes;
+namespace log_keywords = boost::log::keywords;
 
 namespace cemm { namespace bimap {
 
@@ -106,15 +122,38 @@ int main( int argc, char* argv[] )
     boost::mpi::communicator world;
 
 #if defined(USE_BOOST_LOG)
-    typedef boost::log::attributes::constant<int> mpi_rank_attr_t;
-    typedef boost::log::attributes::timer         timer_attr_t;
+    typedef log_attrs::constant<std::string> hostname_attr_t;
+    typedef log_attrs::constant<int>  mpi_rank_attr_t;
+    typedef log_attrs::timer         timer_attr_t;
 
     boost::shared_ptr< boost::log::core > log_core = boost::log::core::get();
 
+    log_core->add_global_attribute( "hostname",
+                                    hostname_attr_t( boost::asio::ip::host_name() ) );
     log_core->add_global_attribute( "mpi_rank",
                                     mpi_rank_attr_t( world.rank() ) );
     log_core->add_global_attribute( "timer",
                                     timer_attr_t() );
+
+    typedef boost::mpl::vector<std::time_t, std::tm, boost::posix_time::ptime> date_time_types;
+
+    boost::log::add_common_attributes();
+    boost::log::init_log_to_console
+    (
+        std::cout,
+        log_keywords::format =
+        (
+            log_fmt::stream
+                << "<" << log_fmt::attr< boost::log::trivial::severity_level >("Severity") << "> "
+                << "(" << log_fmt::attr<std::string>("hostname") << "-"
+                    << log_fmt::attr<int>("mpi_rank") << ") "
+                << log_fmt::date_time<date_time_types>("TimeStamp", log_keywords::format = "%Y.%m.%d %H:%M:%S" ) << " "
+                // << log_fmt::attr< unsigned int >("LineID", log_keywords::format = "%08x")
+                << log_fmt::if_(log_flt::has_attr("timer"))
+                   [  log_fmt::stream << "[" << log_fmt::time_duration("timer", log_keywords::format = "%h:%M:%s" ) << "] " ]
+                << log_fmt::message()
+        )
+    );
 #endif
 
     LOG_INFO( "MPI environment initialized, "
