@@ -82,6 +82,8 @@ BIMAP.msdata.import <- function( ms_data, protein_info, msrun.multipliers = NULL
                                    intersect( colnames(ms_data_noglob),
                                               sample_extra_columns ) ) )
     if ( sample_column == bait_column ) samples.colnames <- c( sample_column, samples.colnames ) # handle case sample = bait
+    print( samples.colnames )
+    print( head( ms_data_noglob ) )
     samples.df <- unique( subset( ms_data_noglob, select = samples.colnames ) )
     samples.colnames[1:2] <- c( 'sample', 'bait_ac' )
     colnames( samples.df ) <- samples.colnames 
@@ -314,6 +316,8 @@ BIMAP.mcmcwalk.eval <- function(
     objects.components.threshold = 0.1,
     probes.components.threshold = 0.1,
     objects.clot.threshold = 0.9,
+    stable.objects.clusters.threshold = NA,
+    stable.probes.clusters.threshold = NA,
     log.particles.file = NULL,
     log.eeJumps.file = NULL
 ){
@@ -362,6 +366,8 @@ BIMAP.mcmcwalk.eval <- function(
         objects.components.threshold = objects.components.threshold,
         probes.components.threshold = probes.components.threshold,
         objects.clot.threshold = objects.clot.threshold,
+        stable.objects.clusters.threshold = stable.objects.clusters.threshold,
+        stable.probes.clusters.threshold = stable.probes.clusters.threshold,
         log.particles.file = log.particles.file,
         log.eeJumps.file = log.eeJumps.file
     )
@@ -420,12 +426,17 @@ BIMAP.mcmcwalk.eval_MPI <- function(
 BIMAP.mcmcwalk.load <- function ( filename, 
     objects.components.threshold = NA,
     probes.components.threshold = NA,
-	objects.clot.threshold = NA )
+    objects.clot.threshold = NA,
+    stable.objects.clusters.threshold = NA,
+    stable.probes.clusters.threshold = NA )
 {
     return ( .Call( "BIMAPWalkLoad", filename, 
                     objects.components.threshold,
                     probes.components.threshold,
-                    objects.clot.threshold ) )
+                    objects.clot.threshold,
+                    stable.objects.clusters.threshold,
+                    stable.probes.clusters.threshold
+ ) )
 }
 
 setClass( "BIMAPCluster",
@@ -487,7 +498,8 @@ setClass( "BIMAPWalk",
         probes.components = "data.frame",
         blocks = "data.frame",
         blocks.freq = "data.frame",
-        signals = "data.frame"
+        signals = "data.frame",
+        stable.blocks.scores = "data.frame"
     )
 )
 

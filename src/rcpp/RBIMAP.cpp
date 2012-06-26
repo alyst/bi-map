@@ -25,6 +25,7 @@
 #include <cemm/bimap/OPAData.h>
 #include <cemm/bimap/BIMAPSampler.h>
 #include <cemm/bimap/ChessboardBiclusteringsPDFEval.h>
+#include <cemm/bimap/BlocksScoring.h>
 #include <cemm/bimap/BIMAPResultsSerialize.h>
 
 #define BIMAP_PARAM_WALK_SAMPLES                    "walk.samples"
@@ -34,6 +35,8 @@
 #define BIMAP_PARAM_OBJECTS_COMPONENTS_THRESHOLD    "objects.components.threshold"
 #define BIMAP_PARAM_PROBES_COMPONENTS_THRESHOLD     "probes.components.threshold"
 #define BIMAP_PARAM_OBJECTS_CLOT_THRESHOLD          "objects.clot.threshold"
+#define BIMAP_PARAM_STABLE_OBJECTS_CLUSTERS_THRESHOLD   "stable.objects.clusters.threshold"
+#define BIMAP_PARAM_STABLE_PROBES_CLUSTERS_THRESHOLD    "stable.probes.clusters.threshold"
 
 #define BIMAP_PARAM_EESAMPLER_LEVELS_COUNT          "eesampler.levelsCount"
 #define BIMAP_PARAM_EESAMPLER_TURBINES_COUNT        "eesampler.turbinesCount"
@@ -104,6 +107,7 @@
 
 #define R_SLOT_BLOCKS                       "blocks"
 #define R_SLOT_BLOCKS_FREQUENCY             "blocks.freq"
+#define R_SLOT_STABLE_BLOCKS_SCORING        "stable.blocks.scores"
 #define R_SLOT_SIGNALS                      "signals"
 #define R_SLOT_OBJECTS_DATA                 "objects.data"
 
@@ -473,7 +477,8 @@ SEXP ConvertBIMAPWalkToRObject(
     const objects_label_map_type&           objects,
     const probes_label_map_type&            probes,
     const BIMAPWalk&                        walk,       /** @param[in] MCMC biclustering walk to convert */
-    const ChessboardBiclusteringsPDFEval*   pdfAdjust   /** @param[in] PDF adjustment data */
+    const ChessboardBiclusteringsPDFEval*   pdfAdjust,  /** @param[in] PDF adjustment data */
+    const BlocksScoring*                    stableBlocksScoring   /** @param[in] optional scoring for on-blocks for selected objects and probes clusters */
 ){
     Rprintf( "Exporting BI-MAP walk...\n" );
     Rcpp::S4 rWalk( R_CLASS_BIMAP_WALK );
@@ -1026,6 +1031,31 @@ SEXP ConvertBIMAPWalkToRObject(
 
     Rprintf( "%d clustering steps exported\n", walk.stepsCount() );
 
+    if ( stableBlocksScoring ) {
+        LOG_INFO( "Exporting stable blocks scoring..." );
+        Rcpp::IntegerVector objCluVec( stableBlocksScoring->blockStats().size() );
+        Rcpp::IntegerVector probeCluVec( objCluVec.size() );
+        Rcpp::NumericVector totalVec( objCluVec.size() );
+        Rcpp::NumericVector enabledVec( objCluVec.size() );
+
+        size_t i = 0;
+        for ( BlocksScoring::block_stats_map::const_iterator it = stableBlocksScoring->blockStats().begin();
+              it != stableBlocksScoring->blockStats().end(); ++it
+        ){
+            objCluVec[i] = it->first.first;
+            probeCluVec[i] = it->first.second;
+            totalVec[i] = it->second.count_total;
+            enabledVec[i] = it->second.count_on;
+        }
+        rWalk.slot( R_SLOT_STABLE_BLOCKS_SCORING ) = Rcpp::DataFrame::create(
+                Rcpp::Named( R_COLUMN_OBJECTS_CLUSTER_SERIAL, objCluVec ),
+                Rcpp::Named( R_COLUMN_PROBES_CLUSTER_SERIAL, probeCluVec ),
+                Rcpp::Named( R_COLUMN_TOTAL, totalVec ),
+                Rcpp::Named( R_COLUMN_ENABLED, enabledVec ),
+                Rcpp::Named( R_STRINGS_AS_FACTORS, false )
+        );
+    }
+
     // convert priors
     Rprintf( "Exporting priors...\n" );
     rWalk.slot( R_SLOT_PRIORS_WALK ) = ConvertPriorParamsWalkToRDataFrame( walk );
@@ -1057,6 +1087,44 @@ public:
     {}
 };
 
+BlocksScoring* BIMAPBlocksScoring(
+    const ChessboardBiclusteringsPDFEval& pdfAdjust,
+    const IndexedPartitionsCollection<ObjectsCluster>& objPtnColl,
+    const IndexedPartitionsCollection<ProbesCluster>& probePtnColl,
+    prob_t stableObjectsClustersThreshold,
+    prob_t stableProbesClustersThreshold
+){
+        LOG_INFO( "Finding stable clusters..." );
+        std::vector<object_clundex_t> stableObjectsClusters;
+
+        std::size_t minObjIncludedSteps = stableObjectsClustersThreshold * objPtnColl.walk().stepsCount();
+        const part_stats_map_type& objectsClustersStats = pdfAdjust.objectsClustersStatsMap();
+        for ( part_stats_map_type::const_iterator ocit = objectsClustersStats.begin();
+            ocit != objectsClustersStats.end(); ++ocit
+        ){
+            if ( ocit->second.nstepsIncluded > minObjIncludedSteps ) {
+                stableObjectsClusters.push_back( ocit->first );
+            }
+        }
+        LOG_INFO( stableObjectsClusters << " stable object clusters found" );
+
+        std::vector<probe_clundex_t> stableProbesClusters;
+        std::size_t minProbeIncludedSteps = stableProbesClustersThreshold * probePtnColl.walk().stepsCount();
+        const part_stats_map_type& probesClustersStats = pdfAdjust.probesClustersStatsMap();
+        for ( part_stats_map_type::const_iterator pcit = probesClustersStats.begin();
+            pcit != probesClustersStats.end(); ++pcit
+        ){
+            if ( pcit->second.nstepsIncluded > minProbeIncludedSteps ) {
+                stableProbesClusters.push_back( pcit->first );
+            }
+        }
+        LOG_INFO( stableObjectsClusters << " stable probes clusters found" );
+
+        LOG_INFO( "Calculating stable blocks scores..." );
+        return ( new BlocksScoring( pdfAdjust, objPtnColl, probePtnColl,
+                                    stableObjectsClusters, stableProbesClusters ) );
+}
+
 /**
     Reads AP-MS data and runs BI-MAP.
  */
@@ -1086,6 +1154,8 @@ RcppExport SEXP BIMAPWalkEval(
     double objectsComponentsThreshold = R_NaReal;
     double probesComponentsThreshold = R_NaReal;
     double objectsClotThreshold = R_NaReal;
+    double stableObjectsClustersThreshold = R_NaReal;
+    double stableProbesClustersThreshold = R_NaReal;
 
     {
         Rprintf( "Reading sampler and model parameters...\n" );
@@ -1148,6 +1218,9 @@ RcppExport SEXP BIMAPWalkEval(
         MaybeReadRParam( probesComponentsThreshold, params, BIMAP_PARAM_PROBES_COMPONENTS_THRESHOLD );
 
         MaybeReadRParam( objectsClotThreshold, params, BIMAP_PARAM_OBJECTS_CLOT_THRESHOLD );
+
+        MaybeReadRParam( stableObjectsClustersThreshold, params, BIMAP_PARAM_STABLE_OBJECTS_CLUSTERS_THRESHOLD );
+        MaybeReadRParam( stableProbesClustersThreshold, params, BIMAP_PARAM_STABLE_PROBES_CLUSTERS_THRESHOLD );
 
         priors.updateCachedDistributions();
 
@@ -1222,15 +1295,25 @@ RcppExport SEXP BIMAPWalkEval(
 
     Rprintf( "Bayesian Biclustering finished\n" );
     boost::scoped_ptr<ChessboardBiclusteringsPDFEval> pdfAdjust;
+    boost::scoped_ptr<IndexedPartitionsCollection<ObjectsCluster> > objPtnColl;
+    boost::scoped_ptr<IndexedPartitionsCollection<ProbesCluster> > probePtnColl;
     if ( !R_IsNA( objectsComponentsThreshold ) || !R_IsNA( probesComponentsThreshold ) ) {
-        Rprintf( "Detecting independent objects/probes components...\n" );
         if ( R_IsNA( objectsComponentsThreshold ) ) objectsComponentsThreshold = 0;
         if ( R_IsNA( probesComponentsThreshold ) ) probesComponentsThreshold = 0;
-        pdfAdjust.reset( ChessboardBiclusteringsPDFEval::Create( res,
-                                           helper.rndNumGen,
-                                           objectsComponentsThreshold,
-                                           probesComponentsThreshold,
-                                           objectsClotThreshold ) );
+
+        LOG_INFO( "Detecting independent objects components...\n" );
+        objPtnColl.reset( new IndexedPartitionsCollection<ObjectsCluster>( res ) );
+        objPtnColl->init( helper.rndNumGen, res.stepsCount() * objectsComponentsThreshold,
+                          res.stepsCount() * objectsClotThreshold );
+
+        LOG_INFO( "Detecting independent probes components...\n" );
+        probePtnColl.reset( new IndexedPartitionsCollection<ProbesCluster>( res ) );
+        probePtnColl->init( nullptr, res.stepsCount() * probesComponentsThreshold,
+                           std::numeric_limits<prob_t>::quiet_NaN() );
+
+        LOG_INFO( "Calculating blocks statistics...\n" );
+        pdfAdjust.reset( new ChessboardBiclusteringsPDFEval( res,
+                                           *objPtnColl, *probePtnColl ) );
     }
     objects_label_map_type  objects = data.objectsLabelMap();
     probes_label_map_type   probes = data.probesLabelMap();
@@ -1239,8 +1322,17 @@ RcppExport SEXP BIMAPWalkEval(
         BIMAPResultsSave( walkFilename.c_str(), objects, probes, res, pdfAdjust.get() );
         Rprintf( "Saving done\n" );
     }
+    boost::scoped_ptr<BlocksScoring> blocksScoring;
+    if ( !R_IsNA( stableObjectsClustersThreshold )
+         && !R_IsNA( stableProbesClustersThreshold )
+         && pdfAdjust
+    ){
+        blocksScoring.reset( BIMAPBlocksScoring( *pdfAdjust, *objPtnColl, *probePtnColl,
+                                                 stableObjectsClustersThreshold,
+                                                 stableProbesClustersThreshold ) );
+    }
     if ( createWalkRObject ) {
-        return ( ConvertBIMAPWalkToRObject( objects, probes, res, pdfAdjust.get() ) );
+        return ( ConvertBIMAPWalkToRObject( objects, probes, res, pdfAdjust.get(), blocksScoring.get() ) );
     }
     else {
         return ( R_NilValue );
@@ -1254,9 +1346,11 @@ RcppExport SEXP BIMAPWalkEval(
  */
 RcppExport SEXP BIMAPWalkLoad(
     SEXP filenameExp,                   /** @param[in] filenameExp walk filename, character string */
-    SEXP objectsComponentThresholdExp, /** @param[in] objectsComponentThresholdExp threshold for defining independent objects' components, numeric */
-    SEXP probesComponentThresholdExp,  /** @param[in] probesComponentThresholdExp  threshold for defining independent objects' components, numeric */
-    SEXP objectsClotThresholdExp        /** @param[in] objectsClotThresholdExp   threshold for defining "clots" of objects (highly co-occurring), numeric */
+    SEXP objectsComponentsThresholdExp, /** @param[in] objectsComponentsThresholdExp threshold for defining independent objects' components, numeric */
+    SEXP probesComponentsThresholdExp,  /** @param[in] probesComponentsThresholdExp  threshold for defining independent probes' components, numeric */
+    SEXP objectsClotThresholdExp,       /** @param[in] objectsClotThresholdExp   threshold for defining "clots" of objects (highly co-occurring), numeric */
+    SEXP stableObjectsClustersThresholdExp, /** @param[in] stableObjectsClustersThresholdExp threshold for defining stable (frequently included) objects' clusters, numeric */
+    SEXP stableProbesClustersThresholdExp   /** @param[in] stableProbesClustersThresholdExp threshold for defining stable (frequently included) probes' components, numeric */
 ){
     BEGIN_RCPP
 
@@ -1270,8 +1364,8 @@ RcppExport SEXP BIMAPWalkLoad(
     ChessboardBiclusteringsIndexing            indexing;
     objects_label_map_type  objects;
     probes_label_map_type   probes;
-    BIMAPWalk* walk = NULL;
-    ChessboardBiclusteringsPDFEval* pdfAdjust = NULL;
+    BIMAPWalk* walk = nullptr;
+    ChessboardBiclusteringsPDFEval* pdfAdjust = nullptr;
     BIMAPResultsLoad( filename.c_str(), indexing, objects, probes, &walk, &pdfAdjust );
 
     if ( !walk ) {
@@ -1283,34 +1377,57 @@ RcppExport SEXP BIMAPWalkLoad(
         throw std::runtime_error( "Error detected in BIMAP walk, loaded from file" );
     }
 
-    double objectsComponentThreshold = Rcpp::as<double>( objectsComponentThresholdExp ); 
-    double probesComponentThreshold = Rcpp::as<double>( probesComponentThresholdExp ); 
+    double objectsComponentsThreshold = Rcpp::as<double>( objectsComponentsThresholdExp ); 
+    double probesComponentsThreshold = Rcpp::as<double>( probesComponentsThresholdExp ); 
+    double stableObjectsClustersThreshold = Rcpp::as<double>( stableObjectsClustersThresholdExp );
+    double stableProbesClustersThreshold = Rcpp::as<double>( stableProbesClustersThresholdExp );
     double objectsClotThreshold = Rcpp::as<double>( objectsClotThresholdExp ); 
-    if ( !R_IsNA( objectsComponentThreshold ) || !R_IsNA( probesComponentThreshold ) ) {
+    boost::scoped_ptr<IndexedPartitionsCollection<ObjectsCluster> > objPtnColl;
+    boost::scoped_ptr<IndexedPartitionsCollection<ProbesCluster> > probePtnColl;
+    boost::scoped_ptr<BlocksScoring> blocksScoring;
+    if ( !R_IsNA( objectsComponentsThreshold ) || !R_IsNA( probesComponentsThreshold ) ) {
         if ( pdfAdjust ) {
             Rprintf( "Deleting old PDF adjustment...\n" );
             delete pdfAdjust;
         }
-        if ( R_IsNA( objectsComponentThreshold ) ) objectsComponentThreshold = 0;
-        if ( R_IsNA( probesComponentThreshold ) ) probesComponentThreshold = 0;
+        if ( R_IsNA( objectsComponentsThreshold ) ) objectsComponentsThreshold = 0;
+        if ( R_IsNA( probesComponentsThreshold ) ) probesComponentsThreshold = 0;
         if ( R_IsNA( objectsClotThreshold ) ) objectsClotThreshold = std::numeric_limits<prob_t>::quiet_NaN();
+        cemm::math::RngPtr rndNumGen( gsl_rng_alloc( gsl_rng_default ) );
+
+        if ( R_IsNA( objectsComponentsThreshold ) ) objectsComponentsThreshold = 0;
+        if ( R_IsNA( probesComponentsThreshold ) ) probesComponentsThreshold = 0;
+
+        LOG_INFO( "Detecting independent objects components...\n" );
+        objPtnColl.reset( new IndexedPartitionsCollection<ObjectsCluster>( *walk ) );
+        objPtnColl->init( rndNumGen, walk->stepsCount() * objectsComponentsThreshold,
+                          walk->stepsCount() * objectsClotThreshold );
+
+        LOG_INFO( "Detecting independent probes components...\n" );
+        probePtnColl.reset( new IndexedPartitionsCollection<ProbesCluster>( *walk ) );
+        probePtnColl->init( nullptr, walk->stepsCount() * probesComponentsThreshold,
+                           std::numeric_limits<prob_t>::quiet_NaN() );
+
         Rprintf( "Calculating PDF adjustment with independent components threshold o=%f, s=%f", 
-                 objectsComponentThreshold, probesComponentThreshold );
+                 objectsComponentsThreshold, probesComponentsThreshold );
         if ( std::isfinite( objectsClotThreshold ) ) {
             Rprintf( "\nand generating object clusters intersections with clot threshold o=%f", 
                     objectsClotThreshold );
         }
         Rprintf( "...\n" );
-        cemm::math::RngPtr rndNumGen( gsl_rng_alloc( gsl_rng_default ) );
-        pdfAdjust = ChessboardBiclusteringsPDFEval::Create( *walk,
-                                           rng,
-                                           objectsComponentThreshold,
-                                           probesComponentThreshold,
-                                           objectsClotThreshold );
+        pdfAdjust = new ChessboardBiclusteringsPDFEval( *walk,
+                                           *objPtnColl, *probePtnColl );
+    }
+    if ( objPtnColl && probePtnColl &&
+         !R_IsNA( objectsComponentsThreshold ) && !R_IsNA( probesComponentsThreshold )
+    ){
+        blocksScoring.reset( BIMAPBlocksScoring( *pdfAdjust, *objPtnColl, *probePtnColl,
+                                                 stableObjectsClustersThreshold, stableProbesClustersThreshold ) );
     }
 
     //Rprintf( "Exporting walk to R...\n" );
-    SEXP res = ConvertBIMAPWalkToRObject( objects, probes, *walk, pdfAdjust );
+    SEXP res = ConvertBIMAPWalkToRObject( objects, probes, *walk,
+                                          pdfAdjust, blocksScoring.get() );
     delete walk;
     if ( pdfAdjust ) delete pdfAdjust;
 
