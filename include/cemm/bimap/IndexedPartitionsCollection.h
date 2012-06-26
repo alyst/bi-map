@@ -19,6 +19,16 @@ namespace cemm { namespace bimap {
 
 typedef boost::numeric::ublas::symmetric_matrix<size_t> pair_counts_matrix_t;
 
+struct ClusterIntersectionStats {
+    object_clundex_t    clusterIx;  /// index of cluster than intersects with given one
+    prob_t              coverage;   /// intersection size / given cluster size
+
+    ClusterIntersectionStats( object_clundex_t clusterIx = 0,
+                              prob_t coverage = 0.0 )
+    : clusterIx( clusterIx ), coverage( coverage )
+    {}
+};
+
 /**
  *  Collection of indexed partitions.
  * 
@@ -121,6 +131,9 @@ public:
     const boost::ptr_vector<counts_map_type>& subpartitionCountsMaps() const {
         return ( _subptnCounts );
     }
+    std::vector< std::vector<ClusterIntersectionStats> > clusterIntersections(
+        const std::vector<part_serial>& clusters
+    ) const;
 };
 
 /**
@@ -271,6 +284,42 @@ void IndexedPartitionsCollection<Part>::countPartsInclusion(
             }
         }
     }
+}
+
+/**
+ *  Count how many times partition part (cluster)
+ *  had occurred in the whole collection of partitions.
+ * 
+ *  Requires countParts() to be called before.
+ */
+template<class Part>
+std::vector< std::vector<ClusterIntersectionStats> >
+IndexedPartitionsCollection<Part>::clusterIntersections(
+    const std::vector<part_serial>& clusters
+) const {
+    typedef std::vector<ClusterIntersectionStats> cluster_intersections;
+    typedef boost::filter_iterator<is_element_contaned<Part>,
+                       typename part_indexing::const_serial_iterator> filtered_part_iterator;
+
+    const part_indexing& partsColl = extractor_type::PartsIndexing( _walk );
+
+    std::vector<cluster_intersections> res( clusters.size() );
+
+    for ( size_t i = 0; i < clusters.size(); ++i ) {
+        const elements_container& cluster = (*partsColl.serialMap().find( clusters[i] ))->value();
+        cluster_intersections& cluIsects = res[ i ];
+        size_t clusterSize = extractor_type::Size( cluster );
+        is_element_contaned<Part> containsElem( *extractor_type::ElementsBegin( cluster ) ); // use first element to reduce search space
+        filtered_part_iterator pit2end( containsElem, partsColl.serialMap().end(), partsColl.serialMap().end() );
+        for ( filtered_part_iterator pit2( containsElem, partsColl.serialMap().begin(), partsColl.serialMap().end() );
+              pit2 != pit2end; ++pit2
+        ){
+            if ( size_t isectSize = extractor_type::Size( extractor_type::Intersect( cluster, (*pit2)->value() ) ) ) {
+                cluIsects.push_back( ClusterIntersectionStats( (*pit2)->serial(), (prob_t)isectSize / clusterSize ) );
+            }
+        }
+    }
+    return ( res );
 }
 
 template<class Part>
