@@ -90,17 +90,19 @@ private:
     typedef boost::unordered_map<submask_id_type, log_prob_t> cells_mask_freq_map;
     typedef PartitionIndependentComponentsPDF::serial_vector_type serial_vector_type;
 
-    PartitionIndependentComponentsPDF   _objPtnIcPdf;
-    PartitionIndependentComponentsPDF   _probePtnIcPdf;
-    PartitionPartsPDF                   _objPtnPartsPdf;
-    PartitionPartsPDF                   _probePtnPartsPdf;
     std::vector<object_set_t>           _objComponents;     /** objects independent components */
+    PartitionIndependentComponentsPDF   _objPtnIcPdf;
+    PartitionPartsPDF                   _objPtnPartsPdf;
+    obj_clu_stats_map                   _objCluStats;       /** average frequency of co-occurrence of pairs of object in a cluster */
+
     std::vector<probe_bitset_t>         _probeComponents;   /** probes independent components */
+    PartitionIndependentComponentsPDF   _probePtnIcPdf;
+    PartitionPartsPDF                   _probePtnPartsPdf;
+    probe_clu_stats_map                 _probeCluStats;     /** average frequency of co-occurrence of pairs of probes in a cluster */
+
     std::vector<cells_mask_freq_map>    _cellsSubmaskFreq;  /** map of cell "on"/"off" masks frequencies
                                                                 per component pair */
     block_stats_map                     _blockStats;        /** biclustering blocks statistics */
-    obj_clu_stats_map                   _objCluStats;       /** average frequency of co-occurrence of pairs of object in a cluster */
-    probe_clu_stats_map                 _probeCluStats;     /** average frequency of co-occurrence of pairs of probes in a cluster */
 
     void encodeMask( const cells_mask_type& mask,
                      std::vector<submask_id_type>& submaskIds,

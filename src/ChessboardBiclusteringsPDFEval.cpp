@@ -52,18 +52,19 @@ ChessboardBiclusteringsPDFEval::ChessboardBiclusteringsPDFEval(
                                 */
     const IndexedPartitionsCollection<ObjectsCluster>& objsPtnColl,
     const IndexedPartitionsCollection<ProbesCluster>& probesPtnColl
-) : _objPtnIcPdf( walk.stepsCount(),
+) : _objComponents( objsPtnColl.components() )
+  , _objPtnIcPdf( walk.stepsCount(),
                   objsPtnColl.partitionCompositionMap(),
                   objsPtnColl.subpartitionCountsMaps() )
-  , _objComponents( objsPtnColl.components() )
-  , _objCluStats( objsPtnColl.partStats() )
   , _objPtnPartsPdf( objsPtnColl )
+  , _objCluStats( objsPtnColl.partStats() )
+
+  , _probeComponents( probesPtnColl.components() )
   , _probePtnIcPdf( walk.stepsCount(),
                     probesPtnColl.partitionCompositionMap(),
                     probesPtnColl.subpartitionCountsMaps() )
-  , _probeComponents( probesPtnColl.components() )
-  , _probeCluStats( probesPtnColl.partStats() )
   , _probePtnPartsPdf( PartitionPartsPDF( probesPtnColl ) )
+  , _probeCluStats( probesPtnColl.partStats() )
 {
     evalCellsMaskFreqMap( walk );
     evalBlocksFreqMap( walk );
