@@ -1,8 +1,10 @@
 #pragma once
 
 #include <boost/ptr_container/ptr_vector.hpp>
+#include <boost/ptr_container/ptr_map.hpp>
 #include <boost/serialization/serialization.hpp>
 #include <boost/ptr_container/serialize_ptr_vector.hpp>
+#include <boost/ptr_container/serialize_ptr_map.hpp>
 #include <boost/unordered_map.hpp>
 
 #include "BIMAPWalk.h"
@@ -83,7 +85,8 @@ public:
         : count_total( count_total ), count_on( count_on )
         {}
     };
-    typedef boost::unordered_map<block_id, block_stats> block_stats_map;
+    typedef boost::unordered_map<object_clundex_t, block_stats> object_block_stats_map;
+    typedef boost::ptr_map<probe_clundex_t, object_block_stats_map> block_stats_map;
     typedef boost::unordered_map<object_serial_type, PartStats> obj_clu_stats_map;
     typedef boost::unordered_map<probe_serial_type, PartStats> probe_clu_stats_map;
 
@@ -133,12 +136,11 @@ private:
 
     ChessboardBiclusteringsPDFEval() {};
 
-protected:
+public:
     ChessboardBiclusteringsPDFEval( const BIMAPWalk& walk,
                                     const IndexedPartitionsCollection<ObjectsCluster>& objPtnColl,
                                     const IndexedPartitionsCollection<ProbesCluster>& probesPtnColl );
 
-public:
     static ChessboardBiclusteringsPDFEval* Create( BIMAPWalk&  walk,
                                     gsl_rng*    rng,
                                     prob_t      objects_threshold,
@@ -203,9 +205,11 @@ public:
     const probe_clu_stats_map& probesClustersStatsMap() const {
         return ( _probeCluStats );
     }
+#if 0
     block_stats blockStats( const block_id& blockId ) const {
         return ( _blockStats.find( blockId )->second );
     }
+#endif
     const block_stats_map& blocksStatsMap() const {
         return ( _blockStats );
     }

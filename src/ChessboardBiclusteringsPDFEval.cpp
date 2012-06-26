@@ -194,17 +194,25 @@ void ChessboardBiclusteringsPDFEval::evalBlocksFreqMap(
     for ( BIMAPWalk::const_step_iterator stepIt = walk.stepsBegin(); stepIt != walk.stepsEnd(); ++stepIt )
     {
         const ChessboardBiclusteringScaffold& clustering = stepIt->clustering.scaffold();
-        for ( ChessboardBiclusteringScaffold::const_object_cluster_iterator ocluIt = clustering.objectClusterBegin();
-              ocluIt != clustering.objectClusterEnd(); ++ocluIt
+        for ( ChessboardBiclusteringScaffold::const_probe_cluster_iterator prcluIt = clustering.probeClusterBegin();
+              prcluIt != clustering.probeClusterEnd(); ++prcluIt
         ){
-            for ( ChessboardBiclusteringScaffold::const_probe_cluster_iterator scluIt = clustering.probeClusterBegin();
-                scluIt != clustering.probeClusterEnd(); ++scluIt
+            probe_clundex_t prcluIx = (*prcluIt)->serial();
+            block_stats_map::iterator objBlockMapIt = _blockStats.find( prcluIx );
+            if ( objBlockMapIt == _blockStats.end() ) {
+                objBlockMapIt = _blockStats.insert( objBlockMapIt, prcluIx, new object_block_stats_map() );
+            }
+            object_block_stats_map& objBlockMap = *objBlockMapIt->second;
+
+            for ( ChessboardBiclusteringScaffold::const_object_cluster_iterator ocluIt = clustering.objectClusterBegin();
+                ocluIt != clustering.objectClusterEnd(); ++ocluIt
             ){
-                block_id id( (*ocluIt)->serial(), (*scluIt)->serial() );
-                bool isEnabled = clustering.isBlockEnabled( id.first, id.second );
-                block_stats_map::iterator blkIt = _blockStats.find( id );
-                if ( blkIt == _blockStats.end() ) {
-                    _blockStats.insert( blkIt, std::pair<block_id, block_stats>( id, block_stats( 1, isEnabled ? 1 : 0 ) ) );
+                object_clundex_t objcluIx = (*ocluIt)->serial();
+                bool isEnabled = clustering.isBlockEnabled( objcluIx, prcluIx );
+                object_block_stats_map::iterator blkIt = objBlockMap.find( objcluIx );
+                if ( blkIt == objBlockMap.end() ) {
+                    objBlockMap.insert( blkIt, std::make_pair( objcluIx,
+                                        block_stats( 1, isEnabled ? 1 : 0 ) ) );
                 } else {
                     blkIt->second.count_total++;
                     if ( isEnabled ) blkIt->second.count_on++;

@@ -948,18 +948,25 @@ SEXP ConvertBIMAPWalkToRObject(
         {
         Rprintf( "Exporting chessboard biclustering blocks \"on\" state frequency...\n" );
         const ChessboardBiclusteringsPDFEval::block_stats_map& blockStatsMap = pdfAdjust->blocksStatsMap();
-        Rcpp::IntegerVector objectsSetSerialVec( blockStatsMap.size() );
-        Rcpp::IntegerVector probesSetSerialVec( blockStatsMap.size() );
-        Rcpp::IntegerVector totalVec( blockStatsMap.size() );
-        Rcpp::IntegerVector enabledVec( blockStatsMap.size() );
+        std::size_t blockStatsMapSize = 0;
+        for ( ChessboardBiclusteringsPDFEval::block_stats_map::const_iterator mapit = blockStatsMap.begin(); mapit != blockStatsMap.end(); ++mapit ) {
+            blockStatsMapSize += mapit->second->size();
+        }
+        Rcpp::IntegerVector objectsSetSerialVec( blockStatsMapSize );
+        Rcpp::IntegerVector probesSetSerialVec( blockStatsMapSize );
+        Rcpp::IntegerVector totalVec( blockStatsMapSize );
+        Rcpp::IntegerVector enabledVec( blockStatsMapSize );
 
         size_t ix = 0;
-        for ( ChessboardBiclusteringsPDFEval::block_stats_map::const_iterator it = blockStatsMap.begin(); it != blockStatsMap.end(); ++it ) {
-            objectsSetSerialVec[ ix ] = it->first.first;
-            probesSetSerialVec[ ix ] = it->first.second;
-            totalVec[ ix ] = it->second.count_total;
-            enabledVec[ ix ] = it->second.count_on;
-            ix++;
+        for ( ChessboardBiclusteringsPDFEval::block_stats_map::const_iterator mapit = blockStatsMap.begin(); mapit != blockStatsMap.end(); ++mapit ) {
+            const ChessboardBiclusteringsPDFEval::object_block_stats_map& objMap = *mapit->second;
+            for ( ChessboardBiclusteringsPDFEval::object_block_stats_map::const_iterator it = objMap.begin(); it != objMap.end(); ++it ) {
+                objectsSetSerialVec[ ix ] = it->first;
+                probesSetSerialVec[ ix ] = mapit->first;
+                totalVec[ ix ] = it->second.count_total;
+                enabledVec[ ix ] = it->second.count_on;
+                ix++;
+            }
         }
         Rprintf( "Creating blocks frequency dataframe, nrow=%d\n", objectsSetSerialVec.size() );
         rWalk.slot( R_SLOT_BLOCKS_FREQUENCY ) = Rcpp::DataFrame::create(
