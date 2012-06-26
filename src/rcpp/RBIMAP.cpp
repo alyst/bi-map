@@ -148,6 +148,8 @@
 
 #define R_COLUMN_TOTAL                      "total"
 #define R_COLUMN_ENABLED                    "enabled"
+#define R_COLUMN_SIGNAL_MEAN                "signal.mean"
+#define R_COLUMN_SIGNAL_VAR                 "signal.var"
 
 #define R_COLUMN_SIZE                       "size"
 #define R_COLUMN_AVG_PAIRS_COOCCUR          "avg.pairs.cooccur"
@@ -962,6 +964,8 @@ SEXP ConvertBIMAPWalkToRObject(
         Rcpp::IntegerVector probesSetSerialVec( blockStatsMapSize );
         Rcpp::IntegerVector totalVec( blockStatsMapSize );
         Rcpp::IntegerVector enabledVec( blockStatsMapSize );
+        Rcpp::NumericVector signalMeanVec( blockStatsMapSize );
+        Rcpp::NumericVector signalVarVec( blockStatsMapSize );
 
         size_t ix = 0;
         for ( ChessboardBiclusteringsPDFEval::block_stats_map::const_iterator mapit = blockStatsMap.begin(); mapit != blockStatsMap.end(); ++mapit ) {
@@ -971,6 +975,8 @@ SEXP ConvertBIMAPWalkToRObject(
                 probesSetSerialVec[ ix ] = mapit->first;
                 totalVec[ ix ] = it->second.count_total;
                 enabledVec[ ix ] = it->second.count_on;
+                signalMeanVec[ ix ] = it->second.signal_mean;
+                signalVarVec[ ix ] = it->second.signal_var;
                 ix++;
             }
         }
@@ -979,7 +985,10 @@ SEXP ConvertBIMAPWalkToRObject(
             Rcpp::Named( R_COLUMN_OBJECTS_CLUSTER_SERIAL, objectsSetSerialVec ),
             Rcpp::Named( R_COLUMN_PROBES_CLUSTER_SERIAL, probesSetSerialVec ),
             Rcpp::Named( R_COLUMN_TOTAL, totalVec ),
-            Rcpp::Named( R_COLUMN_ENABLED, enabledVec )
+            Rcpp::Named( R_COLUMN_ENABLED, enabledVec ),
+            Rcpp::Named( R_COLUMN_SIGNAL_MEAN, signalMeanVec ),
+            Rcpp::Named( R_COLUMN_SIGNAL_VAR, signalVarVec ),
+            Rcpp::Named( R_STRINGS_AS_FACTORS, false )
         );
         }
     }
@@ -1037,6 +1046,8 @@ SEXP ConvertBIMAPWalkToRObject(
         Rcpp::IntegerVector probeCluVec( objCluVec.size() );
         Rcpp::NumericVector totalVec( objCluVec.size() );
         Rcpp::NumericVector enabledVec( objCluVec.size() );
+        Rcpp::NumericVector signalMeanVec( objCluVec.size() );
+        Rcpp::NumericVector signalVarVec( objCluVec.size() );
 
         size_t i = 0;
         for ( BlocksScoring::block_stats_map::const_iterator it = stableBlocksScoring->blockStats().begin();
@@ -1046,6 +1057,8 @@ SEXP ConvertBIMAPWalkToRObject(
             probeCluVec[i] = it->first.second;
             totalVec[i] = it->second.count_total;
             enabledVec[i] = it->second.count_on;
+            signalMeanVec[i] = it->second.signal_mean;
+            signalVarVec[i] = it->second.signal_var;
             i++;
         }
         rWalk.slot( R_SLOT_STABLE_BLOCKS_SCORING ) = Rcpp::DataFrame::create(
@@ -1053,6 +1066,8 @@ SEXP ConvertBIMAPWalkToRObject(
                 Rcpp::Named( R_COLUMN_PROBES_CLUSTER_SERIAL, probeCluVec ),
                 Rcpp::Named( R_COLUMN_TOTAL, totalVec ),
                 Rcpp::Named( R_COLUMN_ENABLED, enabledVec ),
+                Rcpp::Named( R_COLUMN_SIGNAL_MEAN, signalMeanVec ),
+                Rcpp::Named( R_COLUMN_SIGNAL_VAR, signalVarVec ),
                 Rcpp::Named( R_STRINGS_AS_FACTORS, false )
         );
     }

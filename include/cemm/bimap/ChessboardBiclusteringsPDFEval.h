@@ -79,10 +79,14 @@ public:
     typedef serial_type probe_serial_type;
     typedef std::pair<object_serial_type, probe_serial_type> block_id;
     struct block_stats {
-        size_t count_total; /// total number of object cluster x probe cluster blocks
-        size_t count_on;    /// number of blocks in on-state
+        size_t      count_total;    /// total number of object cluster x probe cluster blocks
+        size_t      count_on;       /// number of blocks in on-state
+        signal_t    signal_mean;    /// mean signal of on-blocks
+        signal_t    signal_var;     /// signal variance of on-blocks
+
         block_stats( size_t count_total = 0, size_t count_on = 0 )
         : count_total( count_total ), count_on( count_on )
+        , signal_mean( unset<signal_t>() ), signal_var( unset<signal_t>() )
         {}
     };
     typedef boost::unordered_map<object_clundex_t, block_stats> object_block_stats_map;

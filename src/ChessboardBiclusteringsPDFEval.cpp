@@ -2,6 +2,11 @@
 
 #include <cemm/containers/dynamic_bitset_foreach.h>
 
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
+#include <boost/accumulators/statistics/mean.hpp>
+#include <boost/accumulators/statistics/variance.hpp>
+
 #include "cemm/bimap/IndexedPartitionsCollection.h"
 #include "PartitionStatisticsImpl.h"
 
@@ -187,10 +192,19 @@ void ChessboardBiclusteringsPDFEval::evalCellsMaskFreqMap(
 void ChessboardBiclusteringsPDFEval::evalBlocksFreqMap(
     const BIMAPWalk& walk
 ){
+    typedef boost::accumulators::accumulator_set<
+            signal_t, boost::accumulators::stats<
+                boost::accumulators::tag::mean,
+                boost::accumulators::tag::variance> > signal_accum_t;
+
+    typedef ChessboardBiclusteringIndexed::block_data_map_type::key_type acc_id;
+    typedef boost::unordered_map<acc_id, signal_accum_t> signal_accum_map;
+
+    signal_accum_map blockAccums; // internal blocks signal statistics
+
     // collection of maps from submask id to its counts,
     // per independent component pair
     _blockStats.clear();
-
     for ( BIMAPWalk::const_step_iterator stepIt = walk.stepsBegin(); stepIt != walk.stepsEnd(); ++stepIt )
     {
         const ChessboardBiclusteringScaffold& clustering = stepIt->clustering.scaffold();
@@ -217,6 +231,33 @@ void ChessboardBiclusteringsPDFEval::evalBlocksFreqMap(
                     blkIt->second.count_total++;
                     if ( isEnabled ) blkIt->second.count_on++;
                 }
+            }
+        }
+        // store signals to accums
+        ChessboardBiclusteringIndexed::block_data_map_type::const_iterator blkItEnd = stepIt->clustering.blocksData().end();
+        for ( ChessboardBiclusteringIndexed::block_data_map_type::const_iterator blkIt = stepIt->clustering.blocksData().begin();
+              blkIt != blkItEnd; ++blkIt
+        ){
+            signal_accum_map::iterator blkAccIt = blockAccums.find( blkIt->first );
+            if ( blkAccIt == blockAccums.end() ) {
+                blkAccIt = blockAccums.insert( blkAccIt, std::make_pair( blkIt->first, signal_accum_t() ) );
+            }
+            blkAccIt->second( blkIt->second );
+        }
+    }
+    // copy the signal statistics from the accumulators
+    for ( block_stats_map::iterator it = _blockStats.begin(); it != _blockStats.end(); ++it )
+    {
+        object_block_stats_map& objMap = *it->second;
+        for ( object_block_stats_map::iterator jt = objMap.begin(); jt != objMap.end(); ++jt ) {
+            acc_id blkId = acc_id( jt->first, it->first );
+            signal_accum_map::iterator accIt = blockAccums.find( blkId );
+            if ( accIt != blockAccums.end() ) {
+                jt->second.signal_mean = boost::accumulators::extract::mean( accIt->second );
+                jt->second.signal_var = boost::accumulators::extract::variance( accIt->second );
+            } else {
+                LOG_WARN( "Pair (" << jt->first << ", " << it->first << ")"
+                          << " was not found in accumulators map" );
             }
         }
     }

@@ -22,10 +22,15 @@ class BlocksScoring
 public:
     typedef std::pair<object_clundex_t, probe_clundex_t> block_id;
     struct SplitBlockStats {
-        prob_t count_total; /// total number of object cluster x probe cluster blocks
-        prob_t count_on;    /// number of blocks in on-state
-        SplitBlockStats( prob_t count_total = 0.0, prob_t count_on = 0.0 )
-        : count_total( count_total ), count_on( count_on )
+        prob_t count_total;     /// weighted total number of object cluster x probe cluster blocks
+        prob_t count_on;        /// weighted number of blocks in on-state
+        signal_t signal_mean;   /// weighted signal mean of block
+        signal_t signal_var;    /// weighted signal variance of block
+        SplitBlockStats( prob_t count_total = 0.0, prob_t count_on = 0.0,
+                         signal_t signal_mean = unset<signal_t>(),
+                         signal_t signal_var = unset<signal_t>()
+        ) : count_total( count_total ), count_on( count_on )
+          , signal_mean( signal_mean ), signal_var( signal_var )
         {}
     };
     typedef boost::unordered_map<block_id, SplitBlockStats> block_stats_map;
