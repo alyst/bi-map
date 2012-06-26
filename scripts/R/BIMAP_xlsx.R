@@ -1,5 +1,6 @@
 require( xlsx )
 require( gplots )
+require( IRanges )
 
 source( file.path( bimap_scripts_path, "BIMAP_plot.R" ) )
 
@@ -105,9 +106,12 @@ BIMAP.create_xlsx <- function(
         message( 'Merging sample info columns' )
         for ( icol in 1:length(samp_cols) ) {
             ddply( samples, c( "samples.cluster", samp_cols[[icol]] ), function( merged_cells ) {
-                addMergedRegion( wsh, icol, icol,
-                                 col_offset + min( merged_cells$order ),
-                                 col_offset + max( merged_cells$order ) )
+                merge_ranges <- as.data.frame( whichAsIRanges( samples$order %in% merged_cells$order ) )
+                for ( merge_range_ix in 1:nrow(merge_ranges) ) {
+                  addMergedRegion( wsh, icol, icol,
+                                   col_offset + merge_ranges[ merge_range_ix, 'start' ],
+                                   col_offset + merge_ranges[ merge_range_ix, 'end' ] )
+                }
             } )
         }
         setColumnWidth( wsh, col_offset + 1:nrow(samples), col.width )
