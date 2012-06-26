@@ -26,6 +26,7 @@ BIMAP.create_xlsx <- function(
     bait.border.col = 'red',
     col.width = 5,
     workbook = NULL,
+    signal.comments = TRUE,
     sheet.name = 'BI-MAP results',
     ...
 ){
@@ -178,9 +179,11 @@ BIMAP.create_xlsx <- function(
                             rowIndex = rep.int( block_rows, length(block_cols) ),
                             colIndex = rep( block_cols, each=length(block_rows)) )
             }
-            createCellComment( CB.getCell( biclustersBlock, block_rows[1], block_cols[1] ),
-                               string = paste( format( block$signal.mean, digits=3 ), "\u0b1",
-                                         format( block$signal.sd, digits=3 ), sep="" ) )
+            if ( signal.comments ) {
+                createCellComment( CB.getCell( biclustersBlock, block_rows[1], block_cols[1] ),
+                                   string = paste( format( block$signal.mean, digits=3 ), "\u0b1",
+                                             format( block$signal.sd, digits=3 ), sep="" ) )
+            }
         }
 
         if ( any( cells.off.matrix ) ) {
