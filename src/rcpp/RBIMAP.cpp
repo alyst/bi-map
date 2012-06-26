@@ -16,6 +16,7 @@
 #include <cemm/RUtils.h>
 #include <cemm/containers/dynamic_bitset_foreach.h>
 #include <cemm/eesampler/ConsolePTCExecutionMonitor.h>
+#include <cemm/math/RngPtr.h>
 
 #ifndef NDEBUG
 //#define DYNLOAD_DEBUG
@@ -1300,13 +1301,12 @@ RcppExport SEXP BIMAPWalkLoad(
                     objectsClotThreshold );
         }
         Rprintf( "...\n" );
-        gsl_rng* rng = gsl_rng_alloc(gsl_rng_default);
+        cemm::math::RngPtr rndNumGen( gsl_rng_alloc( gsl_rng_default ) );
         pdfAdjust = ChessboardBiclusteringsPDFEval::Create( *walk,
                                            rng,
                                            objectsComponentThreshold,
                                            probesComponentThreshold,
                                            objectsClotThreshold );
-        gsl_rng_free( rng );
     }
 
     //Rprintf( "Exporting walk to R...\n" );
