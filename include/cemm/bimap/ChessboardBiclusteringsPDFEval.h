@@ -84,6 +84,16 @@ public:
         signal_t    signal_mean;    /// mean signal of on-blocks
         signal_t    signal_var;     /// signal variance of on-blocks
 
+        template<class Archive>
+        void serialize(Archive & ar, const unsigned int version)
+        {
+            boost::serialization::collection_size_type stepsCount;
+            ar & BOOST_SERIALIZATION_NVP( count_total );
+            ar & BOOST_SERIALIZATION_NVP( count_on );
+            ar & BOOST_SERIALIZATION_NVP( signal_mean );
+            ar & BOOST_SERIALIZATION_NVP( signal_var );
+        }
+
         block_stats( size_t count_total = 0, size_t count_on = 0 )
         : count_total( count_total ), count_on( count_on )
         , signal_mean( unset<signal_t>() ), signal_var( unset<signal_t>() )
@@ -136,6 +146,7 @@ private:
         ar & BOOST_SERIALIZATION_NVP( _probePtnPartsPdf );
         ar & BOOST_SERIALIZATION_NVP( _objComponents );
         ar & BOOST_SERIALIZATION_NVP( _probeComponents );
+        ar & BOOST_SERIALIZATION_NVP( _blockStats );
     }
 
     ChessboardBiclusteringsPDFEval() {};
