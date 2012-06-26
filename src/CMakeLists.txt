@@ -25,6 +25,7 @@ set( BIMAP_Sources
      "ChessboardBiclusteringFit.cpp"
      "ChessboardBiclusteringsIndexing.cpp"
      "ChessboardBiclusteringsPDFEval.cpp"
+     "BlocksScoring.cpp"
      "ObjectsPartition.cpp"
      "ProbesPartition.cpp"
      "PrecomputedData.cpp"
