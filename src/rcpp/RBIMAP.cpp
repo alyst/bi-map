@@ -1046,6 +1046,7 @@ SEXP ConvertBIMAPWalkToRObject(
             probeCluVec[i] = it->first.second;
             totalVec[i] = it->second.count_total;
             enabledVec[i] = it->second.count_on;
+            i++;
         }
         rWalk.slot( R_SLOT_STABLE_BLOCKS_SCORING ) = Rcpp::DataFrame::create(
                 Rcpp::Named( R_COLUMN_OBJECTS_CLUSTER_SERIAL, objCluVec ),
@@ -1106,7 +1107,7 @@ BlocksScoring* BIMAPBlocksScoring(
                 stableObjectsClusters.push_back( ocit->first );
             }
         }
-        LOG_INFO( stableObjectsClusters << " stable object clusters found" );
+        LOG_INFO( stableObjectsClusters.size() << " stable object clusters found" );
 
         std::vector<probe_clundex_t> stableProbesClusters;
         std::size_t minProbeIncludedSteps = stableProbesClustersThreshold * probePtnColl.walk().stepsCount();
@@ -1118,7 +1119,7 @@ BlocksScoring* BIMAPBlocksScoring(
                 stableProbesClusters.push_back( pcit->first );
             }
         }
-        LOG_INFO( stableObjectsClusters << " stable probes clusters found" );
+        LOG_INFO( stableProbesClusters.size() << " stable probes clusters found" );
 
         LOG_INFO( "Calculating stable blocks scores..." );
         return ( new BlocksScoring( pdfAdjust, objPtnColl, probePtnColl,
