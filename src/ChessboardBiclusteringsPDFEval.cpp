@@ -202,12 +202,12 @@ void ChessboardBiclusteringsPDFEval::evalBlocksFreqMap(
             ){
                 block_id id( (*ocluIt)->serial(), (*scluIt)->serial() );
                 bool isEnabled = clustering.isBlockEnabled( id.first, id.second );
-                block_stats_map::iterator ccIt = _blockStats.find( id );
-                if ( ccIt == _blockStats.end() ) {
-                    _blockStats.insert( ccIt, std::pair<block_id, block_stats>( id, block_stats( 1, isEnabled ? 1 : 0 ) ) );
+                block_stats_map::iterator blkIt = _blockStats.find( id );
+                if ( blkIt == _blockStats.end() ) {
+                    _blockStats.insert( blkIt, std::pair<block_id, block_stats>( id, block_stats( 1, isEnabled ? 1 : 0 ) ) );
                 } else {
-                    ccIt->second.first++;
-                    if ( isEnabled ) ccIt->second.second++;
+                    blkIt->second.count_total++;
+                    if ( isEnabled ) blkIt->second.count_on++;
                 }
             }
         }

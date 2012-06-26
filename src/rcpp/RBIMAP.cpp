@@ -957,8 +957,8 @@ SEXP ConvertBIMAPWalkToRObject(
         for ( ChessboardBiclusteringsPDFEval::block_stats_map::const_iterator it = blockStatsMap.begin(); it != blockStatsMap.end(); ++it ) {
             objectsSetSerialVec[ ix ] = it->first.first;
             probesSetSerialVec[ ix ] = it->first.second;
-            totalVec[ ix ] = it->second.first;
-            enabledVec[ ix ] = it->second.second;
+            totalVec[ ix ] = it->second.count_total;
+            enabledVec[ ix ] = it->second.count_on;
             ix++;
         }
         Rprintf( "Creating blocks frequency dataframe, nrow=%d\n", objectsSetSerialVec.size() );
