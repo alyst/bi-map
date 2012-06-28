@@ -147,11 +147,11 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
         }
         if ( !is_unset( obj2Dist.second ) ) {
             // do the step
-            obj_split_merge_step    smStep( rndNumGen(), 
-                                            ObjectsPartitionStats( rndNumGen(), clus.data(), clus.priors(),
-                                                                   _energyEval.weights.objects ), 
-                                            ObjectsParamsSampler( *this, true, true, true ),
-                                            _samplingTransform, _params.objectsSplitMergeParams );
+            ObjectsPartitionStats ptnStats( rndNumGen(), clus.data(), clus.priors(),
+                                            _energyEval.weights.objects );
+            ObjectsParamsSampler  ptnSampler( *this, true, true, true );
+            obj_split_merge_step  smStep( rndNumGen(), ptnStats, ptnSampler,
+                                          _samplingTransform, _params.objectsSplitMergeParams );
             obj_split_merge_step::result_type res = smStep( ObjectsPartitionEx( clus ), obj1ix, obj2Dist.first );
             if ( res.modified ) {
                 clus = (const ChessboardBiclusteringFit&)res.ptn;
@@ -171,11 +171,11 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
                                                     gsl_ran_geometric( rndNumGen(), 1.0 / _params.meanObjectRank )-1, true, true );
         if ( !is_unset( obj2Dist.second ) ) {
             // do the step
-            obj_split_merge_step    smStep( rndNumGen(), 
-                                            ObjectsPartitionStats( rndNumGen(), clus.data(), clus.priors(),
-                                                                   _energyEval.weights.objects ), 
-                                            ObjectsParamsSampler( *this, true, true, true ),
-                                            _samplingTransform, _params.objectsSplitMergeParams );
+        	ObjectsPartitionStats ptnStats( rndNumGen(), clus.data(), clus.priors(),
+        	                                _energyEval.weights.objects );
+            ObjectsParamsSampler  ptnSampler( *this, true, true, true );
+            obj_split_merge_step  smStep( rndNumGen(), ptnStats, ptnSampler,
+                                          _samplingTransform, _params.objectsSplitMergeParams );
             obj_split_merge_step::result_type res = smStep( ObjectsPartitionEx( clus ), obj1ix, obj2Dist.first );
             if ( res.modified ) {
                 clus = (const ChessboardBiclusteringFit&)res.ptn;
@@ -285,11 +285,11 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
         }
         if ( !is_unset( probe2Dist.second ) ) {
             // do the step
-            probe_split_merge_step    smStep( rndNumGen(), 
-                                            ProbesPartitionStats( rndNumGen(), clus.data(), clus.priors(),
-                                                                  _energyEval.weights.probes ), 
-                                            ProbesParamsSampler( *this, true, true ),
-                                            _samplingTransform, _params.probesSplitMergeParams );
+            ProbesPartitionStats     ptnStats( rndNumGen(), clus.data(), clus.priors(),
+                                               _energyEval.weights.probes );
+            ProbesParamsSampler      ptnSampler( *this, true, true );
+            probe_split_merge_step   smStep( rndNumGen(), ptnStats, ptnSampler,
+                                             _samplingTransform, _params.probesSplitMergeParams );
             probe_split_merge_step::result_type res = smStep( ProbesPartitionEx( clus ), probe1ix, probe2Dist.first );
             if ( res.modified ) {
                 clus = (const ChessboardBiclusteringFit&)res.ptn;
@@ -309,11 +309,11 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
                                                     gsl_ran_geometric( rndNumGen(), 1.0 / _params.meanProbeRank )-1, true, true );
         if ( !is_unset( probe2Dist.second ) ) {
             // do the step
-            probe_split_merge_step    smStep( rndNumGen(), 
-                                            ProbesPartitionStats( rndNumGen(), clus.data(), clus.priors(),
-                                                                  _energyEval.weights.probes ), 
-                                            ProbesParamsSampler( *this, true, true ),
-                                            _samplingTransform, _params.probesSplitMergeParams );
+            ProbesPartitionStats     ptnStats( rndNumGen(), clus.data(), clus.priors(),
+                                               _energyEval.weights.probes );
+            ProbesParamsSampler      ptnSampler( *this, true, true );
+            probe_split_merge_step   smStep( rndNumGen(), ptnStats, ptnSampler,
+                                             _samplingTransform, _params.probesSplitMergeParams );
             probe_split_merge_step::result_type res = smStep( ProbesPartitionEx( clus ), probe1ix, probe2Dist.first );
             if ( res.modified ) {
                 clus = (const ChessboardBiclusteringFit&)res.ptn;
