@@ -372,6 +372,9 @@ public:
                      const signal_params_type& baselineSignal, const noise_params_type& noiseParams,
                      const PitmanYorSample& objectsClusters, const PitmanYorSample& probesClusters );
 
+    virtual ~ChessboardBiclustering()
+    {}
+
     static cluster_cell_key_type clusterCellKey( object_clundex_t objCluIx, probe_clundex_t probeCluIx )
     {
         return ( std::make_pair( objCluIx, probeCluIx ) );

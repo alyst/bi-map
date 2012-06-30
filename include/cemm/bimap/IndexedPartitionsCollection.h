@@ -100,7 +100,7 @@ public:
         return ( _components );
     }
 
-    const PartStats& partStats( size_t partSerial ) const  {
+    PartStats partStats( size_t partSerial ) const  {
         part_stats_map_type::const_iterator pit = _partStats.find( partSerial );
         return ( pit != _partStats.end() ? pit->second : PartStats() );
     }
