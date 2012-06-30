@@ -13,7 +13,7 @@ BIMAPWalk::BIMAPWalk(
 bool BIMAPWalk::check() const
 {
     for ( const_step_iterator stepIt = stepsBegin(); stepIt != stepsEnd(); ++stepIt ) {
-        LOG_DEBUG2( "Checking iteration #" << stepIt->iteration );
+        LOG_DEBUG2( "Checking iteration " << stepIt->time );
         stepIt->clustering.check();
     }
     return ( true );

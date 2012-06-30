@@ -122,7 +122,7 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
         throw std::runtime_error( "Clustering to sample uses incompatible data" );
     }
 
-    LOG_DEBUG2( "Step #" << _iteration << ": totalLnP=" << clus.totalLnP() );
+    LOG_DEBUG2( "Step #" << _iteration << ": totalLnP=" << clus.totalLnP( _energyEval.weights ) );
     BOOST_ASSERT( clus.check() );
     // update clusters
     // apply one of two sampling steps
@@ -255,9 +255,9 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
                              "O LPP error: " << prevLPP << "+" << newCluIx.oddsRatio.lppRatio
                              << "=" << prevLPP +  newCluIx.oddsRatio.lppRatio
                              << "!=" << newLPP );
-#endif
             LOG_DEBUG2( "Object " << objIx << " put to " << newCluIx << " from " << objCluIx 
                     << " oldLnP=" << (prevLLH + prevLPP) << " newLnP=" << clus.totalLnP() );
+#endif
         }
         else {
             //clus.objectsClusterParams( newCluIx ) = params;
@@ -393,9 +393,9 @@ log_prob_t ChessboardBiclusteringGibbsSampler::doSamplingStep(
                              "S LPP error: " << prevLPP << "+" << newCluIx.oddsRatio.lppRatio
                              << "=" << prevLPP +  newCluIx.oddsRatio.lppRatio
                              << "!=" << newLPP );
-#endif
             LOG_DEBUG1( "Probe " << probeIx << " put to " << newCluIx << " from " << probeCluIx
                     << " oldLnP=" << (prevLLH + prevLPP) << " newLnP=" << clus.totalLnP(_energyEval.weights) );
+#endif
         }
         else {
             //clus.probesClusterParams( newCluIx ) = params;

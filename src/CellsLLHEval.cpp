@@ -28,7 +28,7 @@ log_prob_t CellsLLHEval::cellNoiseLnPdf(
         const OPAData::celldata_t&  cellData = *(cellDataVec++);
         res += _noiseModel.lnPdf( cellData.sc );
     }
-    LOG_DEBUG2( "Cell[N](" << objIx << "," << probeIx << ") pdf=" << res );
+    LOG_DEBUG2( "Cell[N](" << objectIx << "," << probeIx << ") pdf=" << res );
     return ( res );
 }
 
@@ -51,7 +51,7 @@ log_prob_t CellsLLHEval::cellSignalLnPdf(
         res += ObjectsClusterSignal( baseSignalModel, *pAssay, signal )
                .distribTable( _precomputed.scDistribCache() ).lnPdf( cellData.sc );
     }
-    LOG_DEBUG2( "Cell[S](" << objIx << "," << probeIx << ") pdf=" << res );
+    LOG_DEBUG2( "Cell[S](" << objectIx << "," << probeIx << ") pdf=" << res );
     return ( res );
 }
 

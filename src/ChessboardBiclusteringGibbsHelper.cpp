@@ -198,8 +198,6 @@ std::vector<signal_t> ChessboardBiclusteringGibbsHelper::Signals(
     std::vector<signal_t> signals;
     signals.reserve( clustering.probesCount() * clustering.objectsClusters().size() / 2 );
 
-    LOG_DEBUG2( "Signals for transform (E=" << _samplingTransform.maxLnP 
-                << " T=" << _samplingTransform.temperature << ")" );
     for ( probe_clundex_t probeCluIx = 0; probeCluIx < clustering.probesClusters().size(); probeCluIx++ ) {
         for ( object_clundex_t objCluIx = 0; objCluIx < clustering.objectsClusters().size(); objCluIx++ ) {
             const ChessboardBiclustering::const_block_iterator cluIt = clustering.findBlock( objCluIx, probeCluIx );

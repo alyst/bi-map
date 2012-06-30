@@ -109,7 +109,6 @@ private:
             default_serial_t serial = cclus.serial();
             ar << boost::serialization::make_nvp( "chessboardBiclusteringSerial", serial );
             ar << boost::serialization::make_nvp( "clusteringData", cclus );
-            LOG_DEBUG2( stepit->iteration << ": " << cclus._objectClusterData.size() );
             ar << boost::serialization::make_nvp( "blocksData", cclus._blocksData );
             ar << boost::serialization::make_nvp( "objectsData", cclus._objectsData );
         }
