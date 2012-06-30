@@ -55,8 +55,12 @@ BlocksScoring::BlocksScoring(
                         prob_t blockCoverage = objIsect.coverage * probeIsect.coverage;
                         prob_t weight = oit->second.count_on * blockCoverage;
                         accums.count_total += oit->second.count_total * blockCoverage;
-                        accums.signal_mean_accum( oit->second.signal_mean, boost::accumulators::weight = weight );
-                        accums.signal_var_accum( oit->second.signal_var, boost::accumulators::weight = weight );
+                        if ( weight > 0 ) {
+                            accums.signal_mean_accum( oit->second.signal_mean,
+                                                      boost::accumulators::weight = weight );
+                            accums.signal_var_accum( oit->second.signal_var,
+                                                     boost::accumulators::weight = weight );
+                        }
                     }
                 }
             }
