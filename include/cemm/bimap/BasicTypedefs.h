@@ -1,9 +1,11 @@
 #pragma once
 
+#if !defined(DEBUG_LEVEL)
 #if defined(NDEBUG)
 #define DEBUG_LEVEL -1
 #else
 #define DEBUG_LEVEL 1
+#endif
 #endif
 
 #include <cemm/debug.h>
