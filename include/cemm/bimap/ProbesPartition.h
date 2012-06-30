@@ -110,18 +110,19 @@ public:
         friend class ProbesPartition;
         friend class ProbesPartitionEx;
 
-        ChessboardBiclusteringFit& clus;
-        const probe_clundex_t cluIx;
+        ProbesPartition& 	 	ptn;
+        const probe_clundex_t 	cluIx;
 
         const ProbesCluster& cluster() const {
-            return ( clus.probesCluster( cluIx ) );
+            return ( ptn.wrapped().probesCluster( cluIx ) );
         }
 
-        ProbesClusterProxy( ChessboardBiclusteringFit& clus, probe_clundex_t cluIx )
-        : clus( clus ), cluIx( cluIx )
+        ProbesClusterProxy( ProbesPartition& ptn, probe_clundex_t cluIx )
+        : ptn( ptn ), cluIx( cluIx )
         {
+            LOG_DEBUG3( "ProbesClusterProxy(" << &ptn << ", " << cluIx << ")" );
             BOOST_ASSERT( (int)cluIx >= 0 );
-            BOOST_ASSERT( cluIx < clus.probesClusters().size() );
+            BOOST_ASSERT( cluIx < ptn.clustersCount() );
         }
 
     public:
@@ -138,12 +139,13 @@ public:
         const cluster_params_proxy_type params(
             const probe_bitset_t& mask = probe_bitset_t()
         ) const {
-            return ( clus.probesClusterParams( cluIx, mask ) );
+            return ( ptn.wrapped().probesClusterParams( cluIx, mask ) );
         }
         cluster_params_proxy_type params(
             const probe_bitset_t& mask = probe_bitset_t()
         ){
-            return ( clus.probesClusterParams( cluIx, mask ) );
+        	ptn.unshare();
+            return ( ptn.wrapped().probesClusterParams( cluIx, mask ) );
         }
     };
 
@@ -171,10 +173,11 @@ public:
     }
 
     const cluster_proxy_type cluster( cluster_index_type cluIx ) const {
-        return ( cluster_proxy_type( const_cast<ChessboardBiclusteringFit&>( wrapped() ), cluIx ) );
+        return ( cluster_proxy_type( *const_cast<ProbesPartition*>( this ), cluIx ) );
     }
 
     cluster_index_type clusterIndex( element_index_type elmIx ) const {
+        LOG_DEBUG3( "ProbesPartition(" << &wrapped() << ")::clusterIndex(" << elmIx << ")" );
         return ( wrapped().clusterOfProbe( elmIx ) );
     }
 
@@ -200,7 +203,7 @@ public:
 
     cluster_proxy_type cluster( cluster_index_type cluIx ) {
         unshare();
-        return ( cluster_proxy_type( wrapped(), cluIx ) );
+        return ( cluster_proxy_type( *this, cluIx ) );
     }
 
     void putToCluster( 

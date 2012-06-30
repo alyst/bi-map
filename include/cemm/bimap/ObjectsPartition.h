@@ -142,18 +142,18 @@ public:
         friend class ObjectsPartition;
         friend class ObjectsPartitionEx;
 
-        ChessboardBiclusteringFit& clus;
-        const object_clundex_t cluIx;
+        ObjectsPartition& 		ptn;
+        const object_clundex_t 	cluIx;
 
         const ObjectsCluster& cluster() const {
-            return ( clus.objectsCluster( cluIx ) );
+            return ( ptn.wrapped().objectsCluster( cluIx ) );
         }
 
-        ObjectsClusterProxy( ChessboardBiclusteringFit& clus, object_clundex_t cluIx )
-        : clus( clus ), cluIx( cluIx )
+        ObjectsClusterProxy( ObjectsPartition& ptn, object_clundex_t cluIx )
+        : ptn( ptn ), cluIx( cluIx )
         {
             BOOST_ASSERT( (int)cluIx >= 0 );
-            BOOST_ASSERT( cluIx < clus.objectsClusters().size() );
+            BOOST_ASSERT( cluIx < ptn.clustersCount() );
         }
 
     public:
@@ -170,12 +170,13 @@ public:
         const cluster_params_proxy_type params(
             const object_set_t& mask = object_set_t()
         ) const {
-            return ( clus.objectsClusterParams( cluIx, mask ) );
+            return ( ptn.wrapped().objectsClusterParams( cluIx, mask ) );
         }
         cluster_params_proxy_type params(
             const object_set_t& mask = object_set_t()
         ){
-            return ( clus.objectsClusterParams( cluIx, mask ) );
+        	ptn.unshare();
+            return ( ptn.wrapped().objectsClusterParams( cluIx, mask ) );
         }
     };
 
@@ -203,7 +204,7 @@ public:
     }
 
     const cluster_proxy_type cluster( cluster_index_type cluIx ) const {
-        return ( cluster_proxy_type( const_cast<ChessboardBiclusteringFit&>( wrapped() ), cluIx ) );
+        return ( cluster_proxy_type( *const_cast<ObjectsPartition*>( this ), cluIx ) );
     }
 
     cluster_index_type clusterIndex( element_index_type elmIx ) const {
@@ -232,7 +233,7 @@ public:
 
     cluster_proxy_type cluster( cluster_index_type cluIx ) {
         unshare();
-        return ( cluster_proxy_type( wrapped(), cluIx ) );
+        return ( cluster_proxy_type( *this, cluIx ) );
     }
 
     void putToCluster( 
