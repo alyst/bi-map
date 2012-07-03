@@ -21,6 +21,7 @@
 #endif
 
 #include <cemm/eesampler/ConsolePTCExecutionMonitor.h>
+#include <cemm/eesampler/MPITrace.h>
 
 #include "cemm/bimap/BIMAPResultsSerialize.h"
 #include "cemm/bimap/OPADataImportCSV.h"
@@ -71,23 +72,32 @@ boost::optional<BIMAPWalk> MPI_BIMAPSampler_run(
             : createTurbineCascadeStructure( eeCascadeParams.levelsCount, eeCascadeParams.turbinesCount,
                                              comm.size() );
     }
-    mpi::broadcast( comm, cascadeStructure, collectorRank );
+    {
+        VT_TRACER( "Broadcast cascade structure" );
+        mpi::broadcast( comm, cascadeStructure, collectorRank );
+    }
 
 
     typedef MPIUnitCommunicator<ChessboardBiclusteringEnergyEval> unit_communicator_type;
-    unit_communicator_type unitComm( comm, collectorRank );
+    VT_USER_START( "MPIUnitCommunicator construct" );
+   	unit_communicator_type unitComm( comm, collectorRank );
+    VT_USER_END( "MPIUnitCommunicator construct" );
 
+    VT_USER_START( "EE sampler construct" );
     equi_energy_sampler_type eeSampler(
                 comm.rank(), eeCascadeParams, cascadeStructure,
                 helper.rndNumGen, helper.dynamicCrossCluFactory,
                 &helper.crossoverGenerator, collector.get(), &unitComm );
+    VT_USER_END( "EE sampler construct" );
     {
         ChessboardBiclustering iniClu( iniClus );
         iniClu.check();
         eeSampler.init( StaticChessboardBiclustering( iniClu ) );
     }
     LOG_INFO( "Running sampling..." );
+    VT_USER_START( "EE sampler run" );
     eeSampler.run();
+    VT_USER_END( "EE sampler run" );
     LOG_INFO( "Finished sampling in "
               << boost::format( "%0.f" ) % eeSampler.elapsed() << " second(s)" );
     return ( collector ? collector->walk() : boost::optional<BIMAPWalk>() );
@@ -96,6 +106,11 @@ boost::optional<BIMAPWalk> MPI_BIMAPSampler_run(
 template<class Object>
 void broadcast_statically_tracked( boost::mpi::communicator& comm, const char* name, boost::scoped_ptr<Object>& object, int root )
 {
+#if defined(VTRACE)
+	std::ostringstream msg;
+	msg << "broadcast_statically_tracked('" << name << "')";
+    VT_TRACER( msg.str().c_str() );
+#endif
     LOG_INFO( ( comm.rank() == root ? "broadcasting " : "receiving " ) << name << "..." );
     const Object* pObj = object.get();
     if ( ( pObj == NULL ) && ( comm.rank() == root ) ) {
@@ -175,6 +190,7 @@ int main( int argc, char* argv[] )
     bool params_res = false;
     bool is_collector = world.rank() == 0;
     if ( is_collector ) {
+        VT_TRACER( "Read parameters" );
         priors.reset( new ChessboardBiclusteringPriors() );
         priors->probeClustering.concentration = 0.01;
         priors->cellEnablementProb = 0.5;
@@ -194,6 +210,7 @@ int main( int argc, char* argv[] )
                           *collectorParams, *ioParams );
 
         if ( params_res ) {
+        VT_TRACER( "Read OPA Data" );
         if ( !ioParams->dataFilename.empty() ) {
             boost::filesystem::path data_file_path( ioParams->dataFilename );
             LOG_INFO( "Loading data from " << data_file_path << "..." );
@@ -208,17 +225,26 @@ int main( int argc, char* argv[] )
             THROW_RUNTIME_ERROR( "No input data" );
         }
 
+        {
         LOG_INFO( "Precomputing..." );
+        VT_TRACER( "Precomputing" );
         precomputed.reset( new PrecomputedData( *data, *precomputedDataParams, *signalParams ) );
+        }
         }
     }
     LOG_INFO( ( is_collector ? "Broadcasting" : "Receiving" ) << " input data" );
+    {
+    VT_TRACER( "broadcast parameter parsing results" );
     mpi::broadcast( world, params_res, 0 );
+    }
     if ( !params_res ) return ( 0 ); // --help option, no computation
 
+    {
+    VT_TRACER( "broadcast params" );
     mpi::broadcast( world, hyperpriors, 0 );
     mpi::broadcast( world, gibbsParams, 0 );
     mpi::broadcast( world, cascadeParams, 0 );
+    }
     broadcast_statically_tracked( world, "data", data, 0 );
     broadcast_statically_tracked( world, "signalParams", signalParams, 0 );
     broadcast_statically_tracked( world, "priors", priors, 0 );
@@ -234,8 +260,10 @@ int main( int argc, char* argv[] )
     LOG_DEBUG1( "Setting initial clustering..." );
     ChessboardBiclustering iniClus;
     if ( is_collector ) iniClus = helper.trivialClustering();
+    {
+    VT_TRACER( "broadcast initial clustering" );
     mpi::broadcast( world, iniClus, 0 );
-
+    }
     StdOutPTCExecutionMonitor   mon( 1 );
     boost::scoped_ptr<ChessboardBiclusteringsIndexing> ccIndexing;
     if ( is_collector ) ccIndexing.reset( new ChessboardBiclusteringsIndexing() );
