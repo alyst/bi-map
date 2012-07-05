@@ -273,6 +273,11 @@ int main( int argc, char* argv[] )
 
     res.reset( MPI_BIMAPSampler_run( helper, world, cascadeParams, iniClus, 
                                 ccIndexing.get(), collectorParams.get(), &mon ) );
+
+    LOG_INFO( "Waiting for the other process(es) to finish..." );
+    world.barrier();
+    LOG_INFO( "All processes finished" );
+	VT_BUFFER_FLUSH();
 }
     if ( res ) {
         LOG_INFO( "Process finished with " << res->stepsCount() << " samples collected" );
