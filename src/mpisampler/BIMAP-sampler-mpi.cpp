@@ -133,7 +133,12 @@ void broadcast_statically_tracked( boost::mpi::communicator& comm, const char* n
 int main( int argc, char* argv[] )
 {
     using namespace cemm::bimap;
-
+    boost::scoped_ptr<ChessboardBiclusteringsIndexing> ccIndexing;
+    boost::scoped_ptr<BIMAPIOParams>  ioParams;
+    boost::scoped_ptr<OPAData> data;
+    boost::scoped_ptr<BIMAPWalk> res;
+{
+    std::cout << "Starting program" << std::endl;
     boost::mpi::environment env( argc, argv, true );
     boost::mpi::communicator world;
 
@@ -183,11 +188,9 @@ int main( int argc, char* argv[] )
 
     boost::scoped_ptr<CellSignalParams>         signalParams;
     boost::scoped_ptr<PrecomputedDataParams>    precomputedDataParams;
-    boost::scoped_ptr<OPAData> data;
     boost::scoped_ptr<ChessboardBiclusteringPriors> priors;
     boost::scoped_ptr<PrecomputedData> precomputed;
     boost::scoped_ptr<BIMAPSampleCollectorParams>    collectorParams;
-    boost::scoped_ptr<BIMAPIOParams>  ioParams;
     bool params_res = false;
     bool is_collector = world.rank() == 0;
     if ( is_collector ) {
@@ -266,12 +269,11 @@ int main( int argc, char* argv[] )
     mpi::broadcast( world, iniClus, 0 );
     }
     StdOutPTCExecutionMonitor   mon( 1 );
-    boost::scoped_ptr<ChessboardBiclusteringsIndexing> ccIndexing;
     if ( is_collector ) ccIndexing.reset( new ChessboardBiclusteringsIndexing() );
 
-    boost::scoped_ptr<BIMAPWalk> res( MPI_BIMAPSampler_run( helper, world, cascadeParams, iniClus, 
-                                                             ccIndexing.get(), collectorParams.get(), &mon ) );
-
+    res.reset( MPI_BIMAPSampler_run( helper, world, cascadeParams, iniClus, 
+                                ccIndexing.get(), collectorParams.get(), &mon ) );
+}
     if ( res ) {
         LOG_INFO( "Process finished with " << res->stepsCount() << " samples collected" );
         BOOST_ASSERT( res->check() );
