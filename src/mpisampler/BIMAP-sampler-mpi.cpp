@@ -38,7 +38,7 @@ namespace log_keywords = boost::log::keywords;
 
 namespace cemm { namespace bimap {
 
-boost::optional<BIMAPWalk> MPI_BIMAPSampler_run(
+BIMAPWalk* MPI_BIMAPSampler_run(
     const BIMAPSamplerHelper&      helper,
     mpi::communicator&              comm,
     const TurbineCascadeParams&     eeCascadeParams,
@@ -100,7 +100,8 @@ boost::optional<BIMAPWalk> MPI_BIMAPSampler_run(
     VT_USER_END( "EE sampler run" );
     LOG_INFO( "Finished sampling in "
               << boost::format( "%0.f" ) % eeSampler.elapsed() << " second(s)" );
-    return ( collector ? collector->walk() : boost::optional<BIMAPWalk>() );
+    return ( collector ? new BIMAPWalk( collector->walk() )
+                       : nullptr );
 }
 
 template<class Object>
@@ -268,8 +269,8 @@ int main( int argc, char* argv[] )
     boost::scoped_ptr<ChessboardBiclusteringsIndexing> ccIndexing;
     if ( is_collector ) ccIndexing.reset( new ChessboardBiclusteringsIndexing() );
 
-    boost::optional<BIMAPWalk> res = MPI_BIMAPSampler_run( helper, world, cascadeParams, iniClus, 
-                                                             ccIndexing.get(), collectorParams.get(), &mon );
+    boost::scoped_ptr<BIMAPWalk> res( MPI_BIMAPSampler_run( helper, world, cascadeParams, iniClus, 
+                                                             ccIndexing.get(), collectorParams.get(), &mon ) );
 
     if ( res ) {
         LOG_INFO( "Process finished with " << res->stepsCount() << " samples collected" );
