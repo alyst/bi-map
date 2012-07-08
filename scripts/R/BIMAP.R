@@ -881,6 +881,16 @@ BIMAP.mcmcwalk.interactors_frame <- function( bimap.walk, protein.ac, protein.in
     return ( res )
 }
 
+BIMAP.optimal_partition <- function(
+    cluContents.df, cluScore.df,
+    clu_id_col = 'objects.cluster',
+    elm_id_col = 'object',
+    score_col = 'score'
+){
+    return( .Call( "OptimalPartition", cluContents.df, cluScore.df,
+                   clu_id_col, elm_id_col, score_col ) )
+}
+
 #' Extract most stable clusters using greedy approach.
 #' @param bimap.walk 
 #' @param ms_data original MS dataset

@@ -39,6 +39,7 @@ add_library( RBIMAP SHARED ${RBIMAP_Sources} )
 set( RBIMAPMath_Sources
      "ExtraStats.cpp"
      "PartitionMatching.cpp"
+     "OptimalPartition.cpp"
 )
 
 add_library( RBIMAP-math SHARED ${RBIMAPMath_Sources} )
