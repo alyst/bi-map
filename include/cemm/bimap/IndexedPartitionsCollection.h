@@ -43,7 +43,6 @@ public:
     typedef size_t subpartition_serial;
     typedef PartitionDataExtractor<Part> extractor_type;
 
-    typedef boost::unordered_map<part_serial, component_index> part_component_map;
     typedef std::set<part_serial> component_parts;
     typedef std::vector<subpartition_serial> partition_composition;
     typedef boost::unordered_map<partition_serial, partition_composition> ptn_composition_map;
@@ -67,7 +66,6 @@ private:
     part_stats_map_type     _partStats;
     pair_counts_matrix_t    _pairCounts;
     std::vector<elements_container> _components;
-    part_component_map      _partComponent;
 
     ptn_composition_map     _ptnComposition;
     boost::ptr_vector<subpartition_indexing> _subptnIndexes;
@@ -429,7 +427,7 @@ void IndexedPartitionsCollection<Part>::classifyParts()
     ){
         for ( size_t compIx = 0; compIx < _components.size(); ++compIx ) {
             if ( extractor_type::IsSubset( (*pit)->value(), _components[ compIx ] ) ) {
-                _partComponent[ (*pit)->serial() ] = compIx;
+                _partStats[ (*pit)->serial() ].componentIndex = compIx;
                 break;
             }
         }
@@ -448,10 +446,12 @@ void IndexedPartitionsCollection<Part>::indexPartitionsComposition()
         std::vector<component_parts>    subptn( _components.size() );
         for ( const_part_iterator pit = (*ptnIt)->value().begin(); pit != (*ptnIt)->value().end(); ++pit ) {
             size_t partSerial = (*pit)->serial();
-            part_component_map::const_iterator compIt = _partComponent.find( partSerial );
-            if ( compIt != _partComponent.end() ) {
+            part_stats_map_type::const_iterator compIt = _partStats.find( partSerial );
+            if ( compIt != _partStats.end()
+                 && compIt->second.componentIndex != (size_t)(-1)
+            ){
                 // short path, part if fully contained in the component
-                subptn[ compIt->second ].insert( partSerial );
+                subptn[ compIt->second.componentIndex ].insert( partSerial );
             } else {
                 // long path, part is partially in the component, split it by the components
                 elements_container partRemainder = (*pit)->value();

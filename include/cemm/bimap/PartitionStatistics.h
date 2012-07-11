@@ -13,9 +13,11 @@ struct PartStats {
     size_t  nstepsIncluded;     /** N of times (stepwise) this part is seen in the partitions of the collection itself or as a subset of other part */
     prob_t  avgPairCoOccurrence; /** average co-occurrence of element pairs of given part
                                     in all partitions of the collection */
+    size_t  componentIndex;     /** index of the partition component the part belongs to */
 
-    PartStats( size_t size = 0, size_t nsteps = 0 )
+    PartStats( size_t size = 0, size_t nsteps = 0, size_t componentIndex = (size_t)(-1) )
     : size( size ), nsteps( nsteps ), nstepsIncluded( 0 ), avgPairCoOccurrence( 0.0 )
+    , componentIndex( componentIndex )
     {};
 };
 

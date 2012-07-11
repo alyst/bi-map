@@ -896,6 +896,7 @@ SEXP ConvertBIMAPWalkToRObject(
         Rcpp::IntegerVector sizeVec( ocStatsMap.size() );
         Rcpp::IntegerVector nStepsVec( ocStatsMap.size() );
         Rcpp::IntegerVector nStepsIncludedVec( ocStatsMap.size() );
+        Rcpp::IntegerVector componentIxVec( ocStatsMap.size() );
         Rcpp::NumericVector avgPairsCooccurVec( ocStatsMap.size() );
 
         size_t ix = 0;
@@ -906,6 +907,8 @@ SEXP ConvertBIMAPWalkToRObject(
             sizeVec[ ix ] = it->second.size;
             nStepsVec[ ix ] = it->second.nsteps;
             nStepsIncludedVec[ ix ] = it->second.nstepsIncluded;
+            componentIxVec[ ix ] = it->second.componentIndex != (size_t)(-1)
+            		             ?  it->second.componentIndex : R_NaInt;
             avgPairsCooccurVec[ ix ] = it->second.avgPairCoOccurrence;
             ix++;
         }
@@ -915,6 +918,7 @@ SEXP ConvertBIMAPWalkToRObject(
             Rcpp::Named( R_COLUMN_SIZE, sizeVec ),
             Rcpp::Named( R_COLUMN_NSTEPS, nStepsVec ),
             Rcpp::Named( R_COLUMN_NSTEPS_INCLUDED, nStepsIncludedVec ),
+        	Rcpp::Named( R_COLUMN_COMPONENT_INDEX, componentIxVec ),
             Rcpp::Named( R_COLUMN_AVG_PAIRS_COOCCUR, avgPairsCooccurVec )
         );
         ocInfo.attr( "row.names" ) = objectsSetSerialVec;
@@ -928,6 +932,7 @@ SEXP ConvertBIMAPWalkToRObject(
         Rcpp::IntegerVector sizeVec( scStatsMap.size() );
         Rcpp::IntegerVector nStepsVec( scStatsMap.size() );
         Rcpp::IntegerVector nStepsIncludedVec( scStatsMap.size() );
+        Rcpp::IntegerVector componentIxVec( scStatsMap.size() );
         Rcpp::NumericVector avgPairsCooccurVec( scStatsMap.size() );
 
         size_t ix = 0;
@@ -938,6 +943,8 @@ SEXP ConvertBIMAPWalkToRObject(
             sizeVec[ ix ] = it->second.size;
             nStepsVec[ ix ] = it->second.nsteps;
             nStepsIncludedVec[ ix ] = it->second.nstepsIncluded;
+            componentIxVec[ ix ] = it->second.componentIndex != (size_t)(-1)
+            		             ?  it->second.componentIndex : R_NaInt;
             avgPairsCooccurVec[ ix ] = it->second.avgPairCoOccurrence;
             ix++;
         }
@@ -947,6 +954,7 @@ SEXP ConvertBIMAPWalkToRObject(
             Rcpp::Named( R_COLUMN_SIZE, sizeVec ),
             Rcpp::Named( R_COLUMN_NSTEPS, nStepsVec ),
             Rcpp::Named( R_COLUMN_NSTEPS_INCLUDED, nStepsIncludedVec ),
+        	Rcpp::Named( R_COLUMN_COMPONENT_INDEX, componentIxVec ),
             Rcpp::Named( R_COLUMN_AVG_PAIRS_COOCCUR, avgPairsCooccurVec )
         );
         scInfo.attr( "row.names" ) = probesSetSerialVec;
