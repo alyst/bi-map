@@ -80,6 +80,7 @@ private:
     void countSubpartitions();
     void countElementPairsAvgCooccurrencePerPart( bool onlyUnused );
     void countPartsInclusion( bool onlyUnused );
+    void generateTrivialClusters();
     size_t generateNeighboursIntersections( const gsl_rng* rng, const elements_container& clot,
                                           size_t maxIsections, size_t isectionTrials );
     size_t generateIntersectionsWithinClots( const gsl_rng* rng,  size_t clotThreshold,
@@ -575,6 +576,19 @@ size_t IndexedPartitionsCollection<Part>::generateNeighboursIntersections(
 }
 
 template<class Part>
+void IndexedPartitionsCollection<Part>::generateTrivialClusters()
+{
+	LOG_SCOPE_FUNCTION();
+
+    size_t nElems = extractor_type::TotalElementsCount( _walk );
+    for ( size_t elem = 0; elem < nElems; ++elem ) {
+        elements_container trivial = extractor_type::EmptyElementsSet( _walk );
+        extractor_type::ElementInsert( trivial, elem );
+        extractor_type::PartsIndexing( _walk ).index( trivial );
+    }
+}
+
+template<class Part>
 size_t IndexedPartitionsCollection<Part>::generateIntersectionsWithinClots(
     const gsl_rng* rng, 
     size_t clotThreshold,
@@ -598,6 +612,7 @@ void IndexedPartitionsCollection<Part>::init(
     size_t          independenceThreshold,
     size_t          clotThreshold
 ){
+	generateTrivialClusters();
     countPartitions();
     countParts();
     countElementPairs();
