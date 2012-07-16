@@ -179,6 +179,10 @@ RcppExport SEXP OptimalPartition(
         for ( std::size_t cluIx = 0; cluIx < bestPtn.exisitingParts.size(); ++cluIx ) {
             nElems += clustersColl.clusters.find( bestPtn.exisitingParts[cluIx] )->second.size();
         }
+        std::size_t nNewClusterElems = 0;
+        for ( std::size_t cluIx = 0; cluIx < bestPtn.newParts.size(); ++cluIx ) {
+            nNewClusterElems += bestPtn.newParts[cluIx].size();
+        }
         Rcpp::StringVector  elmIdVec( nElems );
         Rcpp::IntegerVector cluIdVec( elmIdVec.size() );
         std::size_t i = 0;
@@ -194,11 +198,13 @@ RcppExport SEXP OptimalPartition(
             }
         }
         LOG_INFO( "Partition with " << nElems << " element(s) in " 
-                  << bestPtn.exisitingParts.size() << " cluster(s) exported" );
-        return ( Rcpp::List::create(
-            Rcpp::Named( elmIdColName ) = elmIdVec,
-            Rcpp::Named( cluIdColName ) = cluIdVec,
-            Rcpp::Named( "stringsAsFactors" ) = false
+                  << bestPtn.exisitingParts.size() << " cluster(s) exported ("
+                  << nNewClusterElems << " element(s) in " << bestPtn.newParts.size()
+                  << " non-indexed cluster(s) ignored)" );
+        return ( Rcpp::DataFrame::create(
+            Rcpp::Named( elmIdColName, elmIdVec ),
+            Rcpp::Named( cluIdColName, cluIdVec ),
+            Rcpp::Named( "stringsAsFactors", false )
         ) );
     }
 
