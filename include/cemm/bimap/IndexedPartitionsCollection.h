@@ -200,14 +200,22 @@ void IndexedPartitionsCollection<Part>::countElementPairs()
           pit != partsIndexing.serialMap().end(); ++pit
     ){
         const part_serial partSerial = (*pit)->serial();
-        const size_t partCounts = _partStats.find( partSerial )->second.nsteps;
-        const const_elem_iterator elEnd = extractor_type::ElementsEnd( (*pit)->value() );
-        for ( const_elem_iterator e1it = extractor_type::ElementsBegin( (*pit)->value() );
-              e1it != elEnd; ++e1it
-        ){
-            for ( const_elem_iterator e2it = e1it; e2it != elEnd; ++e2it ) {
-                _pairCounts( *e1it, *e2it ) += partCounts;
+        part_stats_map_type::const_iterator psit = _partStats.find( partSerial );
+        if ( psit != _partStats.end() ) {
+            const size_t partCounts = psit->second.nsteps;
+            const const_elem_iterator elEnd = extractor_type::ElementsEnd( (*pit)->value() );
+            for ( const_elem_iterator e1it = extractor_type::ElementsBegin( (*pit)->value() );
+                  e1it != elEnd; ++e1it
+            ){
+                for ( const_elem_iterator e2it = e1it; e2it != elEnd; ++e2it ) {
+                    _pairCounts( *e1it, *e2it ) += partCounts;
+                }
             }
+        } else {
+        	LOG_DEBUG2( "Part #" << partSerial << " missing in the statistics" );
+        	// append to the _partStats parts inserted to the indexing later
+            _partStats.insert( psit, std::make_pair( (*pit)->serial(),
+                               PartStats( extractor_type::Size( (*pit)->value() ), 0 ) ) );
         }
     }
 }
