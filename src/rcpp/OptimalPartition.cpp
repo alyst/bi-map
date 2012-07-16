@@ -26,6 +26,7 @@ struct ClustersCollection {
 
     typedef std::set<elm_ix_t> elm_set_t;
     typedef cemm::containers::partition::PartitionOptimizer<elm_set_t> ptn_optimizer_t;
+    typedef cemm::containers::partition::OptimizedPartition<elm_set_t, score_t> opt_partition_t;
 
     typedef ptn_optimizer_t::part_map_t clu2elmset_map_t;
     typedef boost::unordered_map<elm_label_t, elm_ix_t> elm_label_map_t;
@@ -168,21 +169,21 @@ RcppExport SEXP OptimalPartition(
     ClustersCollection::ptn_optimizer_t ptnOptimizer( clustersColl.clusters.begin(), clustersColl.clusters.end() );
 
     LOG_INFO( "Calculating optimal partition..." );
-    ClustersCollection::ptn_optimizer_t::new_partition_t bestPtn = ptnOptimizer.bestMatch( PartitionScore( clustersColl ) );
+    ClustersCollection::opt_partition_t bestPtn = ptnOptimizer.bestMatch( PartitionScore( clustersColl ) );
     LOG_INFO( "Optimal partition calculation done" );
 
     LOG_INFO( "Exporting partition" );
     {
         // new parts are ignored
         std::size_t nElems = 0;
-        for ( std::size_t cluIx = 0; cluIx < bestPtn.first.size(); ++cluIx ) {
-            nElems += clustersColl.clusters.find( bestPtn.first[cluIx] )->second.size();
+        for ( std::size_t cluIx = 0; cluIx < bestPtn.exisitingParts.size(); ++cluIx ) {
+            nElems += clustersColl.clusters.find( bestPtn.exisitingParts[cluIx] )->second.size();
         }
         Rcpp::StringVector  elmIdVec( nElems );
         Rcpp::IntegerVector cluIdVec( elmIdVec.size() );
         std::size_t i = 0;
-        for ( std::size_t cluIx = 0; cluIx < bestPtn.first.size(); ++cluIx ) {
-            const ClustersCollection::clu_ix_t cluId = bestPtn.first[cluIx];
+        for ( std::size_t cluIx = 0; cluIx < bestPtn.exisitingParts.size(); ++cluIx ) {
+            const ClustersCollection::clu_ix_t cluId = bestPtn.exisitingParts[cluIx];
             const ClustersCollection::elm_set_t& elmSet = clustersColl.clusters.find( cluId )->second;
             for ( ClustersCollection::elm_set_t::const_iterator elmIt = elmSet.begin();
                   elmIt != elmSet.end(); ++elmIt
@@ -193,7 +194,7 @@ RcppExport SEXP OptimalPartition(
             }
         }
         LOG_INFO( "Partition with " << nElems << " element(s) in " 
-                  << bestPtn.first.size() << " cluster(s) exported" );
+                  << bestPtn.exisitingParts.size() << " cluster(s) exported" );
         return ( Rcpp::List::create(
             Rcpp::Named( elmIdColName ) = elmIdVec,
             Rcpp::Named( cluIdColName ) = cluIdVec,
