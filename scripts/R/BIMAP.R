@@ -883,12 +883,14 @@ BIMAP.mcmcwalk.interactors_frame <- function( bimap.walk, protein.ac, protein.in
 
 BIMAP.optimal_partition <- function(
     cluContents.df, cluScore.df,
-    clu_id_col = 'objects.cluster',
-    elm_id_col = 'object',
+    clu_id_col = 'cluster.serial',
+    elm_id_col = 'element',
     score_col = 'score'
 ){
-    return( .Call( "OptimalPartition", cluContents.df, cluScore.df,
-                   clu_id_col, elm_id_col, score_col ) )
+    res <- .Call( "OptimalPartition", cluContents.df, cluScore.df,
+                   clu_id_col, elm_id_col, score_col )
+	print( head(res) )
+	return ( res )
 }
 
 #' Extract most stable clusters using greedy approach.
@@ -896,7 +898,7 @@ BIMAP.optimal_partition <- function(
 #' @param ms_data original MS dataset
 #' @param sample_col sample column in MS dataset
 #' @param prey_col prey AC column in MS dataset
-#' @param min.avg.nsample average number of samples the cluster is seen
+#' @param min.avg.noccur average number of samples the cluster is seen
 #' @param min.size minimal size of cluster
 #' @param min.included.freq minimal frequency the cluster is seen (itself or as subcomponent) in partitions
 #' @param size.weight weight of cluster in scoring
@@ -905,40 +907,65 @@ BIMAP.optimal_partition <- function(
 #' @author astukalov
 #' @export
 BIMAP.mcmcwalk.extract_stable_clusters <- function( bimap.walk, bimap.data,
-        min.avg.nsample = 3, min.size = 2,
+        min.avg.noccur = 3, min.size = 2,
         min.included.freq = 0.95, size.weight = 0.2,
-        allow.intersections = FALSE )
+        allow.intersections = FALSE,
+        use.object.clusters = TRUE,
+		greedy.algorithm = FALSE )
 {
+	elem_col <- ifelse( use.object.clusters, 'object', 'probe' )
+	cluster_col <- ifelse( use.object.clusters, 'objects.cluster.serial', 'probes.cluster.serial' )
+
+	clusters.info <- if ( use.object.clusters ) bimap.walk@objects.clusters.info
+                     else bimap.walk@probes.clusters.info
+    clusters <- if ( use.object.clusters ) bimap.walk@objects.clusters
+                else bimap.walk@probes.clusters
+    clusters$element <- clusters[,elem_col]
+    clusters$cluster.serial <- clusters[,cluster_col]
+    clusters.info$cluster.serial <- clusters.info[,cluster_col]
     min.nsteps.included = nrow( bimap.walk@clusterings.walk ) * min.included.freq
-    good.clusters.info <- subset( bimap.walk@objects.clusters.info, size >= min.size & nsteps.included >= min.nsteps.included )
-    good.clusters.info$score <- ( good.clusters.info$nsteps.included / nrow( bimap.walk@clusterings.walk ) - min.included.freq ) / ( 1.0 - min.included.freq ) +
-                  size.weight * ( good.clusters.info$size - min.size )
+    good.clusters.info <- subset( clusters.info, size >= min.size & nsteps.included >= min.nsteps.included )
+    good.clusters.info$score <- ( good.clusters.info$nsteps.included / nrow( bimap.walk@clusterings.walk ) ) *
+                  ( good.clusters.info$size / max( good.clusters.info$size ) )^size.weight
     #print( good.clusters.info )
-    good.clusters <- subset( bimap.walk@objects.clusters, objects.cluster.serial %in% good.clusters.info$objects.cluster.serial )
-    avg.nsamples <- ddply( unique( merge( good.clusters, merge( bimap.data$measurements, bimap.data$exp_design ),
-                                          by.x = 'object', by.y = 'prey_ac' )
-                            [ c( 'objects.cluster.serial', 'object', 'sample' ) ] ), .( objects.cluster.serial ), function( clu_ms_data ) {
-                data.frame( avg.nsample = min( table( clu_ms_data$object ) ),
-                        stringsAsFactors = TRUE )
+    good.clusters <- subset( clusters, cluster.serial %in% good.clusters.info$cluster.serial )
+    avg.noccur <- ddply( unique( merge( good.clusters, merge( bimap.data$measurements, bimap.data$exp_design ),
+                                          by.x = 'element',
+                                          by.y = ifelse( use.object.clusters, 'prey_ac', 'sample' ) )
+                            [ c( 'cluster.serial', 'element', ifelse( use.object.clusters, 'sample', 'prey_ac' ) ) ] ),
+                            .( cluster.serial ), function( clu_ms_data ) {
+                # average number of samples (preys for probes) where object is seen
+                data.frame( avg.noccur = min( table( clu_ms_data$element ) ),
+                        stringsAsFactors = FALSE )
             } )
-    good.clusters.info <- merge( good.clusters.info, avg.nsamples, by = c( 'objects.cluster.serial' ) )
-    good.clusters.info <- subset( good.clusters.info, avg.nsample >= min.avg.nsample )
-    good.clusters <- subset( bimap.walk@objects.clusters, objects.cluster.serial %in% good.clusters.info$objects.cluster.serial )
-    intersecting.pairs <- unique( merge( good.clusters, good.clusters, by = c( 'object' ),
-                    all = FALSE, sort = FALSE )
-                    [ c( 'objects.cluster.serial.x', 'objects.cluster.serial.y' ) ] )
-    if ( !allow.intersections ) {
-        best.clusters.serials <- c()
-        while ( nrow( good.clusters.info ) > 0 ) {
-            best.cluster <- good.clusters.info[ order( good.clusters.info$score, decreasing = TRUE )[1], 'objects.cluster.serial' ]
-            best.clusters.serials <- c( best.clusters.serials, best.cluster )
-            intersects.with <- subset( intersecting.pairs, objects.cluster.serial.x == best.cluster )$objects.cluster.serial.y
-            good.clusters.info <- subset( good.clusters.info, !( objects.cluster.serial %in% intersects.with ) )
-        }
-        res <- subset( bimap.walk@objects.clusters, objects.cluster.serial %in% best.clusters.serials )
-    } else {
-        res <- subset( bimap.walk@objects.clusters, objects.cluster.serial %in% good.clusters.info$objects.cluster.serial )
+    good.clusters.info <- merge( good.clusters.info, avg.noccur, by = c( 'cluster.serial' ) )
+    good.clusters.info <- subset( good.clusters.info, avg.noccur >= min.avg.noccur )
+    good.clusters <- subset( clusters, cluster.serial %in% good.clusters.info$cluster.serial )
+	message( 'Total ', length( unique( good.clusters$element ) ), ' element(s) in ',
+			length( unique( good.clusters$cluster ) ), ' stable cluster(s)' )
+	if ( !allow.intersections ) {
+		if ( greedy.algorithm ) {
+			intersecting.pairs <- unique( merge( good.clusters, good.clusters, by = c( 'element' ),
+							all = FALSE, sort = FALSE )
+							[ c( 'cluster.serial.x', 'cluster.serial.y' ) ] )
+			best.clusters.serials <- c()
+			while ( nrow( good.clusters.info ) > 0 ) {
+				best.cluster <- good.clusters.info[ order( good.clusters.info$score, decreasing = TRUE ), 'cluster.serial' ][1]
+				best.clusters.serials <- c( best.clusters.serials, best.cluster )
+				intersects.with <- subset( intersecting.pairs, cluster.serial.x == best.cluster )$cluster.serial.y
+				good.clusters.info <- subset( good.clusters.info, !( cluster.serial %in% intersects.with ) )
+			}
+			res <- subset( clusters, cluster.serial %in% best.clusters.serials )
+		} else {
+			res <- BIMAP.optimal_partition( good.clusters, good.clusters.info, 'cluster.serial', 'element', 'score' )
+			res[,elem_col] <- res$element
+			res[,cluster_col] <- res$cluster.serial
+		}
+	} else {
+        res <- subset( clusters, cluster.serial %in% good.clusters.info$cluster.serial )
     }
-    res <- res[ order( res$objects.cluster.serial, res$object ), ]
+	message( length( unique( res$element) ), ' ', elem_col, "(s) of ", length( unique( clusters$element ) ),
+			 " in ", length(unique(res$cluster.serial)), " stable cluster(s)" )
+    res <- res[ order( res$cluster.serial, res$element ), ]
     return ( res )
 }
