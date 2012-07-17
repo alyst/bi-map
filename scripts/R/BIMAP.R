@@ -605,7 +605,7 @@ BIMAP.mcmcwalk.lastClustering <- function( walk, serial )
 #' @return data.frame with clusters information
 #' @author astukalov
 #' @export
-BIMAP.mcmcwalk.biclusterings_order <- function( walk, n = 30, by = c( 'parts.pdf', 'components.pdf' ) ) {
+BIMAP.mcmcwalk.biclusterings_order <- function( walk, n = 30, by = 'parts.pdf' ) {
     clus.df <- walk@clusterings
     rownames( clus.df ) <- clus.df$clustering_id
     if ( by == 'parts.pdf' ) {
