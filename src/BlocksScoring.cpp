@@ -14,10 +14,10 @@ typedef boost::accumulators::accumulator_set<
         , prob_t> signal_mean_accum_t;
 struct BlockAccums {
     prob_t count_total;     /// weighted total number of object cluster x probe cluster blocks
-    prob_t count_on;        /// weighted number of blocks in on-state
     signal_mean_accum_t     signal_mean_accum;
     signal_mean_accum_t     signal_var_accum;
     BlockAccums( prob_t count_total = 0.0 )
+    : count_total( count_total )
     {}
 };
 

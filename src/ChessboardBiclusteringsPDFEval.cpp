@@ -197,8 +197,8 @@ void ChessboardBiclusteringsPDFEval::evalBlocksFreqMap(
                 boost::accumulators::tag::mean,
                 boost::accumulators::tag::variance> > signal_accum_t;
 
-    typedef ChessboardBiclusteringIndexed::block_data_map_type::key_type acc_id;
-    typedef boost::unordered_map<acc_id, signal_accum_t> signal_accum_map;
+    typedef ChessboardBiclusteringIndexed::block_key_type blk_id_t;
+    typedef boost::unordered_map<blk_id_t, signal_accum_t> signal_accum_map;
 
     signal_accum_map blockAccums; // internal blocks signal statistics
 
@@ -250,7 +250,7 @@ void ChessboardBiclusteringsPDFEval::evalBlocksFreqMap(
     {
         object_block_stats_map& objMap = *it->second;
         for ( object_block_stats_map::iterator jt = objMap.begin(); jt != objMap.end(); ++jt ) {
-            acc_id blkId = acc_id( jt->first, it->first );
+            blk_id_t blkId = blk_id_t( jt->first, it->first );
             signal_accum_map::iterator accIt = blockAccums.find( blkId );
             if ( accIt != blockAccums.end() ) {
                 jt->second.signal_mean = boost::accumulators::extract::mean( accIt->second );
