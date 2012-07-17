@@ -969,3 +969,94 @@ BIMAP.mcmcwalk.extract_stable_clusters <- function( bimap.walk, bimap.data,
     res <- res[ order( res$cluster.serial, res$element ), ]
     return ( res )
 }
+
+#' Extracts chessboard biclustering with specified ID from random walk.
+#' @param bimap.walk sampling walk
+#' @param bimapId ID of chessboard biclustering to extract
+#' @param onblock.threshold "on" blocks, are those whose "on" probe frequency is greater than this threshold
+#' @returnType 
+#' @return 
+#' @author astukalov
+BIMAP.mcmcwalk.extract_stable_biclustering <- function(
+    bimap.walk, bimap.data,
+    onblock.threshold = 0.6,
+    min.avg.nprobes = 3, min.avg.nobjects = 3,
+    min.objects.freq = 0.95, min.probes.freq = 0.95,
+    objects.size.weight = 0.2, probes.size.weight = 0.2,
+	greedy.algorithm = FALSE
+){
+	if ( nrow( bimap.walk@stable.blocks.score ) == 0 ) {
+		error( 'No stable blocks information found in the BI-MAP walk, run BIMAP.mcmcload() again with stable thresholds defined' )
+	}
+	proteins.clusters <- BIMAP.mcmcwalk.extract_stable_clusters(
+        bimap.walk, bimap.data,
+        min.avg.noccur = min.avg.nprobes, min.size = 1,
+        min.included.freq = min.objects.freq,
+        size.weight = objects.size.weight,
+        allow.intersections = FALSE, use.object.clusters = TRUE,
+		greedy.algorithm = greedy.algorithm )[,c('objects.cluster.serial','object')]
+    colnames( proteins.clusters ) <- c( 'proteins.cluster', 'protein_ac' )
+    samples.clusters <- BIMAP.mcmcwalk.extract_stable_clusters(
+        bimap.walk, bimap.data,
+        min.avg.noccur = min.avg.nobjects, min.size = 1,
+        min.included.freq = min.probes.freq,
+        size.weight = probes.size.weight,
+        allow.intersections = FALSE, use.object.clusters = FALSE,
+		greedy.algorithm = greedy.algorithm )[,c('probes.cluster.serial','probe')]
+    colnames( samples.clusters ) <- c( 'samples.cluster', 'sample' )
+
+    if ( is.numeric(onblock.threshold) ) {
+        # build consensus blocks
+        blocks <- subset( bimap.walk@stable.blocks.scores,
+                          enabled >= onblock.threshold * total &
+                          objects.cluster.serial %in% proteins.clusters$proteins.cluster
+                        & probes.cluster.serial %in% samples.clusters$samples.cluster,
+                        select=c( 'objects.cluster.serial', 'probes.cluster.serial', 'signal.mean', 'signal.var' ) )
+    } else {
+        # get non-empty blocks of the clustering
+        blocks <- subset( bimap.walk@stable.blocks.scores,
+                          objects.cluster.serial %in% proteins.clusters$proteins.cluster
+                        & probes.cluster.serial %in% samples.clusters$samples.cluster,
+                          select = c("objects.cluster.serial", "probes.cluster.serial", 'signal.mean', 'signal.var' ) )
+    }
+
+    nBlocks <- nrow( blocks )
+    if ( nBlocks == 0 ) {
+        stop( "No on-blocks found in stable clustering" )
+    } else {
+        message( nBlocks, ' on-blocks found of ', length( unique( proteins.clusters$proteins.cluster ) ), 
+                 'x', length( unique( samples.clusters$samples.cluster ) ), ' possible' )
+    }
+
+    colnames( blocks ) <- c( 'proteins.cluster', 'samples.cluster', 'signal.mean', 'signal.sd' )
+    blocks$proteins.cluster <- as.character( blocks$proteins.cluster )
+    blocks$samples.cluster <- as.character( blocks$samples.cluster )
+
+    proteins.clusters$proteins.cluster <- as.character( proteins.clusters$proteins.cluster )
+    proteins.clusters$protein_ac <- as.character( proteins.clusters$protein_ac )
+    rownames( proteins.clusters ) <- proteins.clusters$protein_ac
+
+    samples.clusters$sample <- as.character( samples.clusters$sample )
+    samples.clusters$samples.cluster <- as.character( samples.clusters$samples.cluster )
+    rownames( samples.clusters ) <- samples.clusters$sample
+
+    res <- list(
+            blocks = blocks,
+            proteins.clusters = proteins.clusters,
+            proteins.clusters.info = bimap.walk@objects.clusters.info[ unique( proteins.clusters$proteins.cluster ),
+                                                                    c( 'objects.cluster.serial', 'size',
+                                                                       'nsteps', 'nsteps.included', 'avg.pairs.cooccur') ],
+            samples.clusters = samples.clusters,
+            samples.clusters.info = bimap.walk@probes.clusters.info[ unique( samples.clusters$samples.cluster ),
+                                                                 c( 'probes.cluster.serial', 'size',
+                                                                    'nsteps', 'nsteps.included', 'avg.pairs.cooccur') ],
+            signals.mean = daply( blocks, c( 'proteins.cluster', 'samples.cluster' ), function ( data ) data$signal.mean ),
+            signals.sd = daply( blocks, c( 'proteins.cluster', 'samples.cluster' ), function ( data ) data$signal.sd )
+    )
+    colnames( res$proteins.clusters.info ) <- c( 'proteins.cluster', 'size', 'nsteps', 'nsteps_included', 'avg_pairs_cooccur' )
+    res$proteins.clusters.info$avg_pairs_freq <- res$proteins.clusters.info$avg_pairs_cooccur / nrow( bimap.walk@clusterings.walk )
+    colnames( res$samples.clusters.info ) <- c( 'samples.cluster', 'size', 'nsteps', 'nsteps_included', 'avg_pairs_cooccur' )
+    res$samples.clusters.info$avg_pairs_freq <- res$samples.clusters.info$avg_pairs_cooccur / nrow( bimap.walk@clusterings.walk )
+
+    return ( res )
+}
