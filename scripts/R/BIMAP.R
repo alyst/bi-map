@@ -121,7 +121,7 @@ BIMAP.msdata.import <- function( ms_data, protein_info, msrun.multipliers = NULL
     protein_first_index <- vapply( protein_indices, function(indices) indices[[1]], integer(1) )
     # sequence length is the maximum in AC group
     seqlength <- vapply( protein_indices,
-                         function(indices) max( proteins.df$seqlength ),
+                         function(indices) max( proteins.df[indices,'seqlength'] ),
                          integer(1) )
     # leave one (first) record per protein AC
     proteins.df <- proteins.df[ protein_first_index, ]
