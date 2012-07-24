@@ -28,6 +28,7 @@
 #include <cemm/bimap/BlocksScoring.h>
 #include <cemm/bimap/BIMAPResultsSerialize.h>
 
+#define OPA_PARAM_MAP_BAITS_TO_OBJECTS				"map.baits.to.objects"
 #define BIMAP_PARAM_WALK_SAMPLES                    "walk.samples"
 #define BIMAP_PARAM_WALK_CREATE_ROBJECT             "walk.create.RObject"
 #define BIMAP_PARAM_WALK_FILE                       "walk.file"
@@ -207,7 +208,8 @@ OPAData ReadMassSpecData(
     SEXP    proteinsDataExp,        /**< @param[in] proteins data frame: 1 - protein label, 2 - sequence length */
     SEXP    samplesDataExp,         /**< @param[in] samples data frame: 1 - sample label, 2 - bait protein label */
     SEXP    msRunsDataExp,          /**< @param[in] MS-runs data frame: 1 - MS run label, 2 - examined sample label */
-    SEXP    measurementsDataExp     /**< @param[in] MS measurements data frame: 1 - MS run label, 2 - protein label, 3 - TSC */
+    SEXP    measurementsDataExp,    /**< @param[in] MS measurements data frame: 1 - MS run label, 2 - protein label, 3 - TSC */
+    bool    mapBaitsToObjects       /**< @param[in] mapBaitsToObjects flag */
 ){
     Rcpp::DataFrame proteinsFrame( proteinsDataExp );
     Rcpp::DataFrame samplesFrame( samplesDataExp );
@@ -221,7 +223,7 @@ OPAData ReadMassSpecData(
     Rprintf_columns( msRunsFrame, "Input Mass-Spec runs" );
     Rprintf_columns( measurementsFrame, "Input Mass-Spec measurements" );
 
-    OPAData    data;
+    OPAData    data( mapBaitsToObjects );
 
     // fill-in proteins
     {
@@ -235,7 +237,7 @@ OPAData ReadMassSpecData(
     }
     // fill-in samples
     {
-        Rprintf( "Reading samples...\n" );
+        LOG_INFO( "Reading samples...\n" );
         Rcpp::StringVector sampleCodeVec = samplesFrame[ 0 ];
         Rcpp::StringVector baitAcVec = samplesFrame[ 1 ];
         // sample-id bait-id
@@ -1161,7 +1163,11 @@ RcppExport SEXP BIMAPWalkEval(
 ){
     BEGIN_RCPP
 
-    OPAData        data = ReadMassSpecData( proteinsDataExp, samplesDataExp, msRunsDataExp, measurementsDataExp );
+    RcppParamVector      params( paramsExp );
+
+    OPAData        data = ReadMassSpecData( proteinsDataExp, samplesDataExp,
+    		                                msRunsDataExp, measurementsDataExp,
+    		                                read_parameter( params, OPA_PARAM_MAP_BAITS_TO_OBJECTS, true ) );
 
     PrecomputedDataParams       precomputedDataParams;
     GibbsSamplerParams          samplerParams;
@@ -1183,7 +1189,6 @@ RcppExport SEXP BIMAPWalkEval(
 
     {
         Rprintf( "Reading sampler and model parameters...\n" );
-        RcppParamVector      params( paramsExp );
 
         MaybeReadRParam( walkFilename, params, BIMAP_PARAM_WALK_FILE );
         MaybeReadRParam( createWalkRObject, params, BIMAP_PARAM_WALK_CREATE_ROBJECT );
@@ -1495,7 +1500,9 @@ RcppExport SEXP OPADataSave(
 ){
     BEGIN_RCPP
 
-    OPAData  data = ReadMassSpecData( proteinsDataExp, samplesDataExp, msRunsDataExp, measurementsDataExp );
+    OPAData        data = ReadMassSpecData( proteinsDataExp, samplesDataExp,
+    		                                msRunsDataExp, measurementsDataExp,
+    		                                read_parameter( RcppParamVector( paramsExp ), OPA_PARAM_MAP_BAITS_TO_OBJECTS, true ) );
 
     std::string filename;
     {
@@ -1538,14 +1545,17 @@ RcppExport SEXP CalcDistances(
 ){
     BEGIN_RCPP
 
-    OPAData  data = ReadMassSpecData( proteinsDataExp, samplesDataExp, msRunsDataExp, measurementsDataExp );
+    RcppParamVector      params( paramsExp );
+
+    OPAData        data = ReadMassSpecData( proteinsDataExp, samplesDataExp,
+    		                                msRunsDataExp, measurementsDataExp,
+    		                                read_parameter( params, OPA_PARAM_MAP_BAITS_TO_OBJECTS, true ) );
 
     PrecomputedDataParams       precomputedDataParams;
     CellSignalParams            signalParams;
 
     {
         Rprintf( "Reading parameters...\n" );
-        RcppParamVector      params( paramsExp );
 
         MaybeReadRParam( signalParams.sequenceLengthFactor, params, BIMAP_PARAM_SIGNAL_SEQUENCE_LENGTH_FACTOR );
         MaybeReadRParam( signalParams.scShape, params, BIMAP_PARAM_SIGNAL_SHAPE );

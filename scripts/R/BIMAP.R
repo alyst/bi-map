@@ -210,12 +210,14 @@ BIMAP.msdata.load <- function(
 #' @author Alexey Stukalov
 BIMAP.msdata.save <- function( bimap.data, 
     data_path = NULL, filename = NULL,
-    format = c( 'OPA', 'CSV' )
+    format = 'OPA',
+    map.baits.to.objects = TRUE
 ){
     if ( format == 'OPA' ){
         return ( .Call( "OPADataSave", filename,
                 bimap.data$proteins, bimap.data$samples, bimap.data$msruns,
-                bimap.data$measurements ) )
+                bimap.data$measurements,
+                list( map.baits.to.objects = map.baits.to.objects ) ) )
     } else {
         message( "Writing BI-MAP data to ", data_path, "..." )
         write.table( bimap.data$measurements[,intersect(colnames(bimap.data$measurements),
@@ -273,6 +275,7 @@ BIMAP.mcmcwalk.eval <- function(
     sample_info,
     msrun_info,
     measurements,
+    map.baits.to.objects = TRUE,
     walk.samples = 1000,
     walk.create.RObject = TRUE,
     walk.file = NULL,
@@ -322,6 +325,7 @@ BIMAP.mcmcwalk.eval <- function(
     log.eeJumps.file = NULL
 ){
     params <- list(
+        map.baits.to.objects = map.baits.to.objects,
         file = file,
         walk.create.RObject = walk.create.RObject,
         walk.samples = walk.samples,
