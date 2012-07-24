@@ -125,7 +125,7 @@ BIMAP.create_xlsx <- function(
         # cluster borders
         putBorder( proteinInfoBlock,
                    rowIndex = 1 + subset( proteins, clu.order == 1 & order > 1 )$order,
-                   colIndex = 1 + 1:length(samp_cols),
+                   colIndex = 1:length(prot_cols),
                    Border( color = grid.col, position = c( 'TOP' ), pen = c( 'BORDER_THIN' ) ) )
         # outer frame
         putBorder( proteinInfoBlock,
