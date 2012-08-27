@@ -1,6 +1,13 @@
 BI-MAP Changelog
 
- Changes in BI-MAP 1.1.0
+ BI-MAP 1.2.0
+=========================
+  * Refactored source code layout (git submodules)
+  * OpenMPI compatibility fixes
+  * use boost::log for logging
+  * many bugfixes
+
+ BI-MAP 1.1.0
 =========================
 
   * Update the statistical model for off-blocks to take into account
@@ -18,7 +25,7 @@ BI-MAP Changelog
     in a sampled partitions as subsets of their parts.
   * Export BI-MAP biclustering to Excel (requires xslx R package).
 
- Changes in BI-MAP 1.0.0
+ BI-MAP 1.0.0
 =========================
 
   * initial release
