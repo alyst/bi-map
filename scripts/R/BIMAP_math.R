@@ -105,3 +105,34 @@ mutualInformation <- function(
     }
     return ( res )
 }
+
+BIMAP.distances <- function(
+		protein_info, sample_info,
+		msrun_info, measurements = NULL,
+		signal.sequence.length.factor = 0.5,
+		signal.shape = 0.0,
+		precomp.object.freq.threshold = 0.6,
+		precomp.probe.freq.threshold = 0.6
+){
+	params <- list(
+			signal.sequence.length.factor = signal.sequence.length.factor,
+			signal.shape = signal.shape,
+			precomp.object.freq.threshold = precomp.object.freq.threshold,
+			precomp.probe.freq.threshold = precomp.probe.freq.threshold
+	)
+	return ( .Call( "CalcDistances",
+					protein_info, sample_info, msrun_info, measurements,
+					params ) )
+}
+
+BIMAP.optimal_partition <- function(
+		cluContents.df, cluScore.df,
+		clu_id_col = 'cluster.serial',
+		elm_id_col = 'element',
+		score_col = 'score'
+){
+	res <- .Call( "OptimalPartition", cluContents.df, cluScore.df,
+			clu_id_col, elm_id_col, score_col )
+	print( head(res) )
+	return ( res )
+}

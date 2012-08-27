@@ -12,25 +12,6 @@ require( 'Rcpp' )
 #dyn.unload( file.path( RBIMAP.libpath, paste("libRBIMAP", .Platform$dynlib.ext, sep="")) ) 
 dyn.load( file.path( RBIMAP.libpath, paste("libRBIMAP", .Platform$dynlib.ext, sep="")), type = "Call" ) 
 
-BIMAP.distances <- function(
-    protein_info, sample_info,
-    msrun_info, measurements = NULL,
-    signal.sequence.length.factor = 0.5,
-    signal.shape = 0.0,
-    precomp.object.freq.threshold = 0.6,
-    precomp.probe.freq.threshold = 0.6
-){
-    params <- list(
-        signal.sequence.length.factor = signal.sequence.length.factor,
-        signal.shape = signal.shape,
-        precomp.object.freq.threshold = precomp.object.freq.threshold,
-        precomp.probe.freq.threshold = precomp.probe.freq.threshold
-    )
-    return ( .Call( "CalcDistances",
-            protein_info, sample_info, msrun_info, measurements,
-            params ) )
-}
-
 #' Imports MS data into format compatible to submission to BIMAP 
 #' @param ms_data 
 #' @param protein_info 
