@@ -1,10 +1,12 @@
 set(Boost_USE_STATIC_LIBS   OFF)
 set(Boost_USE_MULTITHREADED ON)
-find_package( Boost REQUIRED COMPONENTS thread serialization iostreams filesystem program_options mpi log )
+find_package( Boost REQUIRED COMPONENTS
+              thread serialization iostreams
+	      filesystem program_options mpi log )
 find_package( Threads )
 find_package( MPI )
 
-include_directories( ${Boost_INCLUDE_DIRS} )
+include_directories( ${Boost_INCLUDE_DIRS} ${MPI_INCLUDE_PATH} )
 add_definitions( ${MPI_COMPILE_FLAGS} )
 
 set( BIMAPSamplerMPI_Sources
