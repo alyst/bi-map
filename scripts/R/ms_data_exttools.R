@@ -289,19 +289,23 @@ ms_data.export_nestedcluster <- function(
 # export MS data to SAINT v.2+
 ms_data.export_saint.v2 <- function(
     ms_data, protein_info, export.path,
-    bait_col = 'bait_ac', prey_col = 'prey_ac',
+    bait_col = 'bait_ac', prey_col = 'prey_ac', genename_col = 'genename',
+    msrun_col = 'msrun', sc_col = 'sc',
     neg.ctrl.baits = c( 'nobait', 'gfp' )
 ){
-    preys <- unique(ms_data[,prey_col])
+    ms_data <- ms_data[,c(msrun_col,bait_col,prey_col,sc_col)]
+    colnames( ms_data ) <- c( 'msrun', 'bait', 'prey', 'sc' ) # order is important for exporting
+    preys <- unique(ms_data$prey)
     saint.data <- list( 
         preys = data.frame(
             protein_ac = preys,
             seqlength = protein_info[preys, 'seqlength' ],
+            genename = protein_info[preys, genename_col ],
             stringsAsFactors = FALSE ),
-        baits = unique( subset( ms_data, select = c( 'msrun', bait_col ), msrun != '#glob#' ) ),
-        ms_data = subset( ms_data, select = c( 'msrun', bait_col, prey_col, 'sc' ), msrun != '#glob#' )
+        baits = unique( subset( ms_data, select = c( 'msrun', 'bait' ), msrun != '#glob#' ) ),
+        ms_data = subset( ms_data, msrun != '#glob#' )
     )
-    saint.data$baits$type <- ifelse( saint.data$baits$bait_ac %in% neg.ctrl.baits, 'C', 'T' )
+    saint.data$baits$type <- ifelse( saint.data$baits$bait %in% neg.ctrl.baits, 'C', 'T' )
     write.table( saint.data$preys, file.path( export.path, 'preys.csv' ),
         sep='\t', quote = FALSE, row.names = FALSE, col.names = FALSE )
     write.table( saint.data$baits, file.path( export.path, 'baits.csv' ),
